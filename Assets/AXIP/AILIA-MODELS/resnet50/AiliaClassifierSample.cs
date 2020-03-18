@@ -28,21 +28,20 @@ public class AiliaClassifierSample : AiliaRenderer {
 	private AiliaClassifierModel ailia_classifier_model=new AiliaClassifierModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
-	#if UNITY_ANDROID
 	private AiliaDownload ailia_download=new AiliaDownload();
-	#endif
 
 	private void CreateAilia(){
-		string asset_path = Application.streamingAssetsPath+"/AILIA";
+		string asset_path = Application.temporaryCachePath;
 		if(gpu_mode){
 			ailia_classifier_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
+
 		ailia_classifier_model.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8);
-	#if UNITY_ANDROID
-		ailia_classifier_model.OpenMem(ailia_download.DownloadModel(asset_path+"/SqueezeNet.prototxt"),ailia_download.DownloadModel(asset_path+"/SqueezeNet.caffemodel"));
-	#else
-		ailia_classifier_model.OpenFile(asset_path+"/SqueezeNet.prototxt",asset_path+"/SqueezeNet.caffemodel");
-	#endif
+
+		ailia_download.DownloadModelFromUrl("resnet50","resnet50.opt.onnx.prototxt");
+		ailia_download.DownloadModelFromUrl("resnet50","resnet50.opt.onnx");
+
+		ailia_classifier_model.OpenFile(asset_path+"/resnet50.opt.onnx.prototxt",asset_path+"/resnet50.opt.onnx");
 	}
 
 	private void DestroyAilia(){

@@ -29,46 +29,44 @@ public class AiliaDetectorFaceSample : AiliaRenderer {
 	private AiliaClassifierModel ailia_emotion=new AiliaClassifierModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
-	#if UNITY_ANDROID
 	private AiliaDownload ailia_download=new AiliaDownload();
-	#endif
 
 	private void CreateAiliaDetector(){
-		string asset_path = Application.streamingAssetsPath+"/AILIA";
-
+		string asset_path = Application.temporaryCachePath;
+		
 		//Face Detection
 		uint category_n=1;
 		if(gpu_mode){
 			ailia_face.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
-		ailia_face.Settings (AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV1, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
-		#if UNITY_ANDROID
-		ailia_face.OpenMem (ailia_download.DownloadModel (asset_path + "/yolo_face.prototxt"), ailia_download.DownloadModel (asset_path + "/yolo_face_fp12.caffemodel"));
-		#else
-		ailia_face.OpenFile(asset_path+"/yolo_face.prototxt",asset_path+"/yolo_face_fp12.caffemodel");
-		#endif
+		ailia_face.Settings (AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+
+		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx.prototxt");
+		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx");
+
+		ailia_face.OpenFile(asset_path+"/yolov3-face.opt.onnx.prototxt",asset_path+"/yolov3-face.opt.onnx");
 
 		//Emotion Detection
 		if(gpu_mode){
 			ailia_emotion.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
 		ailia_emotion.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_GRAY, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32);
-		#if UNITY_ANDROID
-		ailia_emotion.OpenMem(ailia_download.DownloadModel(asset_path+"/emotion_miniXception.prototxt"),ailia_download.DownloadModel(asset_path+"/emotion_miniXception.caffemodel"));
-		#else
+
+		ailia_download.DownloadModelFromUrl("face_classification","emotion_miniXception.prototxt");
+		ailia_download.DownloadModelFromUrl("face_classification","emotion_miniXception.caffemodel");
+
 		ailia_emotion.OpenFile(asset_path+"/emotion_miniXception.prototxt",asset_path+"/emotion_miniXception.caffemodel");
-		#endif
 
 		//Gender Detection
 		if(gpu_mode){
 			ailia_gender.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
 		ailia_gender.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_GRAY, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32);
-		#if UNITY_ANDROID
-		ailia_gender.OpenMem(ailia_download.DownloadModel(asset_path+"/gender_miniXception.prototxt"),ailia_download.DownloadModel(asset_path+"/gender_miniXception.caffemodel"));
-		#else
+
+		ailia_download.DownloadModelFromUrl("face_classification","gender_miniXception.prototxt");
+		ailia_download.DownloadModelFromUrl("face_classification","gender_miniXception.caffemodel");
+
 		ailia_gender.OpenFile(asset_path+"/gender_miniXception.prototxt",asset_path+"/gender_miniXception.caffemodel");
-		#endif
 	}
 
 	private void DestroyAiliaDetector(){

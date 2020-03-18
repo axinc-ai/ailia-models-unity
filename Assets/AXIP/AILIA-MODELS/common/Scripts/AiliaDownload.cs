@@ -11,22 +11,27 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class AiliaDownload {
-	//Copy for Android
-	public void CopyModelToTemporaryCachePath (string file_name)
+	public void DownloadModelFromUrl (string folder_path,string file_name)
 	{
-	#if UNITY_ANDROID && !UNITY_EDITOR
-		string prefix="";
-	#else
-		string prefix="file://";
-	#endif
+		string toPath = Application.temporaryCachePath + "/" + file_name;
 
-		string path = prefix+Application.streamingAssetsPath + "/" + file_name;
-		WWW www = new WWW(path);
+		if (System.IO.File.Exists (toPath) == true) {
+			FileInfo fileInfo = new System.IO.FileInfo(toPath);
+			if(fileInfo.Length!=0){
+				Debug.Log("Already exists : "+toPath+" "+fileInfo.Length);
+				return;			
+			}
+		}
+
+		Debug.Log("Download model to "+toPath);
+
+		string url="https://storage.googleapis.com/ailia-models/"+folder_path+"/"+file_name;
+
+		WWW www = new WWW(url);
 		while (!www.isDone)
 		{
 			// NOP.
 		}
-		string toPath = Application.temporaryCachePath + "/" + file_name;
 		File.WriteAllBytes(toPath, www.bytes);
 	}
 
