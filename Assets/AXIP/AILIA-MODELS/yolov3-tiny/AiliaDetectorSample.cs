@@ -27,22 +27,21 @@ public class AiliaDetectorSample : AiliaRenderer {
 	private AiliaDetectorModel ailia_detector=new AiliaDetectorModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
-	#if UNITY_ANDROID
 	private AiliaDownload ailia_download=new AiliaDownload();
-	#endif
 
 	private void CreateAiliaDetector(){
-		string asset_path = Application.streamingAssetsPath+"/AILIA";
+		string asset_path = Application.temporaryCachePath;
+
 		uint category_n=80;
 		if(gpu_mode){
 			ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
 		ailia_detector.Settings (AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
-		#if UNITY_ANDROID
-		ailia_detector.OpenMem (ailia_download.DownloadModel (asset_path + "/yolov3-tiny.opt.onnx.prototxt"), ailia_download.DownloadModel (asset_path + "/yolov3-tiny.opt.onnx"));
-		#else
+
+		ailia_download.DownloadModelFromUrl("yolov3-tiny","yolov3-tiny.opt.onnx.prototxt");
+		ailia_download.DownloadModelFromUrl("yolov3-tiny","yolov3-tiny.opt.onnx");
+
 		ailia_detector.OpenFile(asset_path+"/yolov3-tiny.opt.onnx.prototxt",asset_path+"/yolov3-tiny.opt.onnx");
-		#endif
 	}
 
 	private void DestroyAiliaDetector(){

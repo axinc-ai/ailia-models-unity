@@ -28,9 +28,7 @@ public class AiliaFeatureExtractorSample : AiliaRenderer {
 	private AiliaFeatureExtractorModel ailia_feature_extractor=new AiliaFeatureExtractorModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
-	#if UNITY_ANDROID
 	private AiliaDownload ailia_download=new AiliaDownload();
-	#endif
 
 	//BeforeFeatureValue
 	private float [] before_feature_value=null;
@@ -40,31 +38,31 @@ public class AiliaFeatureExtractorSample : AiliaRenderer {
 	private float threshold=1.24f;	//VGGFace2 predefined value
 
 	private void CreateAiliaDetector(){
-		string asset_path = Application.streamingAssetsPath+"/AILIA";
+		string asset_path = Application.temporaryCachePath;
 
 		//Face detection
 		uint category_n=1;
 		if(gpu_mode){
 			ailia_face.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
-		ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32,AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV1,category_n,AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
-	#if UNITY_ANDROID
-		ailia_face.OpenMem(ailia_download.DownloadModel(asset_path+"/yolo_face.prototxt"),ailia_download.DownloadModel(asset_path+"/yolo_face_fp12.caffemodel"));
-	#else
-		ailia_face.OpenFile(asset_path+"/yolo_face.prototxt",asset_path+"/yolo_face_fp12.caffemodel");
-	#endif
+		ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32,AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,category_n,AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+
+		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx.prototxt");
+		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx");
+
+		ailia_face.OpenFile(asset_path+"/yolov3-face.opt.onnx.prototxt",asset_path+"/yolov3-face.opt.onnx");
 
 		//Feature extractor
 		if(gpu_mode){
 			ailia_feature_extractor.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
+
+		ailia_download.DownloadModelFromUrl("vggface2","resnet50_scratch.prototxt");
+		ailia_download.DownloadModelFromUrl("vggface2","resnet50_scratch.caffemodel");
+
 		string layer_name="conv5_3";
 		ailia_feature_extractor.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8, AiliaFeatureExtractor.AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM,layer_name);
-	#if UNITY_ANDROID
-		ailia_feature_extractor.OpenMem(ailia_download.DownloadModel(asset_path+"/resnet50_scratch.prototxt"),ailia_download.DownloadModel(asset_path+"/resnet50_scratch_fp12.caffemodel"));
-	#else
-		ailia_feature_extractor.OpenFile(asset_path+"/resnet50_scratch.prototxt",asset_path+"/resnet50_scratch_fp12.caffemodel");
-	#endif
+		ailia_feature_extractor.OpenFile(asset_path+"/resnet50_scratch.prototxt",asset_path+"/resnet50_scratch.caffemodel");
 	}
 
 	private void DestroyAiliaDetector(){

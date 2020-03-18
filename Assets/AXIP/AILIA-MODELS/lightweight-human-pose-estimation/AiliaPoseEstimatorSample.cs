@@ -26,21 +26,19 @@ public class AiliaPoseEstimatorSample : AiliaRenderer {
 	private AiliaPoseEstimatorModel ailia_pose=new AiliaPoseEstimatorModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
-	#if UNITY_ANDROID
 	private AiliaDownload ailia_download=new AiliaDownload();
-	#endif
 
 	private void CreateAiliaPoseEstimator(){
-		string asset_path = Application.streamingAssetsPath+"/AILIA";
+		string asset_path = Application.temporaryCachePath;
 		if(gpu_mode){
 			ailia_pose.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
 		ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
-	#if UNITY_ANDROID
-		bool status=ailia_pose.OpenMem(ailia_download.DownloadModel(asset_path+"/lightweight-human-pose-estimation.opt.onnx.prototxt"),ailia_download.DownloadModel(asset_path+"/lightweight-human-pose-estimation.opt.onnx"));
-	#else
+
+		ailia_download.DownloadModelFromUrl("lightweight-human-pose-estimation","lightweight-human-pose-estimation.opt.onnx.prototxt");
+		ailia_download.DownloadModelFromUrl("lightweight-human-pose-estimation","lightweight-human-pose-estimation.opt.onnx");
+
 		bool status=ailia_pose.OpenFile(asset_path+"/lightweight-human-pose-estimation.opt.onnx.prototxt",asset_path+"/lightweight-human-pose-estimation.opt.onnx");
-	#endif
 		if(!status){
 			Debug.Log("Model not found");
 		}
