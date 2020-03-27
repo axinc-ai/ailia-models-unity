@@ -39,7 +39,7 @@ public class AiliaDetectorFaceSample : AiliaRenderer {
 		if(gpu_mode){
 			ailia_face.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 		}
-		ailia_face.Settings (AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+		ailia_face.Settings (AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx.prototxt");
 		ailia_download.DownloadModelFromUrl("yolov3-face","yolov3-face.opt.onnx");
