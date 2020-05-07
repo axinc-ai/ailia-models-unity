@@ -9,26 +9,24 @@ public class AiliaRenderer : MonoBehaviour {
 	public GameObject line_panel;	//LinePanel
 	public GameObject lines;		//LinePanel/Lines
 	public GameObject text_panel;	//TextPanel
-	public GameObject text_base;	//TextPanel/Text
+	public GameObject text_base;    //TextPanel/Text
+	List<GameObject> textObjectBuffer = new List<GameObject>();
+	int textObjectBufferIndex = 0;
+	List<GameObject> lineObjectBuffer = new List<GameObject>();
+	int lineObjectBufferIndex = 0;
 
 	public void Clear(){
-		if(lines){
-			foreach(Transform position in lines.transform){
-				if(position.gameObject){
-					Destroy(position.gameObject);
-				}
-			}
+		for (int i = lineObjectBufferIndex; i < lineObjectBuffer.Count; i++)
+		{
+			lineObjectBuffer[i].SetActive(false);
 		}
-		if(text_panel){
-			foreach(Transform position in text_panel.transform){
-				if(position.gameObject==text_base){
-					continue;
-				}
-				if(position.gameObject){
-					Destroy(position.gameObject);
-				}
-			}
+		lineObjectBufferIndex = 0;
+
+		for (int i = textObjectBufferIndex; i < textObjectBuffer.Count; i++)
+		{
+			textObjectBuffer[i].SetActive(false);
 		}
+		textObjectBufferIndex = 0;
 	}
 
 	public void DrawBone(Color32 color,int tex_width,int tex_height,AiliaPoseEstimator.AILIAPoseEstimatorObjectPose obj,uint from,uint to,int r){
@@ -82,14 +80,25 @@ public class AiliaRenderer : MonoBehaviour {
 		pointPos2.z += delta;
 
 		GameObject newLine = new GameObject ("Line");
+		LineRenderer lRend;
+		if (lineObjectBufferIndex < lineObjectBuffer.Count)
+		{
+			newLine = lineObjectBuffer[lineObjectBufferIndex];
+			lRend = newLine.GetComponent<LineRenderer>();
+		}
+		else
+		{
+			newLine = new GameObject("Line");
+			newLine.transform.parent = lines.gameObject.transform;
+			newLine.layer = lines.gameObject.layer;
+			lRend = newLine.AddComponent<LineRenderer>();
+			lineObjectBuffer.Add(newLine);
+		}
+		lineObjectBufferIndex++;
+		newLine.SetActive(true);
 
-		Color32 c1=color;
+		Color32 c1 =color;
 		c1.a=128+32;
-
-		newLine.transform.parent=lines.gameObject.transform;
-		newLine.layer=lines.gameObject.layer;
-
-		LineRenderer lRend = newLine.AddComponent<LineRenderer> ();
 
 		lRend.material = line_renderer_material;
 		lRend.startColor=c1;
@@ -146,15 +155,26 @@ public class AiliaRenderer : MonoBehaviour {
 		pointPos2.y += height * (-0.5f + 1.0f*to_y/tex_height) * canvasRect.localScale.y - expand_y;
 		pointPos2.z += delta;
 
-		GameObject newLine = new GameObject ("Line");
+		GameObject newLine;
+		LineRenderer lRend;
+		if (lineObjectBufferIndex < lineObjectBuffer.Count)
+		{
+			newLine = lineObjectBuffer[lineObjectBufferIndex];
+			lRend = newLine.GetComponent<LineRenderer>();
+		}
+		else
+		{
+			newLine = new GameObject("Line");
+			newLine.transform.parent = lines.gameObject.transform;
+			newLine.layer = lines.gameObject.layer;
+			lRend = newLine.AddComponent<LineRenderer>();
+			lineObjectBuffer.Add(newLine);
+		}
+		lineObjectBufferIndex++;
+		newLine.SetActive(true);
 
 		Color32 c1=color;
 		c1.a=160;
-
-		newLine.transform.parent=lines.gameObject.transform;
-		newLine.layer=lines.gameObject.layer;
-
-		LineRenderer lRend = newLine.AddComponent<LineRenderer> ();
 
 		lRend.material = line_renderer_material;
 		lRend.startColor=c1;
@@ -169,28 +189,101 @@ public class AiliaRenderer : MonoBehaviour {
 		lRend.SetPosition (1, endVec);
 	}
 
-	public void DrawRect2D(Color32 color, int x, int y, int w, int h,int tex_width,int tex_height){
-		DrawEdgeOfRect2D(color, x, y, x, y + h, tex_width, tex_height);
-		DrawEdgeOfRect2D(color, x + w, y, x + w, y + h, tex_width, tex_height);
-		DrawEdgeOfRect2D(color, x, y, x + w, y, tex_width, tex_height);
-		DrawEdgeOfRect2D(color, x, y + h, x + w, y + h, tex_width, tex_height);
-	}
-
-	public void DrawText(Color color,string text,int x,int y,int tex_width,int tex_height){
-		RectTransform panelRect = line_panel.GetComponent<RectTransform> ();
+	public void AppendEdgeOfRect2D(Color32 color, int from_x, int from_y, int tex_width, int tex_height, LineRenderer lRend)
+	{
+		RectTransform panelRect = line_panel.GetComponent<RectTransform>();
 		float width = panelRect.rect.width;
 		float height = panelRect.rect.height;
 
-		int r=2;
+		int r = 2;
 
-		if(x<r) x=r;
-		if(y<r) y=r;
+		if (from_x < r) from_x = r;
+		if (from_y < r) from_y = r;
+		if (from_x > tex_width - r) from_x = tex_width - r;
+		if (from_y > tex_height - r) from_y = tex_height - r;
 
-		GameObject text_object=GameObject.Instantiate(text_base,text_panel.gameObject.transform);
+		RectTransform canvasRect = line_panel.transform.parent.GetComponent<RectTransform>();
+
+		float delta = 0.0001f;
+
+		// Bottom Left
+		Vector3 pointPos1 = line_panel.transform.position;
+		pointPos1.x += width * (-0.5f + 1.0f - 1.0f * from_x / tex_width) * canvasRect.localScale.x;
+		pointPos1.y += height * (-0.5f + 1.0f * from_y / tex_height) * canvasRect.localScale.y;
+		pointPos1.z += delta;
+
+		int jointPositionCount = lRend.positionCount;
+		lRend.positionCount = lRend.positionCount + 1;
+
+		Vector3 startVec = pointPos1;
+		lRend.SetPosition(jointPositionCount, startVec);
+	}
+
+	public void DrawRect2D(Color32 color, int x, int y, int w, int h, int tex_width, int tex_height)
+	{
+		GameObject newLine;
+		LineRenderer lRend;
+		if (lineObjectBufferIndex < lineObjectBuffer.Count)
+		{
+			newLine = lineObjectBuffer[lineObjectBufferIndex];
+			lRend = newLine.GetComponent<LineRenderer>();
+		}
+		else
+		{
+			newLine = new GameObject("Line");
+			newLine.transform.parent = lines.gameObject.transform;
+			newLine.layer = lines.gameObject.layer;
+			lRend = newLine.AddComponent<LineRenderer>();
+			lineObjectBuffer.Add(newLine);
+		}
+		lineObjectBufferIndex++;
+		
+		lRend.positionCount = 0;
+		lRend.loop = true;
+
+		Color32 c1 = color;
+		c1.a = 160;
+		lRend.material = line_renderer_material;
+		lRend.startColor = c1;
+		lRend.endColor = c1;
+
+		float lineW = 1.0f;
+		lRend.startWidth = lineW;
+		lRend.endWidth = lineW;
+
+		AppendEdgeOfRect2D(color, x, y, tex_width, tex_height, lRend);
+		AppendEdgeOfRect2D(color, x, y + h, tex_width, tex_height, lRend);
+		AppendEdgeOfRect2D(color, x + w, y + h, tex_width, tex_height, lRend);
+		AppendEdgeOfRect2D(color, x + w, y, tex_width, tex_height, lRend);
+
+		newLine.SetActive(true);
+	}
+
+	public void DrawText(Color color,string text,int x,int y,int tex_width,int tex_height){
+		RectTransform panelRect = line_panel.GetComponent<RectTransform>();
+		float width = panelRect.rect.width;
+		float height = panelRect.rect.height;
+
+		int r = 2;
+		if (x < r) x = r;
+		if (y < r) y = r;
+
+		GameObject text_object = null;
+		if (textObjectBufferIndex < textObjectBuffer.Count)
+		{
+			text_object = textObjectBuffer[textObjectBufferIndex];
+		}
+		else
+		{
+			text_object = GameObject.Instantiate(text_base, text_panel.gameObject.transform);
+			textObjectBuffer.Add(text_object);
+		}
+		textObjectBufferIndex++;
+
 		text_object.SetActive(true);
-		text_object.transform.GetChild(0).GetComponent<Text>().text=text;
-		color.a=160/255.0f;
-		text_object.GetComponent<Image>().color=color;
-		text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x*width/tex_width, -y*height/tex_height);
+		text_object.transform.GetChild(0).GetComponent<Text>().text = text;
+		color.a = 160 / 255.0f;
+		text_object.GetComponent<Image>().color = color;
+		text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
 	}
 }
