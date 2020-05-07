@@ -9,7 +9,9 @@ public class AiliaRenderer : MonoBehaviour {
 	public GameObject line_panel;	//LinePanel
 	public GameObject lines;		//LinePanel/Lines
 	public GameObject text_panel;	//TextPanel
-	public GameObject text_base;	//TextPanel/Text
+	public GameObject text_base;    //TextPanel/Text
+	List<GameObject> textObjectBuffer = new List<GameObject>();
+	int textObjectBufferIndex = 0;
 
 	public void Clear(){
 		if(lines){
@@ -19,16 +21,11 @@ public class AiliaRenderer : MonoBehaviour {
 				}
 			}
 		}
-		if(text_panel){
-			foreach(Transform position in text_panel.transform){
-				if(position.gameObject==text_base){
-					continue;
-				}
-				if(position.gameObject){
-					Destroy(position.gameObject);
-				}
-			}
+		for(int i = textObjectBufferIndex; i < textObjectBuffer.Count; i++)
+		{
+			textObjectBuffer[i].SetActive(false);
 		}
+		textObjectBufferIndex = 0;
 	}
 
 	public void DrawBone(Color32 color,int tex_width,int tex_height,AiliaPoseEstimator.AILIAPoseEstimatorObjectPose obj,uint from,uint to,int r){
@@ -177,20 +174,30 @@ public class AiliaRenderer : MonoBehaviour {
 	}
 
 	public void DrawText(Color color,string text,int x,int y,int tex_width,int tex_height){
-		RectTransform panelRect = line_panel.GetComponent<RectTransform> ();
+		RectTransform panelRect = line_panel.GetComponent<RectTransform>();
 		float width = panelRect.rect.width;
 		float height = panelRect.rect.height;
 
-		int r=2;
+		int r = 2;
+		if (x < r) x = r;
+		if (y < r) y = r;
 
-		if(x<r) x=r;
-		if(y<r) y=r;
+		GameObject text_object = null;
+		if (textObjectBufferIndex < textObjectBuffer.Count)
+		{
+			text_object = textObjectBuffer[textObjectBufferIndex];
+		}
+		else
+		{
+			text_object = GameObject.Instantiate(text_base, text_panel.gameObject.transform);
+			textObjectBuffer.Add(text_object);
+		}
+		textObjectBufferIndex++;
 
-		GameObject text_object=GameObject.Instantiate(text_base,text_panel.gameObject.transform);
 		text_object.SetActive(true);
-		text_object.transform.GetChild(0).GetComponent<Text>().text=text;
-		color.a=160/255.0f;
-		text_object.GetComponent<Image>().color=color;
-		text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x*width/tex_width, -y*height/tex_height);
+		text_object.transform.GetChild(0).GetComponent<Text>().text = text;
+		color.a = 160 / 255.0f;
+		text_object.GetComponent<Image>().color = color;
+		text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
 	}
 }
