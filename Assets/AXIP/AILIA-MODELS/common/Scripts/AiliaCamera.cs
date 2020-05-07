@@ -20,7 +20,7 @@ public class AiliaCamera {
 	private WebCamTexture webcamTexture=null;
 
 	// Texture buffer
-	Color32[] image = default;
+	Color32[] image = new Color32[0];
 
 	//Camera ID
 	public void CreateCamera(int camera_id){
