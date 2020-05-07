@@ -19,6 +19,9 @@ public class AiliaCamera {
 	//WebCamera Instance
 	private WebCamTexture webcamTexture=null;
 
+	// Texture buffer
+	Color32[] image = default;
+
 	//Camera ID
 	public void CreateCamera(int camera_id){
 		DestroyCamera();
@@ -54,7 +57,14 @@ public class AiliaCamera {
 	}
 
 	public Color32[] GetPixels32(){
-		Color32[] image=webcamTexture.GetPixels32();
+		if(image.Length != webcamTexture.width * webcamTexture.height)
+		{
+			image = webcamTexture.GetPixels32();
+		}
+		else
+		{
+			webcamTexture.GetPixels32(image);
+		}
 
 		//Crop to square
 		int size=webcamTexture.width;
