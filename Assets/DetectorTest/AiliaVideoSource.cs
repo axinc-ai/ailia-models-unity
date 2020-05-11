@@ -1,30 +1,35 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Video;
+using static AiliaImageUtil;
 
 [RequireComponent(typeof(VideoPlayer))]
 public class AiliaVideoSource : MonoBehaviour
 {
-	public enum Crop
-	{
-		Center
-	}
-
 	VideoPlayer videoPlayer;
 	Texture2D _texture;
 	Color32[] color32sBuffer = new Color32[0];
+	bool readyToPlay;
 
 	public bool IsPrepared { get { return videoPlayer.isPrepared; } }
 	public bool IsPlaying {  get { return videoPlayer.isPlaying; } }
 	public uint Width { get { return videoPlayer.width; } }
 	public uint Height { get { return videoPlayer.height; } }
+	public VideoPlayer.EventHandler PrepareCompleteEvent;
 
 	private void Awake()
 	{
 		videoPlayer = gameObject.GetComponent<VideoPlayer>();
+		videoPlayer.prepareCompleted += (vp) => PrepareCompleteEvent.Invoke(vp);
+		videoPlayer.prepareCompleted += (vp) => { 
+			if(readyToPlay) Play();
+			readyToPlay = false;
+		};
+
 		_texture = new Texture2D(0, 0);
 	}
 
-	public void CreateVideoSource(string URL, RenderTexture targetTexture = null, VideoPlayer.EventHandler prepareCompleteEvent = null)
+	public void CreateSource(string URL, RenderTexture targetTexture = null)
 	{
 		if(videoPlayer != null) videoPlayer.Stop();
 
@@ -34,39 +39,23 @@ public class AiliaVideoSource : MonoBehaviour
 		videoPlayer.url = URL;
 		videoPlayer.targetTexture = targetTexture;
 		videoPlayer.aspectRatio = VideoAspectRatio.Stretch;
-		if(prepareCompleteEvent != null)
-		{
-			videoPlayer.prepareCompleted += prepareCompleteEvent;
-		}
 		videoPlayer.Prepare();
 	}
 
 	public Rect GetCropRect(Crop crop)
 	{
-		if (!videoPlayer.isPrepared) return Rect.zero;
-
-		Rect rect = new Rect();
-		float shortside = videoPlayer.width < videoPlayer.height ? videoPlayer.width : videoPlayer.height;
-		switch (crop)
-		{
-			case Crop.Center:
-				rect = new Rect((videoPlayer.width - shortside) * 0.5f, (videoPlayer.height - shortside) * 0.5f, shortside, shortside);
-				break;
-			default:
-				break;
-		}
-		return rect;
+		if (!IsPrepared) return Rect.zero;
+		return AiliaImageUtil.GetCropRect((int)Width, (int)Height, crop);
 	}
 
 	public Color32[] GetPixels32(Crop crop)
 	{
-		if (!videoPlayer.isPrepared) return null;
 		return GetPixels32(GetCropRect(crop));
 	}
 
 	public Color32[] GetPixels32(Rect cropRect)
 	{
-		if (!videoPlayer.isPrepared) return null;
+		if (!IsPrepared) return null;
 
 		RenderTexture rTexture = videoPlayer.texture as RenderTexture;
 		if (cropRect.xMax < 0) cropRect.xMax = 0;
@@ -98,16 +87,15 @@ public class AiliaVideoSource : MonoBehaviour
 	public bool Play()
 	{
 		if (!videoPlayer.isPrepared) return false;
+		readyToPlay = false;
 		videoPlayer.Play();
 		return true;
 	}
 
 	public void PlayOnReady()
 	{
-		if (!Play())
-		{
-			videoPlayer.prepareCompleted += (vp) => { vp.Play(); };
-		}
+		readyToPlay = true;
+		Play();
 	}
 
 	public void Stop()
