@@ -19,6 +19,7 @@ public class AiliaVideoSource : MonoBehaviour
 
 	private void Awake()
 	{
+		PrepareCompleteEvent += (vp) => { };
 		videoPlayer = gameObject.GetComponent<VideoPlayer>();
 		videoPlayer.prepareCompleted += (vp) => PrepareCompleteEvent.Invoke(vp);
 		videoPlayer.prepareCompleted += (vp) => { 
