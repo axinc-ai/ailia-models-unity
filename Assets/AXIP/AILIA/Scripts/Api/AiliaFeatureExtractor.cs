@@ -13,7 +13,7 @@ public class AiliaFeatureExtractor
 	* 特徴抽出API
 	**/
 
-	public const UInt32 AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM=(0);	/* L2ノルム */
+	public const UInt32 AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM = (0);  /* L2ノルム */
 
 	/**
 	*  特徴抽出オブジェクトを作成します。
@@ -27,7 +27,7 @@ public class AiliaFeatureExtractor
 	*    返値:
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
-	[DllImport(Ailia.LIBRARY_NAME, EntryPoint = "ailiaCreateFeatureExtractor", CharSet=CharSet.Ansi)]
+	[DllImport(Ailia.LIBRARY_NAME, EntryPoint = "ailiaCreateFeatureExtractor", CharSet = CharSet.Ansi)]
 	public static extern int ailiaCreateFeatureExtractor(ref IntPtr fextractor, IntPtr net, UInt32 format, UInt32 channel, UInt32 range, string layer_name);
 
 	/**

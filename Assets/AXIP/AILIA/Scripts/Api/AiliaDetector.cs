@@ -13,25 +13,26 @@ public class AiliaDetector
 	* 物体情報
 	**/
 
-	public const Int32  AILIA_DETECTOR_OBJECT_VERSION = (1);
+	public const Int32 AILIA_DETECTOR_OBJECT_VERSION = (1);
 
 	[StructLayout(LayoutKind.Sequential)]
-	public class AILIADetectorObject {
-		public UInt32 category;	// オブジェクトカテゴリ番号(0～category_count-1)
-		public float prob;		// 推定確率
-		public float x;			// 左上X位置(1で画像横幅)
-		public float y;			// 左上Y位置(1で画像高さ)
-		public float w;			// 幅(1で画像横幅、負数は取らない)
-		public float h;			// 高さ(1で画像高さ、負数は取らない)
+	public class AILIADetectorObject
+	{
+		public UInt32 category; // オブジェクトカテゴリ番号(0～category_count-1)
+		public float prob;      // 推定確率
+		public float x;         // 左上X位置(1で画像横幅)
+		public float y;         // 左上Y位置(1で画像高さ)
+		public float w;         // 幅(1で画像横幅、負数は取らない)
+		public float h;         // 高さ(1で画像高さ、負数は取らない)
 	}
 
-	public const UInt32  AILIA_DETECTOR_ALGORITHM_YOLOV1 = (0);	//YOLOV1
-	public const UInt32  AILIA_DETECTOR_ALGORITHM_YOLOV2 = (1);	//YOLOV2
-	public const UInt32  AILIA_DETECTOR_ALGORITHM_YOLOV3 = (2);	//YOLOV3
+	public const UInt32 AILIA_DETECTOR_ALGORITHM_YOLOV1 = (0);  //YOLOV1
+	public const UInt32 AILIA_DETECTOR_ALGORITHM_YOLOV2 = (1);  //YOLOV2
+	public const UInt32 AILIA_DETECTOR_ALGORITHM_YOLOV3 = (2);  //YOLOV3
 
-	public const UInt32  AILIA_DETECTOR_ALGORITHM_SSD    = (8);	//SSD
+	public const UInt32 AILIA_DETECTOR_ALGORITHM_SSD = (8); //SSD
 
-	public const UInt32  AILIA_DETECTOR_FLAG_NORMAL      = (0); //オプションなし
+	public const UInt32 AILIA_DETECTOR_FLAG_NORMAL = (0); //オプションなし
 
 	/****************************************************************
 	* 物体認識
@@ -52,7 +53,7 @@ public class AiliaDetector
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
 	[DllImport(Ailia.LIBRARY_NAME)]
-	public static extern int ailiaCreateDetector(ref IntPtr detector,IntPtr net, UInt32 format, UInt32 channel,UInt32 range, UInt32 algorithm, UInt32 category_count, UInt32 flags);
+	public static extern int ailiaCreateDetector(ref IntPtr detector, IntPtr net, UInt32 format, UInt32 channel, UInt32 range, UInt32 algorithm, UInt32 category_count, UInt32 flags);
 
 	/**
 	*  検出オブジェクトを破棄します。
@@ -104,7 +105,7 @@ public class AiliaDetector
 	*      認識結果は確率順でソートされます。
 	*/
 	[DllImport(Ailia.LIBRARY_NAME)]
-	public static extern int ailiaDetectorGetObject(IntPtr detector, [In,Out] AILIADetectorObject obj, UInt32 obj_idx, UInt32 version);
+	public static extern int ailiaDetectorGetObject(IntPtr detector, [In, Out] AILIADetectorObject obj, UInt32 obj_idx, UInt32 version);
 
 	/**
 	*  YoloV2などのためにアンカーズ（anchors又はbiases）の情報を設定します。
@@ -120,7 +121,7 @@ public class AiliaDetector
 	*      anchors_countが5の場合、anchorsは10次元の配列になります。
 	*/
 	[DllImport(Ailia.LIBRARY_NAME)]
-	public static extern int ailiaDetectorSetAnchors(IntPtr detector, float [] anchors, UInt32 anchors_count);
+	public static extern int ailiaDetectorSetAnchors(IntPtr detector, float[] anchors, UInt32 anchors_count);
 
 	/**
 	*  YoloV3でのモデルへの入力画像サイズを指定します。

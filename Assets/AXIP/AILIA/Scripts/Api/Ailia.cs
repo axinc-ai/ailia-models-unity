@@ -14,39 +14,39 @@ public class Ailia
 	* ライブラリ状態定義
 	**/
 
-	public const Int32  AILIA_STATUS_SUCCESS                 =(   0);  /* 成功 */
-	public const Int32  AILIA_STATUS_INVALID_ARGUMENT        =(  -1);  /* 引数が不正 */
-	public const Int32  AILIA_STATUS_ERROR_FILE_API          =(  -2);  /* ファイルアクセスに失敗した */
-	public const Int32  AILIA_STATUS_INVALID_VERSION         =(  -3);  /* ストリームバージョンか構造体バージョンが不正 */
-	public const Int32  AILIA_STATUS_BROKEN                  =(  -4);  /* 壊れたファイルが渡された */
-	public const Int32  AILIA_STATUS_MEMORY_INSUFFICIENT     =(  -5);  /* メモリが不足している */
-	public const Int32  AILIA_STATUS_THREAD_ERROR            =(  -6);  /* スレッドの作成に失敗した */
-	public const Int32  AILIA_STATUS_INVALID_STATE           =(  -7);  /* デコーダの内部状態が不正 */
-	public const Int32  AILIA_STATUS_GPU_OLD_ERROR           =(  -8);  /* GPU(旧)上での処理中にエラー */
-	public const Int32  AILIA_STATUS_UNSUPPORT_NET           =(  -9);  /* 非対応のネットワーク */
-	public const Int32  AILIA_STATUS_INVALID_LAYER           =( -10);  /* レイヤーの重み、入力形状などが不正 */
-	public const Int32  AILIA_STATUS_INVALID_PARAMINFO       =( -11);  /* パラメーターファイルの内容が不正 */
-	public const Int32  AILIA_STATUS_NOT_FOUND               =( -12);  /* 指定した要素が見つからなかった */
-	public const Int32  AILIA_STATUS_GPU_UNSUPPORT_LAYER     =( -13);  /* GPUで未対応のレイヤーパラメーターが与えられた */
-	public const Int32  AILIA_STATUS_GPU_ERROR               =( -14);  /* GPU上での処理中にエラー */
-	public const Int32  AILIA_STATUS_UNIMPLEMENTED           =( -15);  /* 未実装 */
-	public const Int32  AILIA_STATUS_PERMISSION_DENIED       =( -16);  /* 許可されていない操作 */
-	public const Int32  AILIA_STATUS_EXPIRED                 =( -17);  /* 有効期限切れ */
-	public const Int32  AILIA_STATUS_UNSETTLED_SHAPE         =( -18);  /* 形状が未確定 */
+	public const Int32 AILIA_STATUS_SUCCESS = (0);  /* 成功 */
+	public const Int32 AILIA_STATUS_INVALID_ARGUMENT = (-1);  /* 引数が不正 */
+	public const Int32 AILIA_STATUS_ERROR_FILE_API = (-2);  /* ファイルアクセスに失敗した */
+	public const Int32 AILIA_STATUS_INVALID_VERSION = (-3);  /* ストリームバージョンか構造体バージョンが不正 */
+	public const Int32 AILIA_STATUS_BROKEN = (-4);  /* 壊れたファイルが渡された */
+	public const Int32 AILIA_STATUS_MEMORY_INSUFFICIENT = (-5);  /* メモリが不足している */
+	public const Int32 AILIA_STATUS_THREAD_ERROR = (-6);  /* スレッドの作成に失敗した */
+	public const Int32 AILIA_STATUS_INVALID_STATE = (-7);  /* デコーダの内部状態が不正 */
+	public const Int32 AILIA_STATUS_GPU_OLD_ERROR = (-8);  /* GPU(旧)上での処理中にエラー */
+	public const Int32 AILIA_STATUS_UNSUPPORT_NET = (-9);  /* 非対応のネットワーク */
+	public const Int32 AILIA_STATUS_INVALID_LAYER = (-10);  /* レイヤーの重み、入力形状などが不正 */
+	public const Int32 AILIA_STATUS_INVALID_PARAMINFO = (-11);  /* パラメーターファイルの内容が不正 */
+	public const Int32 AILIA_STATUS_NOT_FOUND = (-12);  /* 指定した要素が見つからなかった */
+	public const Int32 AILIA_STATUS_GPU_UNSUPPORT_LAYER = (-13);  /* GPUで未対応のレイヤーパラメーターが与えられた */
+	public const Int32 AILIA_STATUS_GPU_ERROR = (-14);  /* GPU上での処理中にエラー */
+	public const Int32 AILIA_STATUS_UNIMPLEMENTED = (-15);  /* 未実装 */
+	public const Int32 AILIA_STATUS_PERMISSION_DENIED = (-16);  /* 許可されていない操作 */
+	public const Int32 AILIA_STATUS_EXPIRED = (-17);  /* 有効期限切れ */
+	public const Int32 AILIA_STATUS_UNSETTLED_SHAPE = (-18);  /* 形状が未確定 */
 
-	public const Int32  AILIA_STATUS_OTHER_ERROR             =(-128);  /* 不明なエラー */
+	public const Int32 AILIA_STATUS_OTHER_ERROR = (-128);  /* 不明なエラー */
 
 	/* Native Binary 定義 */
 
-	#if (UNITY_IPHONE && !UNITY_EDITOR) || (UNITY_WEBGL && !UNITY_EDITOR)
+#if (UNITY_IPHONE && !UNITY_EDITOR) || (UNITY_WEBGL && !UNITY_EDITOR)
 		public const String LIBRARY_NAME="__Internal";
-	#else
-		#if (UNITY_ANDROID && !UNITY_EDITOR) || (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX)
+#else
+#if (UNITY_ANDROID && !UNITY_EDITOR) || (UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX)
 			public const String LIBRARY_NAME="ailia";
-		#else
-			public const String LIBRARY_NAME="ailia";
-		#endif
-	#endif
+#else
+	public const String LIBRARY_NAME = "ailia";
+#endif
+#endif
 
 	/****************************************************************
 	/* ファイルアクセスコールバック構造体
@@ -62,29 +62,30 @@ public class Ailia
 	[StructLayout(LayoutKind.Sequential)]
 	public struct ailiaFileCallback
 	{
-	  public ailiaCallbackOpen  fopen;     /* ユーザ定義fopen関数 */
-	  public ailiaCallbackSeek  fseek;     /* ユーザ定義fseek関数 */
-	  public ailiaCallbackTell  ftell;     /* ユーザ定義ftell関数 */
-	  public ailiaCallbackRead  fread;     /* ユーザ定義fread関数 */
-	  public ailiaCallbackSize  fsize;     /* ユーザ定義fsize関数 */
-	  public ailiaCallbackClose fclose;    /* ユーザ定義fclose関数 */
+		public ailiaCallbackOpen fopen;     /* ユーザ定義fopen関数 */
+		public ailiaCallbackSeek fseek;     /* ユーザ定義fseek関数 */
+		public ailiaCallbackTell ftell;     /* ユーザ定義ftell関数 */
+		public ailiaCallbackRead fread;     /* ユーザ定義fread関数 */
+		public ailiaCallbackSize fsize;     /* ユーザ定義fsize関数 */
+		public ailiaCallbackClose fclose;    /* ユーザ定義fclose関数 */
 	}
 
-	public const Int32 AILIA_FILE_CALLBACK_VERSION           = 1;
+	public const Int32 AILIA_FILE_CALLBACK_VERSION = 1;
 
 	/****************************************************************
 	* 形状情報
 	**/
 
-	public const Int32  AILIA_SHAPE_VERSION = (1);
+	public const Int32 AILIA_SHAPE_VERSION = (1);
 
 	[StructLayout(LayoutKind.Sequential)]
-	public class AILIAShape {
-		public UInt32 x;			// X軸のサイズ
-		public UInt32 y;			// Y軸のサイズ
-		public UInt32 z;			// Z軸のサイズ
-		public UInt32 w;			// W軸のサイズ
-		public UInt32 dim;			// 次元情報
+	public class AILIAShape
+	{
+		public UInt32 x;            // X軸のサイズ
+		public UInt32 y;            // Y軸のサイズ
+		public UInt32 z;            // Z軸のサイズ
+		public UInt32 w;            // W軸のサイズ
+		public UInt32 dim;          // 次元情報
 	}
 
 	/****************************************************************
@@ -129,7 +130,7 @@ public class Ailia
 	*/
 
 #if (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
-	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenStreamFileW", CharSet=CharSet.Unicode)]
+	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenStreamFileW", CharSet = CharSet.Unicode)]
 	public static extern int ailiaOpenStreamFile(IntPtr net, string path);
 #else
 	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenStreamFileA", CharSet=CharSet.Ansi)]
@@ -148,7 +149,7 @@ public class Ailia
 	*/
 
 #if (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
-	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenWeightFileW", CharSet=CharSet.Unicode)]
+	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenWeightFileW", CharSet = CharSet.Unicode)]
 	public static extern int ailiaOpenWeightFile(IntPtr net, string path);
 #else
 	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaOpenWeightFileA", CharSet=CharSet.Ansi)]
@@ -247,7 +248,7 @@ public class Ailia
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
 	[DllImport(LIBRARY_NAME)]
-	public static extern int ailiaGetInputShape(IntPtr net, [In,Out] AILIAShape shape, UInt32 version);
+	public static extern int ailiaGetInputShape(IntPtr net, [In, Out] AILIAShape shape, UInt32 version);
 
 	/**
 	*  推論・学習時の出力データの形状を取得します。
@@ -258,7 +259,7 @@ public class Ailia
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
 	[DllImport(LIBRARY_NAME)]
-	public static extern int ailiaGetOutputShape(IntPtr net, [In,Out] AILIAShape shape, UInt32 version);
+	public static extern int ailiaGetOutputShape(IntPtr net, [In, Out] AILIAShape shape, UInt32 version);
 
 	/**
 	*  推論を行い推論結果を取得します。
@@ -300,7 +301,7 @@ public class Ailia
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
 	[DllImport(LIBRARY_NAME)]
-	public static extern int ailiaGetBlobShape(IntPtr net, [In,Out] AILIAShape shape, UInt32 node_idx, UInt32 version);
+	public static extern int ailiaGetBlobShape(IntPtr net, [In, Out] AILIAShape shape, UInt32 node_idx, UInt32 version);
 
 	/**
 	*  推論時のノード入力データ取得します。
@@ -374,7 +375,7 @@ public class Ailia
 	*      成功した場合はAILIA_STATUS_SUCCESS、そうでなければエラーコードを返す。
 	*/
 	[DllImport(LIBRARY_NAME)]
-	public static extern int ailiaSummary(IntPtr  net, IntPtr buffer, UInt32 buffer_size);
+	public static extern int ailiaSummary(IntPtr net, IntPtr buffer, UInt32 buffer_size);
 
 	/****************************************************************
 	* 複数入力指定・推論API
@@ -411,7 +412,7 @@ public class Ailia
 	*      その他の注意点はailiaSetInputShapeの解説を参照してください。
 	*/
 	[DllImport(LIBRARY_NAME)]
-	public static extern int ailiaSetInputBlobShape(IntPtr net, [In] AILIAShape shape, UInt32 blob_idx,UInt32 version);
+	public static extern int ailiaSetInputBlobShape(IntPtr net, [In] AILIAShape shape, UInt32 blob_idx, UInt32 version);
 
 	/**
 	*  事前に指定した入力データで推論を行います。
@@ -433,29 +434,30 @@ public class Ailia
 
 	public const int AILIA_ENVIRONMENT_VERSION = (2);
 
-	public const int AILIA_ENVIRONMENT_TYPE_CPU     = (0);
-	public const int AILIA_ENVIRONMENT_TYPE_BLAS    = (1);
-	public const int AILIA_ENVIRONMENT_TYPE_GPU     = (2);
+	public const int AILIA_ENVIRONMENT_TYPE_CPU = (0);
+	public const int AILIA_ENVIRONMENT_TYPE_BLAS = (1);
+	public const int AILIA_ENVIRONMENT_TYPE_GPU = (2);
 
-    public const int AILIA_ENVIRONMENT_BACKEND_NONE          = (0);
-    public const int AILIA_ENVIRONMENT_BACKEND_AMP           = (1);
-    public const int AILIA_ENVIRONMENT_BACKEND_CUDA          = (2);
-    public const int AILIA_ENVIRONMENT_BACKEND_MPS           = (3);
-    public const int AILIA_ENVIRONMENT_BACKEND_RENDERSCRIPT  = (4);
-    public const int AILIA_ENVIRONMENT_BACKEND_OPENCL        = (5);
-    public const int AILIA_ENVIRONMENT_BACKEND_VULKAN        = (6);
+	public const int AILIA_ENVIRONMENT_BACKEND_NONE = (0);
+	public const int AILIA_ENVIRONMENT_BACKEND_AMP = (1);
+	public const int AILIA_ENVIRONMENT_BACKEND_CUDA = (2);
+	public const int AILIA_ENVIRONMENT_BACKEND_MPS = (3);
+	public const int AILIA_ENVIRONMENT_BACKEND_RENDERSCRIPT = (4);
+	public const int AILIA_ENVIRONMENT_BACKEND_OPENCL = (5);
+	public const int AILIA_ENVIRONMENT_BACKEND_VULKAN = (6);
 
-    public const int AILIA_ENVIRONMENT_PROPERTY_NORMAL     = (0);
-    public const int AILIA_ENVIRONMENT_PROPERTY_LOWPOWER   = (1); // 省電力なGPU(内蔵GPUなど)を用いることを示す(MPS用)
-    public const int AILIA_ENVIRONMENT_PROPERTY_FP16       = (2); // FP16で動作することを示す
+	public const int AILIA_ENVIRONMENT_PROPERTY_NORMAL = (0);
+	public const int AILIA_ENVIRONMENT_PROPERTY_LOWPOWER = (1); // 省電力なGPU(内蔵GPUなど)を用いることを示す(MPS用)
+	public const int AILIA_ENVIRONMENT_PROPERTY_FP16 = (2); // FP16で動作することを示す
 
 	[StructLayout(LayoutKind.Sequential)]
-	public class AILIAEnvironment {
-		public Int32 id;		// 環境を識別するID
-		public Int32 type;		// 環境の種別(AILIA_ENVIRONMENT_TYPE_CPU or BLAS or GPU)
-		public IntPtr name;		// デバイス名(シングルトンで保持されており開放不要)(Marshal.PtrToStringAnsiでstringに変換可能)
-        public Int32 backend;		// 環境のバックエンド (AILIA_ENVIRONMENT_BACKEND_*) (type==AILIA_ENVIRONMENT_TYPE_GPUの場合有効)
-		public Int32 props;			// 環境の特性などを示す(AILIA_ENVIRONMENT_PROPERTY_*)
+	public class AILIAEnvironment
+	{
+		public Int32 id;        // 環境を識別するID
+		public Int32 type;      // 環境の種別(AILIA_ENVIRONMENT_TYPE_CPU or BLAS or GPU)
+		public IntPtr name;     // デバイス名(シングルトンで保持されており開放不要)(Marshal.PtrToStringAnsiでstringに変換可能)
+		public Int32 backend;       // 環境のバックエンド (AILIA_ENVIRONMENT_BACKEND_*) (type==AILIA_ENVIRONMENT_TYPE_GPUの場合有効)
+		public Int32 props;         // 環境の特性などを示す(AILIA_ENVIRONMENT_PROPERTY_*)
 	}
 
 	/**
@@ -472,7 +474,7 @@ public class Ailia
 	*      RenderScriptのPermissionの制約で外部ストレージのパスを与えることはできません。
 	*/
 #if (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
-	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaSetTemporaryCachePathW", CharSet=CharSet.Unicode)]
+	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaSetTemporaryCachePathW", CharSet = CharSet.Unicode)]
 	public static extern int ailiaSetTemporaryCachePath(string path);
 #else
 	[DllImport(LIBRARY_NAME, EntryPoint = "ailiaSetTemporaryCachePathA", CharSet=CharSet.Ansi)]

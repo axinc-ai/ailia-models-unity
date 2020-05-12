@@ -13,12 +13,13 @@ public class AiliaClassifier
 	* 識別情報
 	**/
 
-	public const Int32  AILIA_CLASSIFIER_CLASS_VERSION = (1);
+	public const Int32 AILIA_CLASSIFIER_CLASS_VERSION = (1);
 
 	[StructLayout(LayoutKind.Sequential)]
-	public class AILIAClassifierClass {
-		public UInt32 category;	// オブジェクトカテゴリ番号
-		public float prob;		// 推定確率
+	public class AILIAClassifierClass
+	{
+		public UInt32 category; // オブジェクトカテゴリ番号
+		public float prob;      // 推定確率
 	}
 
 	/****************************************************************
@@ -40,7 +41,7 @@ public class AiliaClassifier
 	*     環境を自動にした場合はCPUモードになり、BLASが利用できる場合はBLASを利用します。
 	*/
 	[DllImport(Ailia.LIBRARY_NAME)]
-	public static extern int ailiaCreateClassifier(ref IntPtr classifier,IntPtr net, UInt32 format, UInt32 channel, UInt32 range);
+	public static extern int ailiaCreateClassifier(ref IntPtr classifier, IntPtr net, UInt32 format, UInt32 channel, UInt32 range);
 
 	/**
 	*  識別オブジェクトを破棄します。
@@ -91,5 +92,5 @@ public class AiliaClassifier
 	*      認識結果は確率順でソートされます。
 	*/
 	[DllImport(Ailia.LIBRARY_NAME)]
-	public static extern int ailiaClassifierGetClass(IntPtr classifier, [In,Out] AILIAClassifierClass obj, UInt32 cls_idx, UInt32 version);
+	public static extern int ailiaClassifierGetClass(IntPtr classifier, [In, Out] AILIAClassifierClass obj, UInt32 cls_idx, UInt32 version);
 }
