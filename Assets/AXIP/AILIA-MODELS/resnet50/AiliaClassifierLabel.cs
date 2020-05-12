@@ -11,7 +11,7 @@ public class AiliaClassifierLabel {
 
 /* from https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a */
 
-	public static string [] IMAGENET_CATEGORY={
+	public static string [] IMAGENET_CATEGORY = {
  "tench, Tinca tinca",
  "goldfish, Carassius auratus",
  "great white shark, white shark, man-eater, man-eating shark, Carcharodon carcharias",
@@ -1020,7 +1020,7 @@ from https://gist.github.com/PonDad/4dcb4b242b9358e524b4ddecbee385e9
 
 */
 
-public static string [] IMAGENET_CATEGORY_JP={
+public static string [] IMAGENET_CATEGORY_JP = {
 "テンチ",
 "金魚",
 "ホホジロザメ",
@@ -2023,7 +2023,7 @@ public static string [] IMAGENET_CATEGORY_JP={
 "トイレットペーパー"
 };
 
-public static string [] EMOTION_CATEGORY={
+public static string [] EMOTION_CATEGORY = {
 	"angry",
 	"disgust",
 	"fear",
@@ -2033,7 +2033,7 @@ public static string [] EMOTION_CATEGORY={
 	"neutral"
 };
 
-public static string [] GENDER_CATEGORY={
+public static string [] GENDER_CATEGORY = {
 	"female","male"
 };
 

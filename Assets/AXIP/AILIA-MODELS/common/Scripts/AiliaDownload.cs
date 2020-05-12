@@ -10,22 +10,25 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AiliaDownload {
-	public void DownloadModelFromUrl (string folder_path,string file_name)
+public class AiliaDownload
+{
+	public void DownloadModelFromUrl(string folder_path, string file_name)
 	{
 		string toPath = Application.temporaryCachePath + "/" + file_name;
 
-		if (System.IO.File.Exists (toPath) == true) {
+		if (System.IO.File.Exists(toPath) == true)
+		{
 			FileInfo fileInfo = new System.IO.FileInfo(toPath);
-			if(fileInfo.Length!=0){
-				Debug.Log("Already exists : "+toPath+" "+fileInfo.Length);
-				return;			
+			if (fileInfo.Length != 0)
+			{
+				Debug.Log("Already exists : " + toPath + " " + fileInfo.Length);
+				return;
 			}
 		}
 
-		Debug.Log("Download model to "+toPath);
+		Debug.Log("Download model to " + toPath);
 
-		string url="https://storage.googleapis.com/ailia-models/"+folder_path+"/"+file_name;
+		string url = "https://storage.googleapis.com/ailia-models/" + folder_path + "/" + file_name;
 
 		WWW www = new WWW(url);
 		while (!www.isDone)
@@ -36,13 +39,13 @@ public class AiliaDownload {
 	}
 
 	//Download to memory for Android
-	public byte[] DownloadModel (string file_name)
+	public byte[] DownloadModel(string file_name)
 	{
-	#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
 		string prefix="";
-	#else
-		string prefix="file://";
-	#endif
+#else
+		string prefix = "file://";
+#endif
 
 		string path = prefix + file_name;
 		WWW www = new WWW(path);
@@ -50,8 +53,9 @@ public class AiliaDownload {
 		{
 			// NOP.
 		}
-		if(www.bytes.Length == 0){
-			Debug.Log(file_name+" not found");
+		if (www.bytes.Length == 0)
+		{
+			Debug.Log(file_name + " not found");
 		}
 		return www.bytes;
 	}

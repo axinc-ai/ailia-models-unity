@@ -12,28 +12,28 @@ public class AiliaFormat
 	/****************************************************************
 	* 入力画像形式
 	**/
-	
-	public const UInt32  AILIA_IMAGE_FORMAT_RGBA      = (0x00);	//RGBA順
-	public const UInt32  AILIA_IMAGE_FORMAT_BGRA      = (0x01);	//BGRA順
 
-	public const UInt32  AILIA_IMAGE_FORMAT_RGBA_B2T  = (0x10);	//RGBA順(Bottom to Top)
-	public const UInt32  AILIA_IMAGE_FORMAT_BGRA_B2T  = (0x11);	//BGRA順(Bottom to Top)
+	public const UInt32 AILIA_IMAGE_FORMAT_RGBA = (0x00);   //RGBA順
+	public const UInt32 AILIA_IMAGE_FORMAT_BGRA = (0x01);   //BGRA順
+
+	public const UInt32 AILIA_IMAGE_FORMAT_RGBA_B2T = (0x10);   //RGBA順(Bottom to Top)
+	public const UInt32 AILIA_IMAGE_FORMAT_BGRA_B2T = (0x11);   //BGRA順(Bottom to Top)
 
 	/****************************************************************
 	* ネットワーク画像フォーマット
 	**/
 
-	public const UInt32   AILIA_NETWORK_IMAGE_FORMAT_BGR               = (0);	//BGR順
-	public const UInt32   AILIA_NETWORK_IMAGE_FORMAT_RGB               = (1);	//RGB順
-	public const UInt32   AILIA_NETWORK_IMAGE_FORMAT_GRAY              = (2);	//Gray Scale (1ch)
+	public const UInt32 AILIA_NETWORK_IMAGE_FORMAT_BGR = (0);   //BGR順
+	public const UInt32 AILIA_NETWORK_IMAGE_FORMAT_RGB = (1);   //RGB順
+	public const UInt32 AILIA_NETWORK_IMAGE_FORMAT_GRAY = (2);  //Gray Scale (1ch)
 
-	public const UInt32   AILIA_NETWORK_IMAGE_CHANNEL_FIRST            = (0);	//DCYX順
-	public const UInt32   AILIA_NETWORK_IMAGE_CHANNEL_LAST             = (1);	//DYXC順
-	
-	public const UInt32   AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8      = (0);	//0 - 255
-	public const UInt32   AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8        = (1);	//-128 - 127
-	public const UInt32   AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32      = (2);	//0.0 - 1.0
-	public const UInt32   AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32        = (3);	//-1.0 - 1.0
+	public const UInt32 AILIA_NETWORK_IMAGE_CHANNEL_FIRST = (0);    //DCYX順
+	public const UInt32 AILIA_NETWORK_IMAGE_CHANNEL_LAST = (1); //DYXC順
+
+	public const UInt32 AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8 = (0);  //0 - 255
+	public const UInt32 AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8 = (1);    //-128 - 127
+	public const UInt32 AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32 = (2);  //0.0 - 1.0
+	public const UInt32 AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32 = (3);    //-1.0 - 1.0
 
 	/**
 	*  画像のフォーマットを変換します。
