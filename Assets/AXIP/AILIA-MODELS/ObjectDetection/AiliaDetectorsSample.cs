@@ -11,6 +11,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class AiliaDetectorsSample : AiliaRenderer {
+	[SerializeField,HideInInspector]
+	private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.yolov3_tiny;
 	//Settings
 	public bool gpu_mode = false;
 	public int camera_id = 0;
