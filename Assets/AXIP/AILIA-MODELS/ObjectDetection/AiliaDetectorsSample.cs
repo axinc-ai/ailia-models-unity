@@ -27,8 +27,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 
 	//AILIA
 	private AiliaDetectorModel ailia_detector=new AiliaDetectorModel();
-	private AiliaClassifierModel ailia_gender = new AiliaClassifierModel();
-	private AiliaClassifierModel ailia_emotion = new AiliaClassifierModel();
 
 	private AiliaCamera ailia_camera=new AiliaCamera();
 	private AiliaDownload ailia_download=new AiliaDownload();
@@ -68,30 +66,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
 
 				ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
-
-				//Emotion Detection
-				if (gpu_mode)
-				{
-					ailia_emotion.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-				}
-				ailia_emotion.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_GRAY, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32);
-
-				ailia_download.DownloadModelFromUrl("face_classification", "emotion_miniXception.prototxt");
-				ailia_download.DownloadModelFromUrl("face_classification", "emotion_miniXception.caffemodel");
-
-				ailia_emotion.OpenFile(asset_path + "/emotion_miniXception.prototxt", asset_path + "/emotion_miniXception.caffemodel");
-
-				//Gender Detection
-				if (gpu_mode)
-				{
-					ailia_gender.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-				}
-				ailia_gender.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_GRAY, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32);
-
-				ailia_download.DownloadModelFromUrl("face_classification", "gender_miniXception.prototxt");
-				ailia_download.DownloadModelFromUrl("face_classification", "gender_miniXception.caffemodel");
-
-				ailia_gender.OpenFile(asset_path + "/gender_miniXception.prototxt", asset_path + "/gender_miniXception.caffemodel");
 				break;
 			default:
 				Debug.Log("Others ailia models are working in progress.");
@@ -102,8 +76,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 	private void DestroyAiliaDetector()
 	{
 		ailia_detector.Close();
-		ailia_emotion.Close();
-		ailia_gender.Close();
 	}
 
 	// Use this for initialization
@@ -244,23 +216,12 @@ public class AiliaDetectorsSample : AiliaRenderer {
 
 		GetFace(face, x1, y1, w, h, camera, tex_width, tex_height);
 
-		//Estimate emotion
-		const int max_class_count = 1;
-		List<AiliaClassifier.AILIAClassifierClass> gender_obj = ailia_gender.ComputeFromImage(face, w, h, max_class_count);
-
-		//Estimate gender
-		List<AiliaClassifier.AILIAClassifierClass> emotion_obj = ailia_emotion.ComputeFromImage(face, w, h, max_class_count);
-
 		//Draw Box
 		Color color = Color.white;
-		color = Color.HSVToRGB(emotion_obj[0].category / 7.0f, 1.0f, 1.0f);
+		color = Color.HSVToRGB(box.category / 7.0f, 1.0f, 1.0f);
 		DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-
 		string text = "";
-		text += AiliaClassifierLabel.EMOTION_CATEGORY[emotion_obj[0].category];
-		text += " " + emotion_obj[0].prob + "\n";
-		text += AiliaClassifierLabel.GENDER_CATEGORY[gender_obj[0].category];
-		text += " " + gender_obj[0].prob;
+		text += "face: " + (int)(box.prob * 100) / 100.0f;
 
 		int margin = 4;
 		DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
