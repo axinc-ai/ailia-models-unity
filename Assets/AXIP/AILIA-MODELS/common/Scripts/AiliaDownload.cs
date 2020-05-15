@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 
 public class AiliaDownload
 {
@@ -30,12 +31,13 @@ public class AiliaDownload
 
 		string url = "https://storage.googleapis.com/ailia-models/" + folder_path + "/" + file_name;
 
-		WWW www = new WWW(url);
+		UnityWebRequest www = UnityWebRequest.Get(url);
+		www.SendWebRequest();
 		while (!www.isDone)
 		{
 			// NOP.
 		}
-		File.WriteAllBytes(toPath, www.bytes);
+		File.WriteAllBytes(toPath, www.downloadHandler.data);
 	}
 
 	//Download to memory for Android
@@ -48,15 +50,16 @@ public class AiliaDownload
 #endif
 
 		string path = prefix + file_name;
-		WWW www = new WWW(path);
+		UnityWebRequest www = UnityWebRequest.Get(path);
+		www.SendWebRequest();
 		while (!www.isDone)
 		{
 			// NOP.
 		}
-		if (www.bytes.Length == 0)
+		if (www.downloadHandler.data.Length == 0)
 		{
 			Debug.Log(file_name + " not found");
 		}
-		return www.bytes;
+		return www.downloadHandler.data;
 	}
 }
