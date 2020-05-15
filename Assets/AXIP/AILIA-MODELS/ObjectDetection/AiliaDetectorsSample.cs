@@ -173,20 +173,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 		DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
 	}
 
-	private void GetFace(Color32[] face, int x1, int y1, int w, int h, Color32[] camera, int tex_width, int tex_height)
-	{
-		for (int y = 0; y < h; y++)
-		{
-			for (int x = 0; x < w; x++)
-			{
-				if (x + x1 >= 0 && x + x1 < tex_width && y + y1 >= 0 && y + y1 < tex_height)
-				{
-					face[y * w + x] = camera[(tex_height - 1 - y - y1) * tex_width + x + x1];
-				}
-			}
-		}
-	}
-
 	private void FaceClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
 	{
 		//Convert to pixel position
@@ -194,9 +180,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 		int y1 = (int)(box.y * tex_height);
 		int x2 = (int)((box.x + box.w) * tex_width);
 		int y2 = (int)((box.y + box.h) * tex_height);
-
-		//Get face
-		Color32[] face;
 
 		int w = (x2 - x1);
 		int h = (y2 - y1);
@@ -211,10 +194,6 @@ public class AiliaDetectorsSample : AiliaRenderer {
 		{
 			return;
 		}
-
-		face = new Color32[w * h];
-
-		GetFace(face, x1, y1, w, h, camera, tex_width, tex_height);
 
 		//Draw Box
 		Color color = Color.white;
