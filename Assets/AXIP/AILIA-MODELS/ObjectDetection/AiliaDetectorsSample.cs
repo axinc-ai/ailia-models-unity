@@ -11,25 +11,30 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class AiliaDetectorsSample : AiliaRenderer {
-	[SerializeField,HideInInspector]
+	[SerializeField, HideInInspector]
 	private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.yolov3_tiny;
+	[SerializeField, HideInInspector]
+	private GameObject UICanvas = null;
 	//Settings
 	public bool gpu_mode = false;
 	public int camera_id = 0;
 
 	//Result
-	public RawImage raw_image=null;
-	public Text label_text=null;
-	public Text mode_text=null;
+	public RawImage raw_image = null;
+	public Text label_text = null;
+	public Text mode_text = null;
 
 	//Preview
-	private Texture2D preview_texture=null;
+	private Texture2D preview_texture = null;
 
 	//AILIA
-	private AiliaDetectorModel ailia_detector=new AiliaDetectorModel();
+	private AiliaDetectorModel ailia_detector = new AiliaDetectorModel();
 
-	private AiliaCamera ailia_camera=new AiliaCamera();
-	private AiliaDownload ailia_download=new AiliaDownload();
+	private AiliaCamera ailia_camera = new AiliaCamera();
+	private AiliaDownload ailia_download = new AiliaDownload();
+
+	// AILIA open file
+	private bool FileOpened = false;
 
 	private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
 	{
@@ -47,10 +52,19 @@ public class AiliaDetectorsSample : AiliaRenderer {
 				}
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx");
+				// ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt");
+				// ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx");
+				// StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt"));
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx", () =>
+				{
+					//Debug.Log("onCompleted");
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt", () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
+					}));
+				}));
 
-				ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
+				//ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
 				break;
 			case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 				mode_text.text = "ailia FaceDetector";
@@ -81,6 +95,7 @@ public class AiliaDetectorsSample : AiliaRenderer {
 	// Use this for initialization
 	void Start()
 	{
+		SetUIProperties();
 		CreateAiliaDetector(ailiaModelType);
 		ailia_camera.CreateCamera(camera_id);
 	}
@@ -89,6 +104,10 @@ public class AiliaDetectorsSample : AiliaRenderer {
 	void Update()
 	{
 		if(!ailia_camera.IsEnable())
+		{
+			return;
+		}
+		if (!FileOpened)
 		{
 			return;
 		}
@@ -204,6 +223,13 @@ public class AiliaDetectorsSample : AiliaRenderer {
 
 		int margin = 4;
 		DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
+	}
+	void SetUIProperties()
+	{
+		if (UICanvas == null) return;
+		// Set up UI for AiliaDownloader
+		var downloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel");
+		ailia_download.DownloaderProgressPanel = downloaderProgressPanel.gameObject;
 	}
 	void OnApplicationQuit()
 	{

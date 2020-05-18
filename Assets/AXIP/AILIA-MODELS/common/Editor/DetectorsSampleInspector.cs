@@ -9,6 +9,7 @@ public class DetectorsSampleInspector : Editor
 {
 	AiliaDetectorsSample ailiaDetectorsSample;
 	SerializedProperty ailiaModelType;
+	SerializedProperty uiCanvas;
 
 	AiliaModelsConst.AiliaModelTypes[] modelArr;
 	string[] modelNameArr;
@@ -17,6 +18,7 @@ public class DetectorsSampleInspector : Editor
 		ailiaDetectorsSample = target as AiliaDetectorsSample;
 
 		ailiaModelType = serializedObject.FindProperty("ailiaModelType");
+		uiCanvas = serializedObject.FindProperty("UICanvas");
 		// Get all model types in the same category
 		var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory();
 		var allModelsTypes = Enum.GetValues(typeof(AiliaModelsConst.AiliaModelTypes)) as AiliaModelsConst.AiliaModelTypes[];
@@ -31,6 +33,7 @@ public class DetectorsSampleInspector : Editor
 		var currentIndex = Array.FindIndex(modelArr, x => x == (AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex);
 		currentIndex = EditorGUILayout.Popup("AiliaModelType", currentIndex, modelNameArr);
 		ailiaModelType.enumValueIndex = (int)modelArr[currentIndex];
+		EditorGUILayout.PropertyField(uiCanvas);
 
 		serializedObject.ApplyModifiedProperties();
 	}
