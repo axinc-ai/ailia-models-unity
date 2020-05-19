@@ -52,19 +52,13 @@ public class AiliaDetectorsSample : AiliaRenderer {
 				}
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				// ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt");
-				// ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx");
-				// StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt"));
-				StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx", () =>
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt", () =>
 				{
-					//Debug.Log("onCompleted");
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt", () =>
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-tiny", "yolov3-tiny.opt.onnx", () =>
 					{
 						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
 					}));
 				}));
-
-				//ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
 				break;
 			case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 				mode_text.text = "ailia FaceDetector";
@@ -76,10 +70,13 @@ public class AiliaDetectorsSample : AiliaRenderer {
 				}
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
-
-				ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-face", "yolov3-face.opt.onnx.prototxt", () =>
+				{
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL("yolov3-face", "yolov3-face.opt.onnx", () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+					}));
+				}));
 				break;
 			default:
 				Debug.Log("Others ailia models are working in progress.");

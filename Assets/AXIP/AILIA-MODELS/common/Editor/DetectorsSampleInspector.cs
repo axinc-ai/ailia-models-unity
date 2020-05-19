@@ -13,6 +13,8 @@ public class DetectorsSampleInspector : Editor
 
 	AiliaModelsConst.AiliaModelTypes[] modelArr;
 	string[] modelNameArr;
+	// Detectors category
+	const string category = "Object Detection";
 	private void OnEnable()
 	{
 		ailiaDetectorsSample = target as AiliaDetectorsSample;
@@ -20,7 +22,7 @@ public class DetectorsSampleInspector : Editor
 		ailiaModelType = serializedObject.FindProperty("ailiaModelType");
 		uiCanvas = serializedObject.FindProperty("UICanvas");
 		// Get all model types in the same category
-		var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory();
+		// var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory(); //Get category by ailiaModelType default value.
 		var allModelsTypes = Enum.GetValues(typeof(AiliaModelsConst.AiliaModelTypes)) as AiliaModelsConst.AiliaModelTypes[];
 		modelArr = allModelsTypes.Where(x => x.GetCategory() == category).ToArray();
 		modelNameArr = modelArr.Select(x => x.GetDescription()).ToArray();
