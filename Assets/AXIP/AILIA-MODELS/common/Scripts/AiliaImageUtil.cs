@@ -72,4 +72,21 @@ public class AiliaImageUtil
 		}
 		return color32sBuffer;
 	}
+
+	public static Texture2D ResizeTexture(Texture2D texture, int width, int height)
+	{
+		var rt = RenderTexture.GetTemporary(width, height);
+		Graphics.Blit(texture, rt);
+
+		var currentRT = RenderTexture.active;
+		RenderTexture.active = rt;
+		var result = new Texture2D(width, height, texture.format, false);
+		result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+		result.Apply();
+
+		RenderTexture.active = currentRT;
+		RenderTexture.ReleaseTemporary(rt);
+
+		return result;
+	}
 }

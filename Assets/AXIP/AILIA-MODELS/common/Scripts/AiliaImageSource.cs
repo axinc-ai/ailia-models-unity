@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 using static AiliaImageUtil;
@@ -7,14 +8,14 @@ public class AiliaImageSource : MonoBehaviour
 {
 	public Texture2D _texture;
 	Color32[] color32sBuffer = new Color32[0];
-
+	
 	public bool IsPrepared { get; private set; }
 	public int Width { get { return _texture.width; } }
 	public int Height { get { return _texture.height; } }
 
 	private void Awake()
 	{
-		_texture = new Texture2D(0, 0);
+		_texture = new Texture2D(0, 0, TextureFormat.RGBA32, false);
 	}
 
 	public void CreateSource(string URL)
@@ -22,16 +23,32 @@ public class AiliaImageSource : MonoBehaviour
 		StartCoroutine(GetTexture(URL));
 	}
 
+	public void Resize(int width, int height)
+	{
+		_texture = ResizeTexture(_texture, width, height);
+	}
+
 	IEnumerator GetTexture(string URL)
 	{
 		IsPrepared = false;
+		if (URL.StartsWith("file://"))
+		{
+			GetTextureDisk(URL.Remove(0, 7));
+		}
+		else
+		{
+			yield return GetTextureWWW(URL);
+		}
+	}
+
+	IEnumerator GetTextureWWW(string URL)
+	{
 		UnityWebRequest webRequest = UnityWebRequestTexture.GetTexture(URL);
-		
 		yield return webRequest.SendWebRequest();
 
 		if (webRequest.isNetworkError || webRequest.isHttpError)
 		{
-			Debug.Log(webRequest.error);
+			Debug.LogError(webRequest.error, this);
 		}
 		else
 		{
@@ -48,6 +65,31 @@ public class AiliaImageSource : MonoBehaviour
 			}
 			IsPrepared = true;
 		}
+	}
+
+	void GetTextureDisk(string filePath)
+	{
+		if (!File.Exists(filePath))
+		{
+			Debug.Log("file not exists \"" + filePath + "\"");
+			return;
+		}
+		
+		Texture2D loadTex = new Texture2D(0, 0);
+		using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+		{
+			var data = new byte[fs.Length];
+			fs.Read(data, 0, data.Length);
+			if (!loadTex.LoadImage(data))
+			{
+				Debug.Log("unkown file \"" + filePath + "\"");
+				return;
+			}
+		}
+		_texture = new Texture2D(loadTex.width, loadTex.height, TextureFormat.RGBA32, false);
+		_texture.SetPixels32(loadTex.GetPixels32());
+		_texture.Apply();
+		IsPrepared = true;
 	}
 
 	public Rect GetCropRect(Crop crop)
