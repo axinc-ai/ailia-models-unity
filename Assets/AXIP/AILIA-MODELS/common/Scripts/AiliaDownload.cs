@@ -14,7 +14,6 @@ using UnityEngine.Networking;
 public class AiliaDownload
 {
 	private GameObject _DownloaderProgressPanel = null;
-	// public bool downloadCompleted = false;
 	public GameObject DownloaderProgressPanel
 	{
 		get { return _DownloaderProgressPanel; }
@@ -50,6 +49,22 @@ public class AiliaDownload
 				_ProgressText = panel.gameObject.GetComponent<Text>();
 			}
 			return _ProgressText;
+		}
+	}
+	private Text _ContentsText = null;
+	private Text ContentsText
+	{
+		get
+		{
+			if(_ContentsText == null)
+			{
+				if (_DownloaderProgressPanel == null) return null;
+				var panel = _DownloaderProgressPanel.transform.Find("Contents/ContentsText");
+				if (panel == null) return null;
+
+				_ContentsText = panel.gameObject.GetComponent<Text>();
+			}
+			return _ContentsText;
 		}
 	}
 
@@ -103,47 +118,78 @@ public class AiliaDownload
 		return www.downloadHandler.data;
 	}
 
-	public IEnumerator DownloadWithProgressFromURL(string folder_path, string file_name, Action OnCompleted)
+	public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted)
 	{
-		string toPath = Application.temporaryCachePath + "/" + file_name;
+		if (urlList.Count == 0) yield break;
 
-		if (System.IO.File.Exists(toPath) == true)
-		{
-			FileInfo fileInfo = new System.IO.FileInfo(toPath);
-			if (fileInfo.Length != 0)
-			{
-				Debug.Log("Already exists : " + toPath + " " + fileInfo.Length);
-				// downloadCompleted = true;
-				OnCompleted();
-				yield break; ;
-			}
-		}
-
-		Debug.Log("Download model to " + toPath);
-
-		string url = "https://storage.googleapis.com/ailia-models/" + folder_path + "/" + file_name;
-		DownloaderProgressPanel.SetActive(true);
+		var count = urlList.Count;
+		var progress = 0.0f;
+		var content = "";
 		ProgressImage.fillAmount = 0.0f;
-		using (var www = UnityWebRequest.Get(url))
+		ContentsText.text = content;
+
+		foreach (var downloadUrl in urlList)
 		{
-			www.SendWebRequest();
-			while (true)
+			string toPath = Application.temporaryCachePath + "/" + downloadUrl.file_name;
+
+			if (System.IO.File.Exists(toPath) == true)
 			{
-				if (www.isDone)
+				FileInfo fileInfo = new System.IO.FileInfo(toPath);
+				if (fileInfo.Length != 0)
 				{
-					File.WriteAllBytes(toPath, www.downloadHandler.data);
-					// downloadCompleted = true;
-					DownloaderProgressPanel.SetActive(false);
-					OnCompleted();
-					yield break;
+					var tex = "Already exists : " + toPath + " " + fileInfo.Length;
+					content += (tex + "\n");
+					ContentsText.text = content;
+					Debug.Log(tex);
+					continue;
 				}
-				yield return null;
-				Debug.Log(www.downloadProgress);
-				ProgressImage.fillAmount = www.downloadProgress;
-				var val = www.downloadProgress * 100;
-				var val_str = Math.Ceiling(val).ToString();
-				ProgressText.text = val_str + "%";
+			}
+
+			var download_text = "Download model to " + toPath;
+			Debug.Log(download_text);
+
+			string url = "https://storage.googleapis.com/ailia-models/" + downloadUrl.folder_path + "/" + downloadUrl.file_name;
+			DownloaderProgressPanel.SetActive(true);
+			using (var www = UnityWebRequest.Get(url))
+			{
+				www.SendWebRequest();
+				while (true)
+				{
+					if (www.isDone)
+					{
+						File.WriteAllBytes(toPath, www.downloadHandler.data);
+						content += download_text + "\n";
+						ContentsText.text = content;
+						break;
+					}
+
+					yield return null;
+
+					progress = www.downloadProgress;
+					ProgressImage.fillAmount = progress;
+
+					var val = progress * 100;
+					var val_str = Math.Ceiling(val).ToString();
+					ProgressText.text = val_str + "%";
+
+					ulong size = 0;
+					var header = www.GetResponseHeader("Content-Length");
+					if(header != null)
+					{
+						ulong.TryParse(header, out size);
+					}
+
+					ContentsText.text = content + download_text + " (" + www.downloadedBytes.ToString() + "/" + size.ToString() + ")";
+				}
 			}
 		}
+		DownloaderProgressPanel.SetActive(false);
+		OnCompleted();
+		yield break;
 	}
+}
+public class ModelDownloadURL
+{
+	public string folder_path;
+	public string file_name;
 }
