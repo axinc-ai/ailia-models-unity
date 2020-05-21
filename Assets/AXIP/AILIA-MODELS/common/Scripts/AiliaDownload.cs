@@ -67,6 +67,22 @@ public class AiliaDownload
 			return _ContentsText;
 		}
 	}
+	private Button _CloseButton = null;
+	private Button CloseButton
+	{
+		get
+		{
+			if(_CloseButton == null)
+			{
+				if (_DownloaderProgressPanel == null) return null;
+				var panel = _DownloaderProgressPanel.transform.Find("CloseButton");
+				if (panel == null) return null;
+
+				_CloseButton = panel.gameObject.GetComponent<Button>();
+			}
+			return _CloseButton;
+		}
+	}
 
 	public void DownloadModelFromUrl(string folder_path, string file_name)
 	{
@@ -91,6 +107,12 @@ public class AiliaDownload
 		while (!www.isDone)
 		{
 			// NOP.
+			// Error
+			if (www.isHttpError || www.isNetworkError)
+			{
+				Debug.LogError(www.error);
+				return;
+			}
 		}
 		File.WriteAllBytes(toPath, www.downloadHandler.data);
 	}
@@ -110,6 +132,12 @@ public class AiliaDownload
 		while (!www.isDone)
 		{
 			// NOP.
+			// Error
+			if (www.isHttpError || www.isNetworkError)
+			{
+				Debug.LogError(www.error);
+				break;
+			}
 		}
 		if (www.downloadHandler.data.Length == 0)
 		{
@@ -155,6 +183,20 @@ public class AiliaDownload
 				www.SendWebRequest();
 				while (true)
 				{
+					// Error
+					if(www.isHttpError || www.isNetworkError)
+					{
+						Debug.LogError(www.error);
+						content += "<color=red>" + www.error + "</color>" + "\n";
+						ContentsText.text = content;
+
+						CloseButton.onClick.AddListener(() =>
+						{
+							DownloaderProgressPanel.SetActive(false);
+						});
+						yield break;
+					}
+
 					if (www.isDone)
 					{
 						File.WriteAllBytes(toPath, www.downloadHandler.data);
