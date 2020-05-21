@@ -10,53 +10,56 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AiliaDownload
+namespace ailiaSDK
 {
-	public void DownloadModelFromUrl(string folder_path, string file_name)
+	public class AiliaDownload
 	{
-		string toPath = Application.temporaryCachePath + "/" + file_name;
-
-		if (System.IO.File.Exists(toPath) == true)
+		public void DownloadModelFromUrl(string folder_path, string file_name)
 		{
-			FileInfo fileInfo = new System.IO.FileInfo(toPath);
-			if (fileInfo.Length != 0)
+			string toPath = Application.temporaryCachePath + "/" + file_name;
+
+			if (System.IO.File.Exists(toPath) == true)
 			{
-				Debug.Log("Already exists : " + toPath + " " + fileInfo.Length);
-				return;
+				FileInfo fileInfo = new System.IO.FileInfo(toPath);
+				if (fileInfo.Length != 0)
+				{
+					Debug.Log("Already exists : " + toPath + " " + fileInfo.Length);
+					return;
+				}
 			}
+
+			Debug.Log("Download model to " + toPath);
+
+			string url = "https://storage.googleapis.com/ailia-models/" + folder_path + "/" + file_name;
+
+			WWW www = new WWW(url);
+			while (!www.isDone)
+			{
+				// NOP.
+			}
+			File.WriteAllBytes(toPath, www.bytes);
 		}
 
-		Debug.Log("Download model to " + toPath);
-
-		string url = "https://storage.googleapis.com/ailia-models/" + folder_path + "/" + file_name;
-
-		WWW www = new WWW(url);
-		while (!www.isDone)
+		//Download to memory for Android
+		public byte[] DownloadModel(string file_name)
 		{
-			// NOP.
-		}
-		File.WriteAllBytes(toPath, www.bytes);
-	}
-
-	//Download to memory for Android
-	public byte[] DownloadModel(string file_name)
-	{
 #if UNITY_ANDROID && !UNITY_EDITOR
 		string prefix="";
 #else
-		string prefix = "file://";
+			string prefix = "file://";
 #endif
 
-		string path = prefix + file_name;
-		WWW www = new WWW(path);
-		while (!www.isDone)
-		{
-			// NOP.
+			string path = prefix + file_name;
+			WWW www = new WWW(path);
+			while (!www.isDone)
+			{
+				// NOP.
+			}
+			if (www.bytes.Length == 0)
+			{
+				Debug.Log(file_name + " not found");
+			}
+			return www.bytes;
 		}
-		if (www.bytes.Length == 0)
-		{
-			Debug.Log(file_name + " not found");
-		}
-		return www.bytes;
 	}
 }
