@@ -7,11 +7,14 @@ using System.Runtime.InteropServices;
 
 using UnityEngine;
 
-public class AiliaClassifierLabel {
+namespace ailiaSDK
+{
+    public class AiliaClassifierLabel
+    {
 
-/* from https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a */
+        /* from https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a */
 
-	public static string [] IMAGENET_CATEGORY = {
+        public static string[] IMAGENET_CATEGORY = {
  "tench, Tinca tinca",
  "goldfish, Carassius auratus",
  "great white shark, white shark, man-eater, man-eating shark, Carcharodon carcharias",
@@ -1015,12 +1018,12 @@ public class AiliaClassifierLabel {
 
 
 
-/*
-from https://gist.github.com/PonDad/4dcb4b242b9358e524b4ddecbee385e9
+        /*
+        from https://gist.github.com/PonDad/4dcb4b242b9358e524b4ddecbee385e9
 
-*/
+        */
 
-public static string [] IMAGENET_CATEGORY_JP = {
+        public static string[] IMAGENET_CATEGORY_JP = {
 "テンチ",
 "金魚",
 "ホホジロザメ",
@@ -2023,48 +2026,49 @@ public static string [] IMAGENET_CATEGORY_JP = {
 "トイレットペーパー"
 };
 
-public static string [] EMOTION_CATEGORY = {
-	"angry",
-	"disgust",
-	"fear",
-	"happy",
-	"sad",
-	"surprise",
-	"neutral"
+        public static string[] EMOTION_CATEGORY = {
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "sad",
+    "surprise",
+    "neutral"
 };
 
-public static string [] GENDER_CATEGORY = {
-	"female","male"
+        public static string[] GENDER_CATEGORY = {
+    "female","male"
 };
 
-public static string[] COCO_CATEGORY = {
-	"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
-	"truck", "boat", "traffic light", "fire hydrant", "stop sign",
-	"parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-	"elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
-	"handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
-	"sports ball", "kite", "baseball bat", "baseball glove", "skateboard",
-	"surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork",
-	"knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange",
-	"broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
-	"couch", "potted plant", "bed", "dining table", "toilet", "tv",
-	"laptop", "mouse", "remote", "keyboard", "cell phone", "microwave",
-	"oven", "toaster", "sink", "refrigerator", "book", "clock", "vase",
-	"scissors", "teddy bear", "hair drier", "toothbrush"
+        public static string[] COCO_CATEGORY = {
+    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
+    "truck", "boat", "traffic light", "fire hydrant", "stop sign",
+    "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
+    "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
+    "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
+    "sports ball", "kite", "baseball bat", "baseball glove", "skateboard",
+    "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork",
+    "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange",
+    "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+    "couch", "potted plant", "bed", "dining table", "toilet", "tv",
+    "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave",
+    "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase",
+    "scissors", "teddy bear", "hair drier", "toothbrush"
 };
 
-public static string[] VOC_CATEGORY = {
+        public static string[] VOC_CATEGORY = {
         "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car",
         "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike",
         "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"
 };
 
-public static float[] VOC_ANCHORS = {
-	1.08f, 1.19f, 3.42f, 4.41f, 6.63f, 11.38f, 9.42f, 5.11f, 16.62f, 10.52f
+        public static float[] VOC_ANCHORS = {
+    1.08f, 1.19f, 3.42f, 4.41f, 6.63f, 11.38f, 9.42f, 5.11f, 16.62f, 10.52f
 };
 
-public static float[] COCO_ANCHORS = {
-	0.738768f, 0.874946f, 2.42204f, 2.65704f, 4.30971f, 7.04493f, 10.246f, 4.59428f, 12.6868f, 11.8741f
+        public static float[] COCO_ANCHORS = {
+    0.738768f, 0.874946f, 2.42204f, 2.65704f, 4.30971f, 7.04493f, 10.246f, 4.59428f, 12.6868f, 11.8741f
 };
 
+    }
 }
