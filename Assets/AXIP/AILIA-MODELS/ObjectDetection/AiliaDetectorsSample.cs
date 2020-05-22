@@ -10,12 +10,12 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ailiaSDK
-{
-	public class AiliaDetectorsSample : AiliaRenderer
-	{
+namespace ailiaSDK {
+	public class AiliaDetectorsSample : AiliaRenderer {
 		[SerializeField, HideInInspector]
 		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.yolov3_tiny;
+		[SerializeField, HideInInspector]
+		private GameObject UICanvas = null;
 		//Settings
 		public bool gpu_mode = false;
 		public int camera_id = 0;
@@ -34,11 +34,14 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
+		// AILIA open file
+		private bool FileOpened = false;
+
 		private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
 			uint category_n = 0;
-
+			var urlList = new List<ModelDownloadURL>();
 			switch (modelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
@@ -50,10 +53,14 @@ namespace ailiaSDK
 					}
 					ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-					ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx.prototxt");
-					ailia_download.DownloadModelFromUrl("yolov3-tiny", "yolov3-tiny.opt.onnx");
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-tiny", file_name = "yolov3-tiny.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-tiny", file_name = "yolov3-tiny.opt.onnx" });
 
-					ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-tiny.opt.onnx.prototxt", asset_path + "/yolov3-tiny.opt.onnx");
+					}));
+
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 					mode_text.text = "ailia FaceDetector";
@@ -65,16 +72,21 @@ namespace ailiaSDK
 					}
 					ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-					ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx.prototxt");
-					ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx" });
 
-					ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+					}));
+
 					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
 			}
 		}
+
 
 		private void DestroyAiliaDetector()
 		{
@@ -84,6 +96,7 @@ namespace ailiaSDK
 		// Use this for initialization
 		void Start()
 		{
+			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
 			ailia_camera.CreateCamera(camera_id);
 		}
@@ -92,6 +105,10 @@ namespace ailiaSDK
 		void Update()
 		{
 			if (!ailia_camera.IsEnable())
+			{
+				ailia_detector.Close();
+			}
+			if (!FileOpened)
 			{
 				return;
 			}
@@ -208,6 +225,14 @@ namespace ailiaSDK
 			int margin = 4;
 			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
 		}
+
+		void SetUIProperties()
+		{
+			if (UICanvas == null) return;
+			// Set up UI for AiliaDownloader
+			var downloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel");
+			ailia_download.DownloaderProgressPanel = downloaderProgressPanel.gameObject;
+		}
 		void OnApplicationQuit()
 		{
 			DestroyAiliaDetector();
@@ -221,3 +246,4 @@ namespace ailiaSDK
 		}
 	}
 }
+

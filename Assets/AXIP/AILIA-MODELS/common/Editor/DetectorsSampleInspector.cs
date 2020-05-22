@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-
 namespace ailiaSDK
 {
 	[CustomEditor(typeof(AiliaDetectorsSample))]
@@ -11,16 +10,18 @@ namespace ailiaSDK
 	{
 		AiliaDetectorsSample ailiaDetectorsSample;
 		SerializedProperty ailiaModelType;
+		SerializedProperty uiCanvas;
 
 		AiliaModelsConst.AiliaModelTypes[] modelArr;
 		string[] modelNameArr;
-		private void OnEnable()
-		{
-			ailiaDetectorsSample = target as AiliaDetectorsSample;
+		// Detectors category
+		const string category = "Object Detection";
+		private void OnEnable() {
 
 			ailiaModelType = serializedObject.FindProperty("ailiaModelType");
+			uiCanvas = serializedObject.FindProperty("UICanvas");
 			// Get all model types in the same category
-			var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory();
+			// var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory(); //Get category by ailiaModelType default value.
 			var allModelsTypes = Enum.GetValues(typeof(AiliaModelsConst.AiliaModelTypes)) as AiliaModelsConst.AiliaModelTypes[];
 			modelArr = allModelsTypes.Where(x => x.GetCategory() == category).ToArray();
 			modelNameArr = modelArr.Select(x => x.GetDescription()).ToArray();
@@ -33,6 +34,7 @@ namespace ailiaSDK
 			var currentIndex = Array.FindIndex(modelArr, x => x == (AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex);
 			currentIndex = EditorGUILayout.Popup("AiliaModelType", currentIndex, modelNameArr);
 			ailiaModelType.enumValueIndex = (int)modelArr[currentIndex];
+			EditorGUILayout.PropertyField(uiCanvas);
 
 			serializedObject.ApplyModifiedProperties();
 		}
