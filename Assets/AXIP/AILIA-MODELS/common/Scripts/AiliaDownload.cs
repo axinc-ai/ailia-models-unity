@@ -83,6 +83,7 @@ public class AiliaDownload
 			return _CloseButton;
 		}
 	}
+	private const int ContentLineCount = 7;
 
 	public void DownloadModelFromUrl(string folder_path, string file_name)
 	{
@@ -167,6 +168,10 @@ public class AiliaDownload
 				{
 					var tex = "Already exists : " + toPath + " " + fileInfo.Length;
 					content += (tex + "\n");
+					if (ContentsText.cachedTextGenerator.lineCount > 9)
+					{
+						content = content.Substring(content.IndexOf('\n') + 1);
+					}
 					ContentsText.text = content;
 					Debug.Log(tex);
 					continue;
@@ -188,6 +193,10 @@ public class AiliaDownload
 					{
 						Debug.LogError(www.error);
 						content += "<color=red>" + www.error + "</color>" + "\n";
+						if (ContentsText.cachedTextGenerator.lineCount > ContentLineCount)
+						{
+							content = content.Substring(content.IndexOf('\n') + 1);
+						}
 						ContentsText.text = content;
 
 						CloseButton.onClick.AddListener(() =>
@@ -196,17 +205,21 @@ public class AiliaDownload
 						});
 						yield break;
 					}
-
+					// Download is done
 					if (www.isDone)
 					{
 						File.WriteAllBytes(toPath, www.downloadHandler.data);
 						content += download_text + "\n";
+						if (ContentsText.cachedTextGenerator.lineCount > ContentLineCount)
+						{
+							content = content.Substring(content.IndexOf('\n') + 1);
+						}
 						ContentsText.text = content;
 						break;
 					}
 
 					yield return null;
-
+					// Update UI Texts
 					progress = www.downloadProgress;
 					ProgressImage.fillAmount = progress;
 
@@ -220,7 +233,10 @@ public class AiliaDownload
 					{
 						ulong.TryParse(header, out size);
 					}
-
+					if (ContentsText.cachedTextGenerator.lineCount > ContentLineCount)
+					{
+						content = content.Substring(content.IndexOf('\n') + 1);
+					}
 					ContentsText.text = content + download_text + " (" + www.downloadedBytes.ToString() + "/" + size.ToString() + ")";
 				}
 			}
