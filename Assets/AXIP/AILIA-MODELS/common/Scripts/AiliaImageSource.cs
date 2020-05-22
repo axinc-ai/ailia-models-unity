@@ -2,11 +2,12 @@
 using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 using static AiliaImageUtil;
 
 public class AiliaImageSource : MonoBehaviour
 {
-	public Texture2D _texture;
+	Texture2D _texture;
 	Color32[] color32sBuffer = new Color32[0];
 	
 	public bool IsPrepared { get; private set; }
@@ -21,6 +22,21 @@ public class AiliaImageSource : MonoBehaviour
 	public void CreateSource(string URL)
 	{
 		StartCoroutine(GetTexture(URL));
+	}
+
+	public void CreateSource(Texture2D texture)
+	{
+		if(texture.format == TextureFormat.RGBA32)
+		{
+			_texture = texture;
+		}
+		else
+		{
+			_texture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+			_texture.SetPixels32(texture.GetPixels32());
+			_texture.Apply();
+		}
+		IsPrepared = true;
 	}
 
 	public void Resize(int width, int height)
@@ -98,12 +114,12 @@ public class AiliaImageSource : MonoBehaviour
 		return AiliaImageUtil.GetCropRect(_texture, crop);
 	}
 
-	public Color32[] GetPixels32(Crop crop)
+	public Color32[] GetPixels32(Crop crop, bool upsideDown = false)
 	{
-		return GetPixels32(GetCropRect(crop));
+		return GetPixels32(GetCropRect(crop), upsideDown);
 	}
 
-	public Color32[] GetPixels32(Rect cropRect)
+	public Color32[] GetPixels32(Rect cropRect, bool upsideDown = false)
 	{
 		if (!IsPrepared) return null;
 
@@ -124,14 +140,31 @@ public class AiliaImageSource : MonoBehaviour
 		int xMin = (int)cropRect.xMin;
 		int xMax = (int)cropRect.xMax;
 		int destIndex = 0;
-		for (int j = yMin; j < yMax; j++)
+
+		if (upsideDown)
 		{
-			int start = xMin + j * _texture.width;
-			int end = xMax + j * _texture.width;
-			for (int i = start; i < end; i++)
+			for (int j = yMax - 1; j >= yMin; j--)
 			{
-				color32sBuffer[destIndex] = nativeArrayPixels[i];
-				destIndex++;
+				int start = xMin + j * _texture.width;
+				int end = xMax + j * _texture.width;
+				for (int i = start; i < end; i++)
+				{
+					color32sBuffer[destIndex] = nativeArrayPixels[i];
+					destIndex++;
+				}
+			}
+		}
+		else
+		{
+			for (int j = yMin; j < yMax; j++)
+			{
+				int start = xMin + j * _texture.width;
+				int end = xMax + j * _texture.width;
+				for (int i = start; i < end; i++)
+				{
+					color32sBuffer[destIndex] = nativeArrayPixels[i];
+					destIndex++;
+				}
 			}
 		}
 		return color32sBuffer;

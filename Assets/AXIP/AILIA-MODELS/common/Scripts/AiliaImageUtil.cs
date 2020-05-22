@@ -44,7 +44,7 @@ public class AiliaImageUtil
 		return rect;
 	}
 
-	public static Color32[] GetPixels32(Texture2D texture, Rect cropRect)
+	public static Color32[] GetPixels32(Texture2D texture, Rect cropRect, bool upsideDown = false)
 	{
 		if (cropRect.xMax < 0) cropRect.xMax = 0;
 		if (cropRect.yMax < 0) cropRect.yMax = 0;
@@ -60,14 +60,30 @@ public class AiliaImageUtil
 		int xMin = (int)cropRect.xMin;
 		int xMax = (int)cropRect.xMax;
 		int destIndex = 0;
-		for (int j = yMin; j < yMax; j++)
+		if (upsideDown)
 		{
-			int start = xMin + j * texture.width;
-			int end = xMax + j * texture.width;
-			for (int i = start; i < end; i++)
+			for (int j = yMax - 1; j >= yMin; j--)
 			{
-				color32sBuffer[destIndex] = nativeArrayPixels[i];
-				destIndex++;
+				int start = xMin + j * texture.width;
+				int end = xMax + j * texture.width;
+				for (int i = start; i < end; i++)
+				{
+					color32sBuffer[destIndex] = nativeArrayPixels[i];
+					destIndex++;
+				}
+			}
+		}
+		else
+		{
+			for (int j = yMin; j < yMax; j++)
+			{
+				int start = xMin + j * texture.width;
+				int end = xMax + j * texture.width;
+				for (int i = start; i < end; i++)
+				{
+					color32sBuffer[destIndex] = nativeArrayPixels[i];
+					destIndex++;
+				}
 			}
 		}
 		return color32sBuffer;
