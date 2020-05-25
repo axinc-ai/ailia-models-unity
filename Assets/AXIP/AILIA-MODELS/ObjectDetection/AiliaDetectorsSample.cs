@@ -49,7 +49,7 @@ namespace ailiaSDK {
 			switch (modelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
-					mode_text.text = "ailia Detector";
+					mode_text.text = "ailia yolov1-tiny Detector";
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 20;
@@ -73,6 +73,35 @@ namespace ailiaSDK {
 					{
 						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov1-tiny.prototxt", asset_path + "/yolov1-tiny.caffemodel");
 					}));
+
+					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov1_face:
+					mode_text.text = "ailia yolov1-face FaceDetector";
+					threshold = 0.2f;
+					iou = 0.45f;
+					category_n = 1;
+
+					if (gpu_mode)
+					{
+						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV1,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov1-face", file_name = "yolov1-face.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov1-face", file_name = "yolov1-face.caffemodel" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov1-face.prototxt", asset_path + "/yolov1-face.caffemodel");
+					}));
+
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					mode_text.text = "ailia Detector";
@@ -102,7 +131,7 @@ namespace ailiaSDK {
 
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
-					mode_text.text = "ailia FaceDetector";
+					mode_text.text = "ailia yolov3-face FaceDetector";
 					//Face Detection
 					threshold = 0.2f;
 					iou = 0.45f;
@@ -202,6 +231,9 @@ namespace ailiaSDK {
 			{
 				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
 					ObjClassifierYolov1Tiny(box, camera, tex_width, tex_height);
+					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov1_face:
+					FaceClassifier(box, camera, tex_width, tex_height);
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					ObjClassifier(box, camera, tex_width, tex_height);
