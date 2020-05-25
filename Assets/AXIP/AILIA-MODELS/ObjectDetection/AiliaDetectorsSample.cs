@@ -83,7 +83,14 @@ namespace ailiaSDK {
 					{
 						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 					}
-					ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, 
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, 
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,
+						category_n, 
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-tiny", file_name = "yolov3-tiny.opt.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-tiny", file_name = "yolov3-tiny.opt.onnx" });
@@ -104,7 +111,14 @@ namespace ailiaSDK {
 					{
 						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 					}
-					ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, 
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx" });
