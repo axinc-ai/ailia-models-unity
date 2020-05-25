@@ -132,6 +132,34 @@ namespace ailiaSDK {
 					}));
 
 					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov3:
+					mode_text.text = "ailia yolov3 Detector";
+					threshold = 0.4f;
+					iou = 0.45f;
+					category_n = 80;
+
+					if (gpu_mode)
+					{
+						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () => 
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3.opt.onnx.prototxt", asset_path + "/yolov3.opt.onnx");
+					}));
+
+					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					mode_text.text = "ailia yolov3-tiny Detector";
 					threshold = 0.4f;
@@ -265,6 +293,9 @@ namespace ailiaSDK {
 					FaceClassifier(box, camera, tex_width, tex_height);
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov2:
+					ObjClassifier(box, camera, tex_width, tex_height);
+					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov3:
 					ObjClassifier(box, camera, tex_width, tex_height);
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
