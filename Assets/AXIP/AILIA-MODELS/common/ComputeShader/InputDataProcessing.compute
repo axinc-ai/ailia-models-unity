@@ -1,0 +1,119 @@
+﻿#pragma kernel ChannelLast
+#pragma kernel ChannelLastUpsideDown
+#pragma kernel ChannelFirst
+#pragma kernel ChannelFirstUpsideDown
+#pragma kernel ImageNetChannelLast
+#pragma kernel ImageNetChannelLastUpsideDown
+#pragma kernel ImageNetChannelFirst
+#pragma kernel ImageNetChannelFirstUpsideDown
+
+Texture2D<float4> texure;
+RWBuffer<float> result_buffer;
+float weight;
+float bias;
+int width;
+int height;
+
+[numthreads(32, 32, 1)]
+void ChannelLast(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		float4 pix = texure[id];
+		result_buffer[(id.y * width + id.x) * 3 + 0] = pix.r * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 1] = pix.g * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 2] = pix.b * weight + bias;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ChannelLastUpsideDown(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		float4 pix = texure[uint2(id.x, height - 1 - id.y)];
+		result_buffer[(id.y * width + id.x) * 3 + 0] = pix.r * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 1] = pix.g * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 2] = pix.b * weight + bias;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ChannelFirst(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		float4 pix = texure[id];
+		result_buffer[id.y * width + id.x + 0 * height * width] = pix.r * weight + bias;
+		result_buffer[id.y * width + id.x + 1 * height * width] = pix.g * weight + bias;
+		result_buffer[id.y * width + id.x + 2 * height * width] = pix.b * weight + bias;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ChannelFirstUpsideDown(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		float4 pix = texure[uint2(id.x, height - 1 - id.y)];
+		result_buffer[id.y * width + id.x + 0 * height * width] = pix.r * weight + bias;
+		result_buffer[id.y * width + id.x + 1 * height * width] = pix.g * weight + bias;
+		result_buffer[id.y * width + id.x + 2 * height * width] = pix.b * weight + bias;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ImageNetChannelLast(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		const float3 ImageNetMean = { 0.485f, 0.456f, 0.406f };
+		const float3 ImageNetStd = { 1.0f / 0.229f, 1.0f / 0.224f, 1.0f / 0.225f };
+		float4 pix = texure[id];
+		result_buffer[(id.y * width + id.x) * 3 + 0] = pix.r * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 1] = pix.g * weight + bias;
+		result_buffer[(id.y * width + id.x) * 3 + 2] = pix.b * weight + bias;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ImageNetChannelLastUpsideDown(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		const float3 ImageNetMean = { 0.485f, 0.456f, 0.406f };
+		const float3 ImageNetStd = { 1.0f / 0.229f, 1.0f / 0.224f, 1.0f / 0.225f };
+		float4 pix = texure[uint2(id.x, height - 1 - id.y)];
+		result_buffer[(id.y * width + id.x) * 3 + 0] = (pix.r - ImageNetMean.x) * ImageNetStd.x;
+		result_buffer[(id.y * width + id.x) * 3 + 1] = (pix.g - ImageNetMean.y) * ImageNetStd.y;
+		result_buffer[(id.y * width + id.x) * 3 + 2] = (pix.b - ImageNetMean.z) * ImageNetStd.z;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ImageNetChannelFirst(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		const float3 ImageNetMean = { 0.485f, 0.456f, 0.406f };
+		const float3 ImageNetStd = { 1.0f / 0.229f, 1.0f / 0.224f, 1.0f / 0.225f };
+		float4 pix = texure[id];
+		result_buffer[id.y * width + id.x + 0 * height * width] = (pix.r - ImageNetMean.x) * ImageNetStd.x;
+		result_buffer[id.y * width + id.x + 1 * height * width] = (pix.g - ImageNetMean.y) * ImageNetStd.y;
+		result_buffer[id.y * width + id.x + 2 * height * width] = (pix.b - ImageNetMean.z) * ImageNetStd.z;
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ImageNetChannelFirstUpsideDown(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		const float3 ImageNetMean = { 0.485f, 0.456f, 0.406f };
+		const float3 ImageNetStd = { 1.0f / 0.229f, 1.0f / 0.224f, 1.0f / 0.225f };
+		float4 pix = texure[uint2(id.x, height - 1 - id.y)];
+		result_buffer[id.y * width + id.x + 0 * height * width] = (pix.r - ImageNetMean.x) * ImageNetStd.x;
+		result_buffer[id.y * width + id.x + 1 * height * width] = (pix.g - ImageNetMean.y) * ImageNetStd.y;
+		result_buffer[id.y * width + id.x + 2 * height * width] = (pix.b - ImageNetMean.z) * ImageNetStd.z;
+	}
+}

@@ -429,6 +429,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1393556304}
   - component: {fileID: 1393556306}
+  - component: {fileID: 1393556305}
   m_Layer: 0
   m_Name: ImageSegmentationController
   m_TagString: Untagged
@@ -450,6 +451,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1393556305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1393556303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 934c7647d29ea6d43a6a0acb71083453, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1393556306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -468,12 +481,12 @@ MonoBehaviour:
   lines: {fileID: 906043600}
   text_panel: {fileID: 1567056764}
   text_base: {fileID: 1580147085}
-  ailiaModelType: 17
+  imageSegmentaionModels: 4
   gpu_mode: 1
-  camera_id: 0
   raw_image: {fileID: 806531540}
   label_text: {fileID: 615086717}
   mode_text: {fileID: 615086716}
+  oneshot: 1
 --- !u!1 &1567056764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1945808911574990, guid: b13fba7fbe84549eaad325ff3431cb6f,
