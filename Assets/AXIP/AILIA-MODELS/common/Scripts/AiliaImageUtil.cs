@@ -105,4 +105,25 @@ public class AiliaImageUtil
 
 		return result;
 	}
+
+	public static Color32[] CreatePalette(int num, byte alpha = 255)
+	{
+		Color32[] palette = new Color32[num];
+
+		for (int j = 0; j < palette.Length; j++)
+		{
+			int lab = j;
+			int i = 0;
+			while(lab != 0)
+			{
+				palette[j].r |= (byte)(((lab >> 0) & 1) << (7 - i));
+				palette[j].g |= (byte)(((lab >> 1) & 1) << (7 - i));
+				palette[j].b |= (byte)(((lab >> 2) & 1) << (7 - i));
+				i += 1;
+				lab >>= 3;
+			}
+			palette[j].a = alpha;
+		}
+		return palette;
+	}
 }
