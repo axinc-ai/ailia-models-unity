@@ -37,6 +37,10 @@ namespace ailiaSDK {
 		// AILIA open file
 		private bool FileOpened = false;
 
+		// Compute parameter
+		float threshold = 0.2f;
+		float iou = 0.25f;
+
 		private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
@@ -44,8 +48,36 @@ namespace ailiaSDK {
 			var urlList = new List<ModelDownloadURL>();
 			switch (modelType)
 			{
+				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
+					mode_text.text = "ailia Detector";
+					threshold = 0.2f;
+					iou = 0.45f;
+					category_n = 20;
+					if (gpu_mode)
+					{
+						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV1,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov1-tiny", file_name = "yolov1-tiny.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov1-tiny", file_name = "yolov1-tiny.caffemodel" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov1-tiny.prototxt", asset_path + "/yolov1-tiny.caffemodel");
+					}));
+					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					mode_text.text = "ailia Detector";
+					threshold = 0.4f;
+					iou = 0.45f;
 					category_n = 80;
 					if (gpu_mode)
 					{
@@ -65,6 +97,8 @@ namespace ailiaSDK {
 				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 					mode_text.text = "ailia FaceDetector";
 					//Face Detection
+					threshold = 0.2f;
+					iou = 0.45f;
 					category_n = 1;
 					if (gpu_mode)
 					{
@@ -127,8 +161,6 @@ namespace ailiaSDK {
 			Color32[] camera = ailia_camera.GetPixels32();
 
 			//Detection
-			float threshold = 0.2f;
-			float iou = 0.25f;
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 			List<AiliaDetector.AILIADetectorObject> list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
@@ -154,6 +186,9 @@ namespace ailiaSDK {
 		{
 			switch (modelType)
 			{
+				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
+					ObjClassifierYolov1Tiny(box, camera, tex_width, tex_height);
+					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					ObjClassifier(box, camera, tex_width, tex_height);
 					break;
@@ -163,6 +198,34 @@ namespace ailiaSDK {
 				default:
 					break;
 			}
+		}
+
+		private void ObjClassifierYolov1Tiny(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
+		{
+			//Convert to pixel domain
+			int x1 = (int)(box.x * tex_width);
+			int y1 = (int)(box.y * tex_height);
+			int x2 = (int)((box.x + box.w) * tex_width);
+			int y2 = (int)((box.y + box.h) * tex_height);
+
+			int w = (x2 - x1);
+			int h = (y2 - y1);
+
+			if (w <= 0 || h <= 0)
+			{
+				return;
+			}
+
+			Color color = Color.white;
+			color = Color.HSVToRGB(box.category / 20.0f, 1.0f, 1.0f);
+			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
+
+			float p = (int)(box.prob * 100) / 100.0f;
+			string text = "";
+			text += AiliaClassifierLabel.VOC_CATEGORY[box.category];
+			text += " " + p;
+			int margin = 4;
+			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
 		}
 
 		private void ObjClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
