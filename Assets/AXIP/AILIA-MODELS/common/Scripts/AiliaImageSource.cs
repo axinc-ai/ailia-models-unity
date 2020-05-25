@@ -9,7 +9,8 @@ public class AiliaImageSource : MonoBehaviour
 {
 	Texture2D _texture;
 	Color32[] color32sBuffer = new Color32[0];
-	
+	Texture2D textureBuffer;
+
 	public bool IsPrepared { get; private set; }
 	public int Width { get { return _texture.width; } }
 	public int Height { get { return _texture.height; } }
@@ -17,6 +18,7 @@ public class AiliaImageSource : MonoBehaviour
 	private void Awake()
 	{
 		_texture = new Texture2D(0, 0, TextureFormat.RGBA32, false);
+		textureBuffer = new Texture2D(0, 0, TextureFormat.RGBA32, false);
 	}
 
 	public void CreateSource(string URL)
@@ -168,5 +170,42 @@ public class AiliaImageSource : MonoBehaviour
 			}
 		}
 		return color32sBuffer;
+	}
+
+	public Texture2D GetTexture(Crop crop)
+	{
+		return GetTexture(GetCropRect(crop));
+	}
+	public Texture2D GetTexture(Rect cropRect)
+	{
+		if (!IsPrepared) return null;
+
+		if (cropRect.xMax < 0) cropRect.xMax = 0;
+		if (cropRect.yMax < 0) cropRect.yMax = 0;
+		if (cropRect.xMax > Width) cropRect.xMax = Width;
+		if (cropRect.yMax > Height) cropRect.yMax = Height;
+
+		int length = (int)(cropRect.width * cropRect.height);
+
+		if (textureBuffer.width != cropRect.width || textureBuffer.width != cropRect.height)
+		{
+			textureBuffer = new Texture2D((int)cropRect.width, (int)cropRect.height, TextureFormat.RGBA32, false);
+		}
+
+		Graphics.CopyTexture(
+			src: _texture,
+			srcElement: 0,
+			srcMip: 0,
+			srcX: (int)cropRect.xMin,
+			srcY: (int)cropRect.yMin,
+			srcWidth: (int)cropRect.width,
+			srcHeight: (int)cropRect.height,
+			dst: textureBuffer,
+			dstElement: 0,
+			dstMip: 0,
+			dstX: 0,
+			dstY: 0);
+
+		return textureBuffer;
 	}
 }
