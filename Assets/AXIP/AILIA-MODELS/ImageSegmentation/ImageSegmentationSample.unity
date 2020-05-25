@@ -481,12 +481,14 @@ MonoBehaviour:
   lines: {fileID: 906043600}
   text_panel: {fileID: 1567056764}
   text_base: {fileID: 1580147085}
-  imageSegmentaionModels: 4
+  imageSegmentaionModels: 0
   gpu_mode: 1
   raw_image: {fileID: 806531540}
   label_text: {fileID: 615086717}
   mode_text: {fileID: 615086716}
   oneshot: 1
+  inputDataProcessingShader: {fileID: 7200000, guid: 4ad8a3eeb0183024b80805583ce4281a,
+    type: 3}
 --- !u!1 &1567056764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1945808911574990, guid: b13fba7fbe84549eaad325ff3431cb6f,
