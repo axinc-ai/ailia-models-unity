@@ -215,6 +215,33 @@ namespace ailiaSDK {
 					}));
 
 					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov3_hand:
+					mode_text.text = "ailia yolov3-hand Detector";
+					threshold = 0.4f;
+					iou = 0.45f;
+					category_n = 1;
+					if (gpu_mode)
+					{
+						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-hand", file_name = "yolov3-hand.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3-hand", file_name = "yolov3-hand.opt.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3-hand.opt.onnx.prototxt", asset_path + "/yolov3-hand.opt.onnx");
+					}));
+
+					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -303,6 +330,9 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 					FaceClassifier(box, camera, tex_width, tex_height);
+					break;
+				case AiliaModelsConst.AiliaModelTypes.yolov3_hand:
+					HandClassifier(box, camera, tex_width, tex_height);
 					break;
 				default:
 					break;
@@ -393,6 +423,39 @@ namespace ailiaSDK {
 			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
 			string text = "";
 			text += "face: " + (int)(box.prob * 100) / 100.0f;
+
+			int margin = 4;
+			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
+		}
+
+		private void HandClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
+		{
+			//Convert to pixel position
+			int x1 = (int)(box.x * tex_width);
+			int y1 = (int)(box.y * tex_height);
+			int x2 = (int)((box.x + box.w) * tex_width);
+			int y2 = (int)((box.y + box.h) * tex_height);
+
+			int w = (x2 - x1);
+			int h = (y2 - y1);
+
+			float expand = 1.4f;
+			x1 -= (int)(w * expand - w) / 2;
+			y1 -= (int)(h * expand - h) / 2;
+			w = (int)(w * expand);
+			h = (int)(h * expand);
+
+			if (w <= 0 || h <= 0)
+			{
+				return;
+			}
+
+			//Draw Box
+			Color color = Color.white;
+			color = Color.HSVToRGB(box.category / 7.0f, 1.0f, 1.0f);
+			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
+			string text = "";
+			text += "hand: " + (int)(box.prob * 100) / 100.0f;
 
 			int margin = 4;
 			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
