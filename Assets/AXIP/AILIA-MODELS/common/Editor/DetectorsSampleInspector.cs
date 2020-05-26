@@ -10,6 +10,7 @@ namespace ailiaSDK
 	{
 		AiliaDetectorsSample ailiaDetectorsSample;
 		SerializedProperty ailiaModelType;
+		SerializedProperty pretrainedModel;
 		SerializedProperty uiCanvas;
 
 		AiliaModelsConst.AiliaModelTypes[] modelArr;
@@ -19,6 +20,7 @@ namespace ailiaSDK
 		private void OnEnable() {
 
 			ailiaModelType = serializedObject.FindProperty("ailiaModelType");
+			pretrainedModel = serializedObject.FindProperty("pretrainedModel");
 			uiCanvas = serializedObject.FindProperty("UICanvas");
 			// Get all model types in the same category
 			// var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory(); //Get category by ailiaModelType default value.
@@ -34,6 +36,17 @@ namespace ailiaSDK
 			var currentIndex = Array.FindIndex(modelArr, x => x == (AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex);
 			currentIndex = EditorGUILayout.Popup("AiliaModelType", currentIndex, modelNameArr);
 			ailiaModelType.enumValueIndex = (int)modelArr[currentIndex];
+			if(ailiaModelType.enumValueIndex == (int)AiliaModelsConst.AiliaModelTypes.mobilenet_ssd)
+			{
+				EditorGUI.indentLevel++;
+				var index = EditorGUILayout.Popup(
+					"Pretrained model", 
+					ArrayUtility.IndexOf(AiliaModelsConst.MobilenetSSDPretrainedModel, pretrainedModel.stringValue),
+					AiliaModelsConst.MobilenetSSDPretrainedModel
+				);
+				pretrainedModel.stringValue = AiliaModelsConst.MobilenetSSDPretrainedModel[index];
+				EditorGUI.indentLevel--;
+			}
 			EditorGUILayout.PropertyField(uiCanvas);
 
 			serializedObject.ApplyModifiedProperties();

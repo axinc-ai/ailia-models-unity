@@ -83,6 +83,7 @@ namespace ailiaSDK
 			[System.ComponentModel.Category("Natural Language Processing"), System.ComponentModel.Description("bert")]
 			bert
 		}
+		public static string[] MobilenetSSDPretrainedModel = new string[] { "mb1-ssd", "mb2-ssd-lite" };
 	}
 	public static class AiliaModelExtensions
 	{
