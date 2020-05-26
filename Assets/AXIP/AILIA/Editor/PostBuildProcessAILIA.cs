@@ -10,11 +10,14 @@ using System.IO;
 using System.Text;
 using System.Xml;
 #endif
+namespace ailiaSDK
+{
+    public class PostBuildProcessAILIA
+    {
 
-public class PostBuildProcessAILIA {
-
-    [PostProcessBuild]
-    public static void OnPostProcessBuild (BuildTarget buildTarget, string path) {
+        [PostProcessBuild]
+        public static void OnPostProcessBuild(BuildTarget buildTarget, string path)
+        {
 #if UNITY_IOS
         string projPath = Path.Combine (path, "Unity-iPhone.xcodeproj/project.pbxproj");
 
@@ -35,5 +38,6 @@ public class PostBuildProcessAILIA {
         //Add
         File.WriteAllText (projPath, proj.WriteToString ());
 #endif
+        }
     }
 }

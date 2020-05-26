@@ -309,6 +309,12 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &688907547 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1813464802}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &806531540 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 114335148288096466, guid: b13fba7fbe84549eaad325ff3431cb6f,
@@ -468,6 +474,8 @@ MonoBehaviour:
   lines: {fileID: 906043600}
   text_panel: {fileID: 1567056764}
   text_base: {fileID: 1580147085}
+  ailiaModelType: 17
+  UICanvas: {fileID: 688907547}
   gpu_mode: 1
   camera_id: 0
   raw_image: {fileID: 806531540}
