@@ -7,10 +7,9 @@ namespace ailiaSDK
 {
 	public class AiliaRenderer : MonoBehaviour
 	{
-
-		public Material line_renderer_material; //Sprite/Default,RenderQueue=Transparent+2000
 		public GameObject line_panel;   //LinePanel
 		public GameObject lines;        //LinePanel/Lines
+		public GameObject line;         // Line to instiate
 		public GameObject text_panel;   //TextPanel
 		public GameObject text_base;    //TextPanel/Text
 		List<GameObject> textObjectBuffer = new List<GameObject>();
@@ -86,7 +85,7 @@ namespace ailiaSDK
 			pointPos2.y += height * (-0.5f + 1.0f * to_y / tex_height) * canvasRect.localScale.y;
 			pointPos2.z += delta;
 
-			GameObject newLine = new GameObject("Line");
+			GameObject newLine;
 			LineRenderer lRend;
 			if (lineObjectBufferIndex < lineObjectBuffer.Count)
 			{
@@ -95,10 +94,9 @@ namespace ailiaSDK
 			}
 			else
 			{
-				newLine = new GameObject("Line");
-				newLine.transform.parent = lines.gameObject.transform;
+				newLine = Instantiate(line, lines.gameObject.transform);
 				newLine.layer = lines.gameObject.layer;
-				lRend = newLine.AddComponent<LineRenderer>();
+				lRend = newLine.GetComponent<LineRenderer>();
 				lineObjectBuffer.Add(newLine);
 			}
 			lineObjectBufferIndex++;
@@ -107,7 +105,6 @@ namespace ailiaSDK
 			Color32 c1 = color;
 			c1.a = 128 + 32;
 
-			lRend.material = line_renderer_material;
 			lRend.startColor = c1;
 			lRend.endColor = c1;
 
@@ -172,10 +169,9 @@ namespace ailiaSDK
 			}
 			else
 			{
-				newLine = new GameObject("Line");
-				newLine.transform.parent = lines.gameObject.transform;
+				newLine = Instantiate(line, lines.gameObject.transform);
 				newLine.layer = lines.gameObject.layer;
-				lRend = newLine.AddComponent<LineRenderer>();
+				lRend = newLine.GetComponent<LineRenderer>();
 				lineObjectBuffer.Add(newLine);
 			}
 			lineObjectBufferIndex++;
@@ -184,7 +180,6 @@ namespace ailiaSDK
 			Color32 c1 = color;
 			c1.a = 160;
 
-			lRend.material = line_renderer_material;
 			lRend.startColor = c1;
 			lRend.endColor = c1;
 
@@ -238,10 +233,9 @@ namespace ailiaSDK
 			}
 			else
 			{
-				newLine = new GameObject("Line");
-				newLine.transform.parent = lines.gameObject.transform;
+				newLine = Instantiate(line, lines.gameObject.transform);
 				newLine.layer = lines.gameObject.layer;
-				lRend = newLine.AddComponent<LineRenderer>();
+				lRend = newLine.GetComponent<LineRenderer>();
 				lineObjectBuffer.Add(newLine);
 			}
 			lineObjectBufferIndex++;
@@ -251,7 +245,7 @@ namespace ailiaSDK
 
 			Color32 c1 = color;
 			c1.a = 160;
-			lRend.material = line_renderer_material;
+
 			lRend.startColor = c1;
 			lRend.endColor = c1;
 
