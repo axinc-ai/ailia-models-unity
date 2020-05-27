@@ -275,6 +275,28 @@ namespace ailiaSDK {
 					}));
 
 					break;
+				case AiliaModelsConst.AiliaModelTypes.maskrcnn:
+					Debug.Log("maskrcnn is working in progress.");
+					/*
+					mode_text.text = "ailia maskrcnn Detector";
+
+					if (gpu_mode)
+					{
+						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+
+					// Download
+					urlList.Add(new ModelDownloadURL() { folder_path = "mask_rcnn", file_name = "mask_rcnn_R_50_FPN_1x.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "mask_rcnn", file_name = "mask_rcnn_R_50_FPN_1x.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/mask_rcnn_R_50_FPN_1x.onnx.prototxt", asset_path + "/mask_rcnn_R_50_FPN_1x.onnx");
+						Ailia.AILIAShape shape;
+						shape = ailia_detector.GetInputShape();
+					}));
+					*/
+					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;

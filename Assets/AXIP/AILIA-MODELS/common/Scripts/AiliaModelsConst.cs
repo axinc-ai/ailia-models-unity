@@ -52,6 +52,8 @@ namespace ailiaSDK
 			yolov3_hand,
 			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("mobilenet_ssd")]
 			mobilenet_ssd,
+			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("maskrcnn")]
+			maskrcnn,
 			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("openpose")]
 			openpose,
 			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("lightweight-human-pose-estimation")]
