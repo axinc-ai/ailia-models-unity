@@ -54,8 +54,8 @@ namespace ailiaSDK
 		int mainTexId;
 		int blendTexId;
 		int blendFlagId;
-		int mainVScaleId;
-		int blendVScaleId;
+		int mainVFlipId;
+		int blendVFlipId;
 
 		int InputWidth;
 		int InputHeight;
@@ -84,8 +84,8 @@ namespace ailiaSDK
 			mainTexId = Shader.PropertyToID("_MainTex");
 			blendTexId = Shader.PropertyToID("_BlendTex");
 			blendFlagId = Shader.PropertyToID("blendFlag");
-			mainVScaleId = Shader.PropertyToID("mainVScale");
-			blendVScaleId = Shader.PropertyToID("blendVScale");
+			mainVFlipId = Shader.PropertyToID("mainVFlip");
+			blendVFlipId = Shader.PropertyToID("blendVFlip");
 			raw_image.material = blendMaterial;
 
 			rawImageSize = raw_image.rectTransform.sizeDelta;
@@ -161,12 +161,12 @@ namespace ailiaSDK
 				if (!gpu_mode || inputDataProcessingShader == null)
 				{
 					inputImage = AiliaImageSource.GetPixels32(rect, true);
-					InputDataPocessingCPU(imageSegmentaionModels, inputImage, input);
+					InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
 				}
 				else
 				{
 					originalTexture = AiliaImageSource.GetTexture(rect);
-					InputDataPocessing(imageSegmentaionModels, originalTexture, input, true);
+					InputDataProcessing(imageSegmentaionModels, originalTexture, input, true);
 				}
 				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
@@ -203,8 +203,8 @@ namespace ailiaSDK
 				labelTexture.Apply();
 				blendMaterial.SetTexture(blendTexId, labelTexture);
 
-				blendMaterial.SetFloat(mainVScaleId, 1);
-				blendMaterial.SetFloat(blendVScaleId, -1);
+				blendMaterial.SetFloat(mainVFlipId, 0);
+				blendMaterial.SetFloat(blendVFlipId, 1);
 
 				raw_image.gameObject.SetActive(true);
 			}
@@ -341,7 +341,7 @@ namespace ailiaSDK
 			}
 		}
 
-		void InputDataPocessingCPU(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
+		void InputDataProcessingCPU(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
 		{
 			float weight = 1f / 255f;
 			float bias = 0;
@@ -352,7 +352,7 @@ namespace ailiaSDK
 					rgbRepeats = true;
 					break;
 				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataPocessingCPU_PSP(inputImage, processedInputBuffer);
+					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
 					return;
 				case ImageSegmentaionModels.deeplabv3:
 					weight = 1f / 127.5f;
@@ -385,7 +385,7 @@ namespace ailiaSDK
 			}
 		}
 
-		void InputDataPocessingCPU_PSP(Color32[] inputImage, float[] processedInputBuffer)
+		void InputDataProcessingCPU_PSP(Color32[] inputImage, float[] processedInputBuffer)
 		{
 			for (int i = 0; i < inputImage.Length; i++)
 			{
@@ -397,7 +397,7 @@ namespace ailiaSDK
 		}
 
 		ComputeBuffer cbuffer;
-		void InputDataPocessing(ImageSegmentaionModels imageSegmentaionModels, Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
+		void InputDataProcessing(ImageSegmentaionModels imageSegmentaionModels, Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
 		{
 			float weight = 1;
 			float bias = 0;
@@ -408,7 +408,7 @@ namespace ailiaSDK
 					rgbRepeats = true;
 					break;
 				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataPocessingPSP(inputImage, processedInputBuffer, upsideDown);
+					InputDataProcessingPSP(inputImage, processedInputBuffer, upsideDown);
 					return;
 				case ImageSegmentaionModels.deeplabv3:
 					weight = 2;
@@ -445,7 +445,7 @@ namespace ailiaSDK
 			cbuffer.GetData(processedInputBuffer);
 		}
 
-		void InputDataPocessingPSP(Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
+		void InputDataProcessingPSP(Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
 		{
 			if (cbuffer == null || cbuffer.count != processedInputBuffer.Length)
 			{

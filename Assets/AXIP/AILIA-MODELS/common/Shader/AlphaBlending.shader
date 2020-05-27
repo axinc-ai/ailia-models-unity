@@ -29,8 +29,8 @@
             sampler2D _MainTex;
             sampler2D _BlendTex;
             float blendFlag;
-            float mainVScale;
-            float blendVScale;
+            float mainVFlip;
+            float blendVFlip;
             float4 _MainTex_ST;
 
             v2f vert (appdata v)
@@ -39,8 +39,8 @@
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv2 = o.uv;
-                o.uv.y = mainVScale * o.uv.y;
-                o.uv2.y = blendVScale * o.uv2.y;
+                o.uv.y = mainVFlip + o.uv.y - 2 * mainVFlip * o.uv.y;
+                o.uv2.y = blendVFlip + o.uv2.y - 2 * blendVFlip * o.uv2.y;
                 return o;
             }
 
