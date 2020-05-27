@@ -12,18 +12,21 @@ using UnityEngine.UI;
 
 namespace ailiaSDK {
 	public class AiliaDetectorsSample : AiliaRenderer {
-		[SerializeField, HideInInspector]
+		[SerializeField]
 		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.yolov3_tiny;
-		[SerializeField, HideInInspector]
+		[SerializeField]
 		private GameObject UICanvas = null;
+
 		//Settings
-		public bool gpu_mode = false;
-		public int camera_id = 0;
+		[SerializeField]
+		private bool gpu_mode = false;
+		[SerializeField]
+		private int camera_id = 0;
 
 		//Result
-		public RawImage raw_image = null;
-		public Text label_text = null;
-		public Text mode_text = null;
+		RawImage raw_image = null;
+		Text label_text = null;
+		Text mode_text = null;
 
 		//Preview
 		private Texture2D preview_texture = null;
@@ -553,6 +556,16 @@ namespace ailiaSDK {
 			// Set up UI for AiliaDownloader
 			var downloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel");
 			ailia_download.DownloaderProgressPanel = downloaderProgressPanel.gameObject;
+			// Set up lines
+			line_panel = UICanvas.transform.Find("LinePanel").gameObject;
+			lines = UICanvas.transform.Find("LinePanel/Lines").gameObject;
+			line = UICanvas.transform.Find("LinePanel/Lines/Line").gameObject;
+			text_panel = UICanvas.transform.Find("TextPanel").gameObject;
+			text_base = UICanvas.transform.Find("TextPanel/TextHolder").gameObject;
+
+			raw_image = UICanvas.transform.Find("RawImage").gameObject.GetComponent<RawImage>();
+			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
+			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
 		void OnApplicationQuit()
 		{
