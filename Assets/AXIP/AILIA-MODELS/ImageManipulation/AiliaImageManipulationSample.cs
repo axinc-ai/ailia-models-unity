@@ -14,7 +14,6 @@ namespace ailiaSDK
 		{
 			SRResNet,
 			Noise2Noise,
-			//DewarpNet,
 			IlluminationCorrection,
 		}
 		//Settings
@@ -267,11 +266,6 @@ namespace ailiaSDK
 					prototxtName = "noise2noise_gaussian.onnx.prototxt";
 					onnxName = "noise2noise_gaussian.onnx";
 					break;
-				//case ImageManipulationModels.DewarpNet:
-				//	serverFolderName = "dewarpnet";
-				//	prototxtName = "wc_model.onnx.prototxt";
-				//	onnxName = "wc_model.onnx";
-				//	break;
 				case ImageManipulationModels.IlluminationCorrection:
 					serverFolderName = "illnet";
 					prototxtName = "illnet.onnx.prototxt";
@@ -308,7 +302,6 @@ namespace ailiaSDK
 			{
 				case ImageManipulationModels.SRResNet:
 				case ImageManipulationModels.Noise2Noise:
-				//case ImageManipulationModels.DewarpNet:
 					shape = ailiaModel.GetInputShape();
 					InputWidth = (int)shape.x;
 					InputHeight = (int)shape.y;
@@ -346,9 +339,6 @@ namespace ailiaSDK
 				case ImageManipulationModels.Noise2Noise:
 					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageManipulation/SampleImage/monarch-gaussian-noisy.png");
 					break;
-				//case ImageManipulationModels.DewarpNet:
-				//	ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageManipulation/SampleImage/dewarpnet_test.png");
-				//	break;
 				case ImageManipulationModels.IlluminationCorrection:
 					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageManipulation/SampleImage/illumination_correction_test.png");
 					break;
