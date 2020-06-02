@@ -28,22 +28,40 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
+		// AILIA open file(model file)
+		private bool FileOpened = false;
+
 		private void CreateAiliaPoseEstimator()
 		{
 			string asset_path = Application.temporaryCachePath;
-			if (gpu_mode)
-			{
-				ailia_pose.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-			}
-			ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
 
-			ailia_download.DownloadModelFromUrl("lightweight-human-pose-estimation", "lightweight-human-pose-estimation.opt.onnx.prototxt");
-			ailia_download.DownloadModelFromUrl("lightweight-human-pose-estimation", "lightweight-human-pose-estimation.opt.onnx");
-
-			bool status = ailia_pose.OpenFile(asset_path + "/lightweight-human-pose-estimation.opt.onnx.prototxt", asset_path + "/lightweight-human-pose-estimation.opt.onnx");
-			if (!status)
+			switch (ailiaModelType)
 			{
-				Debug.Log("Model not found");
+				case AiliaModelsConst.AiliaModelTypes.openpose:
+
+					break;
+				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
+					if (gpu_mode)
+					{
+						ailia_pose.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					}
+					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
+
+					var urlList = new List<ModelDownloadURL>();
+					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = "lightweight-human-pose-estimation.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = "lightweight-human-pose-estimation.opt.onnx" });
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () => 
+					{
+						FileOpened = ailia_pose.OpenFile(asset_path + "/lightweight-human-pose-estimation.opt.onnx.prototxt", asset_path + "/lightweight-human-pose-estimation.opt.onnx");
+					}));
+
+					break;
+				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation_3d:
+
+					break;
+				default:
+					Debug.Log("Others ailia models are working in progress.");
+					break;
 			}
 		}
 
@@ -57,6 +75,7 @@ namespace ailiaSDK
 		void Start()
 		{
 			mode_text.text = "ailia PoseEstimator";
+			SetUIProperties();
 			CreateAiliaPoseEstimator();
 			ailia_camera.CreateCamera(camera_id);
 		}
@@ -65,6 +84,10 @@ namespace ailiaSDK
 		void Update()
 		{
 			if (!ailia_camera.IsEnable())
+			{
+				return;
+			}
+			if (!FileOpened)
 			{
 				return;
 			}
