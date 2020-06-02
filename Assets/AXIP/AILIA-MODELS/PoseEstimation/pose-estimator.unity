@@ -420,6 +420,8 @@ MonoBehaviour:
   lines: {fileID: 1813464807}
   text_panel: {fileID: 1813464806}
   text_base: {fileID: 1813464805}
+  ailiaModelType: 21
+  UICanvas: {fileID: 1821187748}
   gpu_mode: 1
   camera_id: 0
   label_text: {fileID: 1813464804}
@@ -589,3 +591,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &1821187748 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1813464802}
+  m_PrefabAsset: {fileID: 0}
