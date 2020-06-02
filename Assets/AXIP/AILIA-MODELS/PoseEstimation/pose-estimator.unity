@@ -414,13 +414,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a728d70e194cb046868861fb1c8c6e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  line_renderer_material: {fileID: 2100000, guid: 9850adc21eb504815a1f9e501a272b37,
-    type: 2}
   line_panel: {fileID: 1813464808}
   lines: {fileID: 1813464807}
+  line: {fileID: 0}
   text_panel: {fileID: 1813464806}
   text_base: {fileID: 1813464805}
-  ailiaModelType: 21
+  ailiaModelType: 22
   UICanvas: {fileID: 1821187748}
   gpu_mode: 1
   camera_id: 0
