@@ -52,6 +52,8 @@ namespace ailiaSDK
 			yolov3_hand,
 			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("mobilenet_ssd")]
 			mobilenet_ssd,
+			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("maskrcnn")]
+			maskrcnn,
 			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("openpose")]
 			openpose,
 			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("lightweight-human-pose-estimation")]
@@ -83,6 +85,7 @@ namespace ailiaSDK
 			[System.ComponentModel.Category("Natural Language Processing"), System.ComponentModel.Description("bert")]
 			bert
 		}
+		public static string[] MobilenetSSDPretrainedModel = new string[] { "mb1-ssd", "mb2-ssd-lite" };
 	}
 	public static class AiliaModelExtensions
 	{
