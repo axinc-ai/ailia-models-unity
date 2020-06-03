@@ -12,6 +12,7 @@ namespace ailiaSDK
 		SerializedProperty uiCanvas;
 		SerializedProperty gpuMode;
 		SerializedProperty cameraID;
+		SerializedProperty optimizedModel;
 		MonoScript script = null;
 
 		AiliaModelsConst.AiliaModelTypes[] modelArr;
@@ -26,6 +27,7 @@ namespace ailiaSDK
 			uiCanvas = serializedObject.FindProperty("UICanvas");
 			gpuMode = serializedObject.FindProperty("gpu_mode");
 			cameraID = serializedObject.FindProperty("camera_id");
+			optimizedModel = serializedObject.FindProperty("optimizedModel");
 			// Get all model types in the same category
 			// var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory(); //Get category by ailiaModelType default value.
 			var allModelsTypes = Enum.GetValues(typeof(AiliaModelsConst.AiliaModelTypes)) as AiliaModelsConst.AiliaModelTypes[];
@@ -46,6 +48,13 @@ namespace ailiaSDK
 			var currentIndex = Array.FindIndex(modelArr, x => x == (AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex);
 			currentIndex = EditorGUILayout.Popup("AiliaModelType", currentIndex, modelNameArr);
 			ailiaModelType.enumValueIndex = (int)modelArr[currentIndex];
+			if(ailiaModelType.enumValueIndex == (int)AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation)
+			{
+				EditorGUI.indentLevel++;
+				EditorGUILayout.PropertyField(optimizedModel, new GUIContent("Optimized Model"));
+				EditorGUI.indentLevel--;
+
+			}
 
 			serializedObject.ApplyModifiedProperties();
 		}

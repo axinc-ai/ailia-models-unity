@@ -28,31 +28,55 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
+		// normal model or optimized model for lightweight-human-pose-estimation
+		[SerializeField]
+		private bool optimizedModel = true;
 		// AILIA open file(model file)
 		private bool FileOpened = false;
 
 		private void CreateAiliaPoseEstimator()
 		{
 			string asset_path = Application.temporaryCachePath;
+			var urlList = new List<ModelDownloadURL>();
 
+			if (gpu_mode)
+			{
+				ailia_pose.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+			}
 			switch (ailiaModelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.openpose:
+					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_OPEN_POSE);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_deploy.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_iter_440000.caffemodel" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_pose.OpenFile(asset_path + "/pose_deploy.prototxt", asset_path + "/pose_iter_440000.caffemodel");
+					}));
 
 					break;
 				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
-					if (gpu_mode)
-					{
-						ailia_pose.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
 
-					var urlList = new List<ModelDownloadURL>();
-					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = "lightweight-human-pose-estimation.opt.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = "lightweight-human-pose-estimation.opt.onnx" });
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () => 
+					var model_path = "lightweight-human-pose-estimation";
+					var weight_path = "lightweight-human-pose-estimation";
+					if (optimizedModel)
 					{
-						FileOpened = ailia_pose.OpenFile(asset_path + "/lightweight-human-pose-estimation.opt.onnx.prototxt", asset_path + "/lightweight-human-pose-estimation.opt.onnx");
+						model_path += ".opt.onnx.prototxt";
+						weight_path += ".opt.onnx";
+					}
+					else
+					{
+						model_path += ".onnx.prototxt";
+						weight_path  += ".onnx";
+					}
+					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = model_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = weight_path });
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_pose.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 
 					break;
