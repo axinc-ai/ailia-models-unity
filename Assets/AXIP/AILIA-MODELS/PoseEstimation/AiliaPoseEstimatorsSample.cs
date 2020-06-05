@@ -46,6 +46,8 @@ namespace ailiaSDK
 			switch (ailiaModelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.openpose:
+					/*
+					// Download url is uncertain.
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_OPEN_POSE);
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_deploy.prototxt" });
@@ -55,7 +57,7 @@ namespace ailiaSDK
 					{
 						FileOpened = ailia_pose.OpenFile(asset_path + "/pose_deploy.prototxt", asset_path + "/pose_iter_440000.caffemodel");
 					}));
-
+					*/
 					break;
 				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
