@@ -47,16 +47,18 @@ namespace ailiaSDK {
 		// Compute parameter
 		float threshold = 0.2f;
 		float iou = 0.25f;
+		string[] classifierLabel;
+		uint category_n = 1;
 
 		private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
-			uint category_n = 0;
 			var urlList = new List<ModelDownloadURL>();
 			switch (modelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
 					mode_text.text = "ailia yolov1-tiny Detector";
+					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 20;
@@ -84,6 +86,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov1_face:
 					mode_text.text = "ailia yolov1-face FaceDetector";
+					classifierLabel = new string[] { "face" };
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 1;
@@ -112,6 +115,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov2:
 					mode_text.text = "ailia yolov2 Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 80;
@@ -141,6 +145,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3:
 					mode_text.text = "ailia yolov3 Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 80;
@@ -169,6 +174,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
 					mode_text.text = "ailia yolov3-tiny Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 80;
@@ -196,6 +202,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
 					mode_text.text = "ailia yolov3-face FaceDetector";
+					classifierLabel = new string[] { "face" };
 					//Face Detection
 					threshold = 0.2f;
 					iou = 0.45f;
@@ -224,6 +231,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.yolov3_hand:
 					mode_text.text = "ailia yolov3-hand Detector";
+					classifierLabel = new string[] { "hand" };
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 1;
@@ -251,6 +259,7 @@ namespace ailiaSDK {
 					break;
 				case AiliaModelsConst.AiliaModelTypes.mobilenet_ssd:
 					mode_text.text = "ailia mobilenet_ssd Detector. Pretraine model : " + pretrainedModel;
+					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 80;
@@ -353,7 +362,7 @@ namespace ailiaSDK {
 			long start_time_class = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			foreach (AiliaDetector.AILIADetectorObject obj in list)
 			{
-				Classifier(ailiaModelType, obj, camera, tex_width, tex_height);
+				Classifier(obj, camera, tex_width, tex_height);
 			}
 			long end_time_class = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
@@ -367,40 +376,7 @@ namespace ailiaSDK {
 			preview_texture.Apply();
 		}
 
-		private void Classifier(AiliaModelsConst.AiliaModelTypes modelType, AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			switch (modelType)
-			{
-				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
-					ObjClassifierYolov1Tiny(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov1_face:
-					FaceClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov2:
-					ObjClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3:
-					ObjClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
-					ObjClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
-					FaceClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_hand:
-					HandClassifier(box, camera, tex_width, tex_height);
-					break;
-				case AiliaModelsConst.AiliaModelTypes.mobilenet_ssd:
-					ObjClassifierMobilenetssd(box, camera, tex_width, tex_height);
-					break;
-				default:
-					break;
-			}
-		}
-
-		private void ObjClassifierYolov1Tiny(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
+		private void Classifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
 		{
 			//Convert to pixel domain
 			int x1 = (int)(box.x * tex_width);
@@ -417,134 +393,12 @@ namespace ailiaSDK {
 			}
 
 			Color color = Color.white;
-			color = Color.HSVToRGB(box.category / 20.0f, 1.0f, 1.0f);
+			color = Color.HSVToRGB(box.category / category_n, 1.0f, 1.0f);
 			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
 
 			float p = (int)(box.prob * 100) / 100.0f;
 			string text = "";
-			text += AiliaClassifierLabel.VOC_CATEGORY[box.category];
-			text += " " + p;
-			int margin = 4;
-			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
-		}
-
-		private void ObjClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			//Convert to pixel domain
-			int x1 = (int)(box.x * tex_width);
-			int y1 = (int)(box.y * tex_height);
-			int x2 = (int)((box.x + box.w) * tex_width);
-			int y2 = (int)((box.y + box.h) * tex_height);
-
-			int w = (x2 - x1);
-			int h = (y2 - y1);
-
-			if (w <= 0 || h <= 0)
-			{
-				return;
-			}
-
-			Color color = Color.white;
-			color = Color.HSVToRGB(box.category / 80.0f, 1.0f, 1.0f);
-			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-
-			float p = (int)(box.prob * 100) / 100.0f;
-			string text = "";
-			text += AiliaClassifierLabel.COCO_CATEGORY[box.category];
-			text += " " + p;
-			int margin = 4;
-			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
-		}
-
-		private void FaceClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			//Convert to pixel position
-			int x1 = (int)(box.x * tex_width);
-			int y1 = (int)(box.y * tex_height);
-			int x2 = (int)((box.x + box.w) * tex_width);
-			int y2 = (int)((box.y + box.h) * tex_height);
-
-			int w = (x2 - x1);
-			int h = (y2 - y1);
-
-			float expand = 1.4f;
-			x1 -= (int)(w * expand - w) / 2;
-			y1 -= (int)(h * expand - h) / 2;
-			w = (int)(w * expand);
-			h = (int)(h * expand);
-
-			if (w <= 0 || h <= 0)
-			{
-				return;
-			}
-
-			//Draw Box
-			Color color = Color.white;
-			color = Color.HSVToRGB(box.category / 7.0f, 1.0f, 1.0f);
-			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-			string text = "";
-			text += "face: " + (int)(box.prob * 100) / 100.0f;
-
-			int margin = 4;
-			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
-		}
-
-		private void HandClassifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			//Convert to pixel position
-			int x1 = (int)(box.x * tex_width);
-			int y1 = (int)(box.y * tex_height);
-			int x2 = (int)((box.x + box.w) * tex_width);
-			int y2 = (int)((box.y + box.h) * tex_height);
-
-			int w = (x2 - x1);
-			int h = (y2 - y1);
-
-			float expand = 1.4f;
-			x1 -= (int)(w * expand - w) / 2;
-			y1 -= (int)(h * expand - h) / 2;
-			w = (int)(w * expand);
-			h = (int)(h * expand);
-
-			if (w <= 0 || h <= 0)
-			{
-				return;
-			}
-
-			//Draw Box
-			Color color = Color.white;
-			color = Color.HSVToRGB(box.category / 7.0f, 1.0f, 1.0f);
-			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-			string text = "";
-			text += "hand: " + (int)(box.prob * 100) / 100.0f;
-
-			int margin = 4;
-			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
-		}
-
-		private void ObjClassifierMobilenetssd(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			//Convert to pixel domain
-			int x1 = (int)(box.x * tex_width);
-			int y1 = (int)(box.y * tex_height);
-			int x2 = (int)((box.x + box.w) * tex_width);
-			int y2 = (int)((box.y + box.h) * tex_height);
-
-			int w = (x2 - x1);
-			int h = (y2 - y1);
-
-			if (w <= 0 || h <= 0)
-			{
-				return;
-			}
-
-			Color color = Color.white;
-			color = Color.HSVToRGB(box.category / 80.0f, 1.0f, 1.0f);
-			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-
-			float p = (int)(box.prob * 100) / 100.0f;
-			string text = "";
-			text += AiliaClassifierLabel.VOC_CATEGORY[box.category];
+			text += classifierLabel[box.category];
 			text += " " + p;
 			int margin = 4;
 			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
