@@ -54,6 +54,10 @@ namespace ailiaSDK {
 		{
 			string asset_path = Application.temporaryCachePath;
 			var urlList = new List<ModelDownloadURL>();
+			if (gpu_mode)
+			{
+				ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+			}
 			switch (modelType)
 			{
 				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
@@ -62,10 +66,7 @@ namespace ailiaSDK {
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 20;
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
+
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -91,10 +92,6 @@ namespace ailiaSDK {
 					iou = 0.45f;
 					category_n = 1;
 
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -120,10 +117,6 @@ namespace ailiaSDK {
 					iou = 0.45f;
 					category_n = 80;
 
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -136,7 +129,7 @@ namespace ailiaSDK {
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov2", file_name = "yolov2.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov2", file_name = "yolov2.onnx" });
 
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () => 
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov2.onnx.prototxt", asset_path + "/yolov2.onnx");
 						ailia_detector.Anchors(AiliaClassifierLabel.COCO_ANCHORS);
@@ -150,10 +143,6 @@ namespace ailiaSDK {
 					iou = 0.45f;
 					category_n = 80;
 
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -166,7 +155,7 @@ namespace ailiaSDK {
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx" });
 
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () => 
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3.opt.onnx.prototxt", asset_path + "/yolov3.opt.onnx");
 					}));
@@ -178,16 +167,13 @@ namespace ailiaSDK {
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 80;
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
+
 					ailia_detector.Settings(
-						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, 
-						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, 
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
 						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
 						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,
-						category_n, 
+						category_n,
 						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
 					);
 
@@ -207,15 +193,12 @@ namespace ailiaSDK {
 					threshold = 0.2f;
 					iou = 0.45f;
 					category_n = 1;
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
+
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
 						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
-						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, 
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3,
 						category_n,
 						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
 					);
@@ -235,10 +218,7 @@ namespace ailiaSDK {
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 1;
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
+
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -263,10 +243,7 @@ namespace ailiaSDK {
 					threshold = 0.4f;
 					iou = 0.45f;
 					category_n = 80;
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
+
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -291,11 +268,6 @@ namespace ailiaSDK {
 					Debug.Log("maskrcnn is working in progress.");
 					/*
 					mode_text.text = "ailia maskrcnn Detector";
-
-					if (gpu_mode)
-					{
-						ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-					}
 
 					// Download
 					urlList.Add(new ModelDownloadURL() { folder_path = "mask_rcnn", file_name = "mask_rcnn_R_50_FPN_1x.onnx.prototxt" });
