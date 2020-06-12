@@ -135,7 +135,7 @@ namespace ailiaSDK
 			raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
 			raw_image.gameObject.SetActive(false);
 
-			mode_text.text = "ailia Adain\nSpace key down to switch image (result -> style -> original)";
+			mode_text.text = "ailia Adain\nSpace key down to switch image (<color=#f66>result</color> -> style -> original)";
 		}
 
 		int previewMode = 0;
@@ -220,6 +220,7 @@ namespace ailiaSDK
 						blendMaterial.SetFloat(blendFlagId, 1);
 						blendMaterial.SetFloat(blendVFlipId, 1);
 						blendMaterial.SetTexture(blendTexId, resultRenderTexture);
+						mode_text.text = "ailia Adain\nSpace key down to switch image (<color=#f66>result</color> -> style -> original)";
 						break;
 					case 1:
 						rawImageRatio = rawImageSize.x / rawImageSize.y;
@@ -227,6 +228,7 @@ namespace ailiaSDK
 						raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
 						blendMaterial.SetFloat(blendVFlipId, 0);
 						blendMaterial.SetTexture(blendTexId, styleTexture);
+						mode_text.text = "ailia Adain\nSpace key down to switch image (result -> <color=#f66>style</color> -> original)";
 						break;
 					case 2:
 						rawImageRatio = rawImageSize.x / rawImageSize.y;
@@ -234,6 +236,7 @@ namespace ailiaSDK
 						raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
 						blendMaterial.SetFloat(blendFlagId, 0);
 						blendMaterial.SetFloat(blendVFlipId, 1);
+						mode_text.text = "ailia Adain\nSpace key down to switch image (result -> style -> <color=#f66>original</color>)";
 						break;
 				}
 			}
