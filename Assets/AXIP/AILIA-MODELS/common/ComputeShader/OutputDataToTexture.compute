@@ -1,0 +1,33 @@
+﻿#pragma kernel ChannelLastToTexture
+#pragma kernel ChannelFirstToTexture
+
+RWTexture2D<float4> result_texure;
+Buffer<float> input_buffer;
+int width;
+int height;
+
+[numthreads(32, 32, 1)]
+void ChannelLastToTexture(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		result_texure[id] = saturate(float4(
+			input_buffer[(id.y * width + id.x) * 3 + 0],
+			input_buffer[(id.y * width + id.x) * 3 + 1],
+			input_buffer[(id.y * width + id.x) * 3 + 2],
+			1));
+	}
+}
+
+[numthreads(32, 32, 1)]
+void ChannelFirstToTexture(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < width && id.y < height)
+	{
+		result_texure[id] = saturate(float4(
+			input_buffer[(id.y * width + id.x) + 0 * height * width],
+			input_buffer[(id.y * width + id.x) + 1 * height * width],
+			input_buffer[(id.y * width + id.x) + 2 * height * width],
+			1));
+	}
+}

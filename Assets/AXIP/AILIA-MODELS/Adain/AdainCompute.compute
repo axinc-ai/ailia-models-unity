@@ -1,0 +1,77 @@
+﻿#pragma kernel AdaptiveInstanceNormalization
+RWBuffer<float> result_buffer;
+Buffer<float> content_buffer;
+Buffer<float> style_buffer;
+float adainAlpha;
+#define BLOCK_NUM (64)
+#define CHANNEL_THREAD_GROUP_NUM (16)
+
+groupshared float content_sum[CHANNEL_THREAD_GROUP_NUM * BLOCK_NUM];
+groupshared float style_sum[CHANNEL_THREAD_GROUP_NUM * BLOCK_NUM];
+
+// Dispatch(AdaptiveInstanceNormalizationKernelID, 32, 1, 1);
+[numthreads(CHANNEL_THREAD_GROUP_NUM, BLOCK_NUM, 1)]
+void AdaptiveInstanceNormalization(uint2 id : SV_DispatchThreadID, uint2 gtid : SV_GroupThreadID)
+{
+	const uint FEATURE_SIZE = 64 * 64;
+	const uint BLOCK_SIZE = FEATURE_SIZE / BLOCK_NUM;
+	const float EPSILON = 1e-5;
+	uint sharedBufferIndex = gtid.x * BLOCK_NUM + gtid.y;
+
+	// calculation mean
+	content_sum[sharedBufferIndex] = 0;
+	style_sum[sharedBufferIndex] = 0;
+	for (uint i = 0; i < BLOCK_SIZE; i++)
+	{
+		content_sum[sharedBufferIndex] += content_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)];
+		style_sum[sharedBufferIndex] += style_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)];
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+	for (i = BLOCK_NUM >> 1; i > 0; i = i >> 1)
+	{
+		if (gtid.y < i)
+		{
+			content_sum[sharedBufferIndex] += content_sum[sharedBufferIndex + i];
+			style_sum[sharedBufferIndex] += style_sum[sharedBufferIndex + i];
+		}
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	float contentMean = content_sum[gtid.x * BLOCK_NUM] / (float)FEATURE_SIZE;
+	float styleMean = style_sum[gtid.x * BLOCK_NUM] / (float)FEATURE_SIZE;
+	GroupMemoryBarrierWithGroupSync();
+
+	// calculation std
+	content_sum[sharedBufferIndex] = 0;
+	style_sum[sharedBufferIndex] = 0;
+	for (i = 0; i < BLOCK_SIZE; i++)
+	{
+		content_sum[sharedBufferIndex] += (content_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)] - contentMean) * (content_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)] - contentMean);
+		style_sum[sharedBufferIndex] += (style_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)] - styleMean) * (style_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)] - styleMean);
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+	for (i = BLOCK_NUM >> 1; i > 0; i = i >> 1)
+	{
+		if (gtid.y < i)
+		{
+			content_sum[sharedBufferIndex] += content_sum[sharedBufferIndex + i];
+			style_sum[sharedBufferIndex] += style_sum[sharedBufferIndex + i];
+		}
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	float contentStd = content_sum[gtid.x * BLOCK_NUM] / (float)FEATURE_SIZE;
+	float styleStd = style_sum[gtid.x * BLOCK_NUM] / (float)FEATURE_SIZE;
+	contentStd = sqrt(contentStd + EPSILON);
+	styleStd = sqrt(styleStd + EPSILON);
+
+	// calculation result feature
+	for (i = 0; i < BLOCK_SIZE; i++)
+	{
+		float content = content_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)];
+		float feature = ((content - contentMean) / contentStd) * styleStd + styleMean;
+		result_buffer[id.x * FEATURE_SIZE + (gtid.y * BLOCK_SIZE + i)] = feature * adainAlpha + content * (1 - adainAlpha);
+	}
+}

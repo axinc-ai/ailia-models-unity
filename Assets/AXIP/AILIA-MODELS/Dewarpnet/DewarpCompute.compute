@@ -1,0 +1,40 @@
+﻿#pragma kernel WCtoBM_Resize
+#pragma kernel bmOutputToUVTexture
+RWBuffer<float> result_buffer;
+Buffer<float> input_buffer;
+RWTexture2D<float4> result_texure;
+
+
+// Specialized 256x256 to 128x128
+// Dispatch(WCtoBM_ResizeKernelID, 4, 4, 3);
+[numthreads(32, 32, 1)]
+void WCtoBM_Resize(uint3 id : SV_DispatchThreadID)
+{
+	result_buffer[((id.y) * 128 + id.x) + id.z * 128*128] = saturate((
+		input_buffer[(id.y * 2 + 0) * 256 + (id.x * 2 + 0) + id.z * 256 * 256] +
+		input_buffer[(id.y * 2 + 1) * 256 + (id.x * 2 + 0) + id.z * 256 * 256] +
+		input_buffer[(id.y * 2 + 0) * 256 + (id.x * 2 + 1) + id.z * 256 * 256] +
+		input_buffer[(id.y * 2 + 1) * 256 + (id.x * 2 + 1) + id.z * 256 * 256]) * 0.25);
+}
+
+//Dispatch(bmOutputToUVTextureKernelID, 4, 4, 1);
+[numthreads(32, 32, 1)]
+void bmOutputToUVTexture(uint2 id : SV_DispatchThreadID)
+{
+	float u = 0;
+	float v = 0;
+	const int r = 1;
+	const int2 xRange = int2(max((int)id.x - r, 0), min(id.x + r, 127));
+	const int2 yRange = int2(max((int)id.y - r, 0), min(id.y + r, 127));
+
+	for (int j = yRange.x; j <= yRange.y; j++)
+	{
+		for (int i = xRange.x; i <= xRange.y; i++)
+		{
+			u += input_buffer[j * 128 + i];
+			v += input_buffer[j * 128 + i + 128 * 128];
+		}
+	}
+	const int kernelSize = (xRange.y - xRange.x + 1) * (yRange.y - yRange.x + 1);
+	result_texure[id] = saturate(float4((u + kernelSize) * (1.0 / (2 * kernelSize)), (v + kernelSize) * (1.0 / (2 * kernelSize)), 0, 1));
+}
