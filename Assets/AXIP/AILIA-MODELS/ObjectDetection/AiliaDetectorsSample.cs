@@ -365,7 +365,7 @@ namespace ailiaSDK {
 			}
 
 			Color color = Color.white;
-			color = Color.HSVToRGB(box.category * 1.0f / category_n, 1.0f, 1.0f);
+			color = Color.HSVToRGB((float)box.category / category_n, 1.0f, 1.0f);
 			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
 
 			float p = (int)(box.prob * 100) / 100.0f;
