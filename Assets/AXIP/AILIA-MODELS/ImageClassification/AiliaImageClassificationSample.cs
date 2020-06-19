@@ -14,6 +14,11 @@ namespace ailiaSDK
 {
 	public class AiliaImageClassificationSample : AiliaRenderer
 	{
+		[SerializeField]
+		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.resnet50;
+		[SerializeField]
+		private GameObject UICanvas = null;
+
 		//Settings
 		public bool gpu_mode = true;
 		public bool is_english = false;
@@ -33,20 +38,36 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
+		// AILIA open file
+		private bool FileOpened = false;
+
 		private void CreateAilia()
 		{
 			string asset_path = Application.temporaryCachePath;
+			var urlList = new List<ModelDownloadURL>();
 			if (gpu_mode)
 			{
 				ailia_classifier_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 
-			ailia_classifier_model.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8);
+			switch (ailiaModelType)
+			{
+				case AiliaModelsConst.AiliaModelTypes.resnet50:
+					ailia_classifier_model.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8
+					);
 
-			ailia_download.DownloadModelFromUrl("resnet50", "resnet50.opt.onnx.prototxt");
-			ailia_download.DownloadModelFromUrl("resnet50", "resnet50.opt.onnx");
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = "resnet50.opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = "resnet50.opt.onnx" });
 
-			ailia_classifier_model.OpenFile(asset_path + "/resnet50.opt.onnx.prototxt", asset_path + "/resnet50.opt.onnx");
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/resnet50.opt.onnx.prototxt", asset_path + "/resnet50.opt.onnx");
+					}));
+					break;
+			}
 		}
 
 		private void DestroyAilia()
@@ -57,13 +78,14 @@ namespace ailiaSDK
 		void Start()
 		{
 			mode_text.text = "ailia Classifier";
+			SetUIProperties();
 			CreateAilia();
 			ailia_camera.CreateCamera(camera_id);
 		}
 
 		void Update()
 		{
-			if (!ailia_camera.IsEnable())
+			if (!ailia_camera.IsEnable() || !FileOpened)
 			{
 				return;
 			}
@@ -116,6 +138,24 @@ namespace ailiaSDK
 			//Apply image
 			preview_texture.SetPixels32(camera);
 			preview_texture.Apply();
+		}
+
+		void SetUIProperties()
+		{
+			if (UICanvas == null) return;
+			// Set up UI for AiliaDownloader
+			var downloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel");
+			ailia_download.DownloaderProgressPanel = downloaderProgressPanel.gameObject;
+			// Set up lines
+			line_panel = UICanvas.transform.Find("LinePanel").gameObject;
+			lines = UICanvas.transform.Find("LinePanel/Lines").gameObject;
+			line = UICanvas.transform.Find("LinePanel/Lines/Line").gameObject;
+			text_panel = UICanvas.transform.Find("TextPanel").gameObject;
+			text_base = UICanvas.transform.Find("TextPanel/TextHolder").gameObject;
+
+			raw_image = UICanvas.transform.Find("RawImage").gameObject.GetComponent<RawImage>();
+			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
+			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
 
 		void OnApplicationQuit()

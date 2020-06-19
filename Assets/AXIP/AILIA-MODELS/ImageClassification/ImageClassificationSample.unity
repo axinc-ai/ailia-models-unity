@@ -297,6 +297,8 @@ MonoBehaviour:
   line: {fileID: 284098718}
   text_panel: {fileID: 1966900788}
   text_base: {fileID: 134548559}
+  ailiaModelType: 2
+  UICanvas: {fileID: 1166538630}
   gpu_mode: 1
   is_english: 0
   camera_id: 0
@@ -565,6 +567,12 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
+--- !u!1 &1166538630 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
+    type: 3}
+  m_PrefabInstance: {fileID: 284098717}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1255283545 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1018917012828270, guid: b13fba7fbe84549eaad325ff3431cb6f,
