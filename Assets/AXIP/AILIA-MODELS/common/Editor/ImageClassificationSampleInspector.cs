@@ -9,7 +9,7 @@ namespace ailiaSDK
 	public class ImageClassificationSampleInspector : Editor
 	{
 		SerializedProperty ailiaModelType;
-		// SerializedProperty pretrainedModel;
+		SerializedProperty resnet50Model;
 		SerializedProperty uiCanvas;
 		SerializedProperty gpuMode;
 		SerializedProperty cameraID;
@@ -23,7 +23,7 @@ namespace ailiaSDK
 			script = MonoScript.FromMonoBehaviour((AiliaImageClassificationSample)target);
 
 			ailiaModelType = serializedObject.FindProperty("ailiaModelType");
-			// pretrainedModel = serializedObject.FindProperty("pretrainedModel");
+			resnet50Model = serializedObject.FindProperty("resnet50model");
 			uiCanvas = serializedObject.FindProperty("UICanvas");
 			gpuMode = serializedObject.FindProperty("gpu_mode");
 			cameraID = serializedObject.FindProperty("camera_id");
@@ -47,7 +47,17 @@ namespace ailiaSDK
 			var currentIndex = Array.FindIndex(modelArr, x => x == (AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex);
 			currentIndex = EditorGUILayout.Popup("AiliaModelType", currentIndex, modelNameArr);
 			ailiaModelType.enumValueIndex = (int)modelArr[currentIndex];
-
+			if (ailiaModelType.enumValueIndex == (int)AiliaModelsConst.AiliaModelTypes.resnet50)
+			{
+				EditorGUI.indentLevel++;
+				var index = EditorGUILayout.Popup(
+					"Resnet50 Model",
+					ArrayUtility.IndexOf(AiliaModelsConst.Resnet50Model, resnet50Model.stringValue),
+					AiliaModelsConst.Resnet50Model
+				);
+				resnet50Model.stringValue = AiliaModelsConst.Resnet50Model[index];
+				EditorGUI.indentLevel--;
+			}
 			serializedObject.ApplyModifiedProperties();
 		}
 	}

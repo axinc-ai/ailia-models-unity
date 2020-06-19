@@ -41,6 +41,11 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
+		// Model for resnet50, default model is resnet50.opt
+		[SerializeField]
+		private string resnet50model = "resnet50.opt";
+		// private string resnet50_model = "resnet50.opt";
+
 		// AILIA open file
 		private bool FileOpened = false;
 
@@ -62,8 +67,8 @@ namespace ailiaSDK
 						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8
 					);
 
-					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = "resnet50.opt.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = "resnet50.opt.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = resnet50model + ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = resnet50model + ".onnx" });
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{

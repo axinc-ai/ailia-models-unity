@@ -305,6 +305,7 @@ MonoBehaviour:
   raw_image: {fileID: 792245433}
   mode_text: {fileID: 66576881}
   label_text: {fileID: 1581251166}
+  resnet50model: resnet50.opt
 --- !u!1 &489979542
 GameObject:
   m_ObjectHideFlags: 0
