@@ -20,9 +20,12 @@ namespace ailiaSDK
 		private GameObject UICanvas = null;
 
 		//Settings
-		public bool gpu_mode = true;
-		public bool is_english = false;
-		public int camera_id = 0;
+		[SerializeField]
+		private bool gpu_mode = true;
+		[SerializeField]
+		private bool is_english = false;
+		[SerializeField]
+		private int camera_id = 0;
 
 		//Output buffer
 		public RawImage raw_image = null;
