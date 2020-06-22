@@ -60,6 +60,25 @@ namespace ailiaSDK
 
 			switch (ailiaModelType)
 			{
+				case AiliaModelsConst.AiliaModelTypes.vgg16:
+
+					break;
+
+				case AiliaModelsConst.AiliaModelTypes.googlenet:
+					ailia_classifier_model.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "googlenet", file_name = "googlenet.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "googlenet", file_name = "googlenet.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/googlenet.onnx.prototxt", asset_path + "/googlenet.onnx");
+					}));
+					break;
 				case AiliaModelsConst.AiliaModelTypes.resnet50:
 					ailia_classifier_model.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR,
@@ -67,12 +86,15 @@ namespace ailiaSDK
 						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8
 					);
 
-					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = resnet50model + ".onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = resnet50model + ".onnx" });
+					var model_path = resnet50model + ".onnx.prototxt";
+					var weight_path = resnet50model + ".onnx";
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = model_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = "resnet50", file_name = weight_path });
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/resnet50.opt.onnx.prototxt", asset_path + "/resnet50.opt.onnx");
+						// FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + model_path);
+						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 					break;
 			}
