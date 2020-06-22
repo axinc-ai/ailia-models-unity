@@ -97,6 +97,21 @@ namespace ailiaSDK
 						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 					break;
+				case AiliaModelsConst.AiliaModelTypes.inceptionv3:
+					ailia_classifier_model.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "inceptionv3", file_name = "inceptionv3.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "inceptionv3", file_name = "inceptionv3.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/inceptionv3.onnx.prototxt", asset_path + "/inceptionv3.onnx");
+					}));
+					break;
 			}
 		}
 
