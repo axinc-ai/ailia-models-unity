@@ -44,7 +44,6 @@ namespace ailiaSDK
 		// Model for resnet50, default model is resnet50.opt
 		[SerializeField]
 		private string resnet50model = "resnet50.opt";
-		// private string resnet50_model = "resnet50.opt";
 
 		// AILIA open file
 		private bool FileOpened = false;
@@ -93,7 +92,6 @@ namespace ailiaSDK
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						// FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + model_path);
 						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 					break;
