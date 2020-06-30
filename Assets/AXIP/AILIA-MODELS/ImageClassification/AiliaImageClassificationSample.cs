@@ -80,7 +80,7 @@ namespace ailiaSDK
 					break;
 				case AiliaModelsConst.AiliaModelTypes.resnet50:
 					ailia_classifier_model.Settings(
-						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR,
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
 						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8
 					);
