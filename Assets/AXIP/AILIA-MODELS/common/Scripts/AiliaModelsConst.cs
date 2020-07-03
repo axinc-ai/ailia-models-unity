@@ -86,6 +86,7 @@ namespace ailiaSDK
 			bert
 		}
 		public static string[] MobilenetSSDPretrainedModel = new string[] { "mb1-ssd", "mb2-ssd-lite" };
+		public static string[] Resnet50Model = new string[] { "resnet50.opt", "resnet50", "resnet50_pytorch" };
 	}
 	public static class AiliaModelExtensions
 	{
