@@ -306,7 +306,7 @@ namespace ailiaSDK {
 		{
 			if (!ailia_camera.IsEnable())
 			{
-				ailia_detector.Close();
+				return;
 			}
 			if (!FileOpened)
 			{
