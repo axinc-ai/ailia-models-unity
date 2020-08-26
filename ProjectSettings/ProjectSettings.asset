@@ -12,6 +12,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
+  companyName: ax Inc.
   productName: ailia-models-unity
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
@@ -293,6 +294,7 @@ PlayerSettings:
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
   cameraUsageDescription: 
+  cameraUsageDescription: Capture for detection
   locationUsageDescription: 
   microphoneUsageDescription: 
   switchNetLibKey: 
