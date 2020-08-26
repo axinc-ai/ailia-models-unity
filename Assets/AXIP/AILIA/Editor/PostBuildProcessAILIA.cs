@@ -24,7 +24,11 @@ namespace ailiaSDK
         PBXProject proj = new PBXProject ();
         proj.ReadFromString (File.ReadAllText (projPath));
 
+#if UNITY_2019_1_OR_NEWER
+        string target =  proj.GetUnityFrameworkTargetGuid();
+#else
         string target = proj.TargetGuidByName ("Unity-iPhone");
+#endif
 
         List<string> frameworks = new List<string> () {
             "Accelerate.framework",

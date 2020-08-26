@@ -21,7 +21,7 @@ So you must get license and import ailia libraries to Plugin folder.
 ## Develop Environment
 
 - Windows, Mac
-- Unity 2017.4.30f1
+- Unity 2019.3.8f1
 
 ## Target Environment
 
