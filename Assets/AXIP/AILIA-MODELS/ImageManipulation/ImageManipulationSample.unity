@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.4465782, g: 0.49641252, b: 0.5748167, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -427,8 +427,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d04b895a864ef04e89038752f3ea8b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  imageManipulationModels: 2
-  gpu_mode: 1
+  imageManipulationModels: 3
+  gpu_mode: 0
   inputDataProcessingShader: {fileID: 7200000, guid: 4ad8a3eeb0183024b80805583ce4281a,
     type: 3}
   outputDataToTextureShader: {fileID: 7200000, guid: 3012291cfcecf1b48887939405da3641,
