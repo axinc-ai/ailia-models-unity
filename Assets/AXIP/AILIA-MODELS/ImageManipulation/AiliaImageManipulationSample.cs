@@ -165,7 +165,6 @@ namespace ailiaSDK
                 }
 
                 AiliaImageSource.Resize(InputWidth, InputHeight);
-                Debug.Log($"input: {InputWidth},{InputHeight},{InputChannel}");
                 input = new float[InputWidth * InputHeight * InputChannel];
                 output = new float[OutputWidth * OutputHeight * OutputChannel];
                 outputImage = new Color32[OutputWidth * OutputHeight];
@@ -178,6 +177,7 @@ namespace ailiaSDK
                 // Make input data
                 Rect rect = new Rect(0, 0, InputWidth, InputHeight);
                 long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+
                 Color32[] inputImage = null;
                 if (!gpu_mode || inputDataProcessingShader == null)
                 {
@@ -198,12 +198,13 @@ namespace ailiaSDK
                 // convert result to image
                 if (!gpu_mode || outputDataToTextureShader == null)
                 {
-                    OutputDataProcessingCPU(output, outputImage);
+                    OutputDataProcessingCPU(imageManipulationModels, output, outputImage, inputImage);
                 }
                 else
                 {
                     OutputDataProcessing(output, resultRenderTexture);
                 }
+
                 long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
                 if (label_text != null)
@@ -225,6 +226,7 @@ namespace ailiaSDK
                 {
                     resultTexture2D.SetPixels32(outputImage);
                     resultTexture2D.Apply();
+
                     blendMaterial.SetTexture(blendTexId, resultTexture2D);
                 }
                 else
@@ -333,6 +335,7 @@ namespace ailiaSDK
                     OutputHeight = AiliaImageSource.Height;
                     OutputChannel = 3;
                     break;
+#if false
                 case ImageManipulationModels.Colorization:
                     shape = new Ailia.AILIAShape();
                     shape.x = (uint)AiliaImageSource.Width;
@@ -343,11 +346,27 @@ namespace ailiaSDK
                     ailiaModel.SetInputShape(shape);
                     InputWidth = AiliaImageSource.Width;
                     InputHeight = AiliaImageSource.Height;
-                    InputChannel = 3;
+                    InputChannel = 1;
                     OutputWidth = AiliaImageSource.Width;
                     OutputHeight = AiliaImageSource.Height;
-                    OutputChannel = 3;
+                    OutputChannel = 2;
                     break;
+#else
+                // 256x256に縮小してみる
+                case ImageManipulationModels.Colorization:
+                    shape = ailiaModel.GetInputShape();
+                    shape.z = 1;
+                    shape.w = 1;
+                    shape.dim = 4;
+                    ailiaModel.SetInputShape(shape);
+                    InputWidth = (int)shape.x;
+                    InputHeight = (int)shape.y;
+                    InputChannel = 1;
+                    OutputWidth = InputWidth; // AiliaImageSource.Width;
+                    OutputHeight = InputHeight; // AiliaImageSource.Height;
+                    OutputChannel = 2;
+                    break;
+#endif // ~true
             }
         }
 
@@ -381,6 +400,36 @@ namespace ailiaSDK
                     weight = 1f / 127.5f;
                     bias = -1;
                     break;
+
+                case ImageManipulationModels.Colorization:
+                    if (rgbRepeats)
+                    {
+                        for (int i = 0; i < inputImage.Length; i++)
+                        {
+                            var r = (inputImage[i].r) * weight + bias;
+                            var g = (inputImage[i].g) * weight + bias;
+                            var b = (inputImage[i].b) * weight + bias;
+
+                            var lab = AiliaColorConv.Color2Lab(new Color(r, g, b));
+                            processedInputBuffer[i * 3 + 0] = (float)lab.L;
+                            processedInputBuffer[i * 3 + 1] = (float)lab.A;
+                            processedInputBuffer[i * 3 + 2] = (float)lab.B;
+                        }
+
+                    }
+                    else
+                    {
+                        for (int i = 0; i < inputImage.Length; i++)
+                        {
+                            var r = (inputImage[i].r) * weight + bias;
+                            var g = (inputImage[i].g) * weight + bias;
+                            var b = (inputImage[i].b) * weight + bias;
+                            var lab = AiliaColorConv.Color2Lab(new Color(r, g, b));
+
+                            processedInputBuffer[i + inputImage.Length * 0] = (float)lab.L;
+                        }
+                    }
+                    return;
                 default:
                     break;
             }
@@ -400,7 +449,6 @@ namespace ailiaSDK
             {
                 for (int i = 0; i < inputImage.Length; i++)
                 {
-                    // rrr...ggg...bbb...
                     processedInputBuffer[i + inputImage.Length * 0] = (inputImage[i].r) * weight + bias;
                     processedInputBuffer[i + inputImage.Length * 1] = (inputImage[i].g) * weight + bias;
                     processedInputBuffer[i + inputImage.Length * 2] = (inputImage[i].b) * weight + bias;
@@ -451,14 +499,34 @@ namespace ailiaSDK
             inputCBuffer.GetData(processedInputBuffer);
         }
 
-        void OutputDataProcessingCPU(float[] outputData, Color32[] pixelBuffer)
+        void OutputDataProcessingCPU(ImageManipulationModels imageManipulationModels, float[] outputData, Color32[] pixelBuffer, Color32[] srcBuffer = null)
         {
-            for (int i = 0; i < pixelBuffer.Length; i++)
+            switch (imageManipulationModels)
             {
-                pixelBuffer[i].r = (byte)Mathf.Clamp(outputData[i + 0 * pixelBuffer.Length] * 255, 0, 255);
-                pixelBuffer[i].g = (byte)Mathf.Clamp(outputData[i + 1 * pixelBuffer.Length] * 255, 0, 255);
-                pixelBuffer[i].b = (byte)Mathf.Clamp(outputData[i + 2 * pixelBuffer.Length] * 255, 0, 255);
-                pixelBuffer[i].a = 255;
+                case ImageManipulationModels.Colorization:
+                    // FIXME: stretch to original size
+                    for (int i = 0; i < pixelBuffer.Length; i++)
+                    {
+                        var lab = AiliaColorConv.Color2Lab(srcBuffer[i]);
+                        var nlab = new AiliaColorConv.LAB(
+                            lab.l,
+                            outputData[i + 0 * pixelBuffer.Length],
+                            outputData[i + 1 * pixelBuffer.Length]
+                        );
+
+                        pixelBuffer[i] = AiliaColorConv.Lab2Color(nlab);
+                    }
+                    break;
+                default:
+                    for (int i = 0; i < pixelBuffer.Length; i++)
+                    {
+                        pixelBuffer[i].r = (byte)Mathf.Clamp(outputData[i + 0 * pixelBuffer.Length] * 255, 0, 255);
+                        pixelBuffer[i].g = (byte)Mathf.Clamp(outputData[i + 1 * pixelBuffer.Length] * 255, 0, 255);
+                        pixelBuffer[i].b = (byte)Mathf.Clamp(outputData[i + 2 * pixelBuffer.Length] * 255, 0, 255);
+                        pixelBuffer[i].a = 255;
+                    }
+                    break;
+
             }
         }
 
