@@ -73,6 +73,8 @@ namespace ailiaSDK
         float[] input;
         Color32[] outputImage;
 
+
+        Texture2D baseTexture; // use for colorization
         bool modelPrepared;
 
         void Start()
@@ -164,6 +166,8 @@ namespace ailiaSDK
                     resultRenderTexture.Create();
                 }
 
+                baseTexture = AiliaImageSource.GetTexture(new Rect(0, 0, AiliaImageSource.Width, AiliaImageSource.Height));
+
                 AiliaImageSource.Resize(InputWidth, InputHeight);
                 input = new float[InputWidth * InputHeight * InputChannel];
                 output = new float[OutputWidth * OutputHeight * OutputChannel];
@@ -199,6 +203,35 @@ namespace ailiaSDK
                 if (!gpu_mode || outputDataToTextureShader == null)
                 {
                     OutputDataProcessingCPU(imageManipulationModels, output, outputImage, inputImage);
+                    if (imageManipulationModels == ImageManipulationModels.Colorization)
+                    {
+                        resultTexture2D.SetPixels32(outputImage);
+                        resultTexture2D.Apply();
+
+                        {
+                            var rTexture = AiliaImageUtil.ResizeTexture(resultTexture2D, baseTexture.width, baseTexture.height);
+                            var base32 = baseTexture.GetPixels32();
+                            var dst32 = rTexture.GetPixels32();
+
+                            Color32[] dstColorBuffer = new Color32[dst32.Length];
+
+                            for (int i = 0; i < dst32.Length; i++)
+                            {
+                                var px = i % baseTexture.width;
+                                var py = (baseTexture.height - 1 - (i / baseTexture.width)) * baseTexture.width;
+
+                                var baselab = AiliaColorConv.Color2Lab(base32[i]);
+                                var dstlab = AiliaColorConv.Color2Lab(dst32[px + py]);
+
+                                var resultlab = new AiliaColorConv.LAB(baselab.L, dstlab.A, dstlab.B);
+                                dstColorBuffer[px + py] = AiliaColorConv.Lab2Color(resultlab);
+                            }
+
+                            outputImage = dstColorBuffer;
+                        }
+
+                        resultTexture2D = new Texture2D(baseTexture.width, baseTexture.height);
+                    }
                 }
                 else
                 {
