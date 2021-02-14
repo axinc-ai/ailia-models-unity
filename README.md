@@ -4,24 +4,18 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 [ailia models (Python version)](https://github.com/axinc-ai/ailia-models)
 
-## About ailia SDK
+## Setup
 
-ailia SDK is a cross-platform high speed inference SDK. The ailia SDK provides a consistent C++ API on Windows, Mac, Linux, iOS, Android and Jetson. It supports Unity, Python and JNI for efficient AI implementation. The ailia SDK makes great use of the GPU via Vulkan and Metal to serve accelerated computing.
+This repository does not include ailia libraries. So you must get license and import ailia libraries to Plugin folder.
 
-You can download a free evaluation version that allows you to evaluate the ailia SDK for 30 days. Please download from the trial link below.
+[Download ailia SDK trial version](https://ailia.jp/en/)
 
-https://ailia.jp/en/
-
-## Notice
-
-This repository does not include ailia libraries.
-
-So you must get license and import ailia libraries to Plugin folder.
+[ailia SDK Tutorial (Unity)](https://medium.com/axinc-ai/ailia-sdk-tutorial-unity-54f2a8155b8f)
 
 ## Develop Environment
 
 - Windows, Mac
-- Unity 2019.3.8f1
+- Unity 2019.3.15f1
 
 ## Target Environment
 
@@ -43,6 +37,12 @@ We are now converting to C#. Please wait to complete conversion.
 | [partialconv](/Assets/AXIP/AILIA-MODELS/ImageClassification/)|[Partial Convolution Layer for Padding and Image Inpainting](https://github.com/NVIDIA/partialconv)|Pytorch| 1.2.0 and later |
 | [resnet50](/Assets/AXIP/AILIA-MODELS/ImageClassification/) | [Deep Residual Learning for Image Recognition]( https://github.com/KaimingHe/deep-residual-networks) | Chainer | 1.2.0 and later |
 
+## Image deformation
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [dewarpnet](/Assets/AXIP/AILIA-MODELS/Dewarpnet) | [DewarpNet: Single-Image Document Unwarping With Stacked 3D and 2D Regression Networks](https://github.com/cvlab-stonybrook/DewarpNet) | Pytorch | 1.2.1 and later |
+
 ## Image segmentation
 
 | Name | Detail | Exported From | Supported Ailia Version |
@@ -58,9 +58,7 @@ We are now converting to C#. Please wait to complete conversion.
 |:-----------|------------:|:------------:|:------------:|
 | [srresnet](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://github.com/twtygqyy/pytorch-SRResNet) | Pytorch | 1.2.0 and later |
 | [noise2noise](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Learning Image Restoration without Clean Data](https://github.com/joeylitalien/noise2noise-pytorch) | Pytorch | 1.2.0 and later |
-| [dewarpnet](/Assets/AXIP/AILIA-MODELS/Dewarpnet) | [DewarpNet: Single-Image Document Unwarping With Stacked 3D and 2D Regression Networks](https://github.com/cvlab-stonybrook/DewarpNet) | Pytorch | 1.2.1 and later |
 | [illnet](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Document Rectification and Illumination Correction using a Patch-based CNN](https://github.com/xiaoyu258/DocProj) | Pytorch | 1.2.2 and later |
-| [adain](/Assets/AXIP/AILIA-MODELS/Adain/) | [Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization](https://github.com/naoto0804/pytorch-AdaIN)| Pytorch | 1.2.1 and later |
 
 ## Object detection
 
@@ -81,9 +79,14 @@ We are now converting to C#. Please wait to complete conversion.
 |:-----------|------------:|:------------:|:------------:|
 | [lightweight-human-pose-estimation](/Assets/AXIP/AILIA-MODELS/PoseEstimation/) | [Fast and accurate human pose estimation in PyTorch. Contains implementation of "Real-time 2D Multi-Person Pose Estimation on CPU: Lightweight OpenPose" paper.](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch) | Pytorch | 1.2.1 and later |
 
-## Face recognization
+## Style transfer
 
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
-|[face_classification](/Assets/AXIP/AILIA-MODELS/yolov3-face) | [Real-time face detection and emotion/gender classification](https://github.com/oarriaga/face_classification) | Keras | 1.1.0 and later |
-|[vggface2](/Assets/AXIP/AILIA-MODELS/vggface2) | [VGGFace2 Dataset for Face Recognition](https://github.com/ox-vgg/vgg_face2) | Caffe | 1.1.0 and later |
+| [adain](/Assets/AXIP/AILIA-MODELS/StyleTransfer/) | [Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization](https://github.com/naoto0804/pytorch-AdaIN)| Pytorch | 1.2.1 and later |
+
+## Face identification
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+|[vggface2](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [VGGFace2 Dataset for Face Recognition](https://github.com/ox-vgg/vgg_face2) | Caffe | 1.1.0 and later |
