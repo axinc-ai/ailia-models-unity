@@ -2,7 +2,7 @@
 
 The collection of pre-trained, state-of-the-art models for Unity.
 
-[ailia models (Python version)](https://github.com/axinc-ai/ailia-models)
+<img src="Demo/colorization.png" width=512px>
 
 ## Setup
 
@@ -12,14 +12,10 @@ This repository does not include ailia libraries. So you must get license and im
 
 [ailia SDK Tutorial (Unity)](https://medium.com/axinc-ai/ailia-sdk-tutorial-unity-54f2a8155b8f)
 
-## Develop Environment
+## Supported platforms
 
-- Windows, Mac
-- Unity 2019.3.15f1
-
-## Target Environment
-
-- Windows, Mac, iOS, Android, Linux
+- Unity 2019.3.15f1 and later
+- Deployment to Windows, Mac, iOS, Android and Linux
 
 # Supporting Models
 
@@ -90,3 +86,9 @@ We are now converting to C#. Please wait to complete conversion.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 |[vggface2](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [VGGFace2 Dataset for Face Recognition](https://github.com/ox-vgg/vgg_face2) | Caffe | 1.1.0 and later |
+
+# Other languages
+
+[python version](https://github.com/axinc-ai/ailia-models)
+
+[c++ version](https://github.com/axinc-ai/ailia-models-cpp)

@@ -112,7 +112,7 @@ namespace ailiaSDK
 			{
 				AiliaImageSource = gameObject.AddComponent<AiliaImageSource>();
 			}
-			AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Dewarpnet/SampleImage/dewarpnet_test.png");
+			AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageDeformation/SampleImage/dewarpnet_test.png");
 
 		}
 
