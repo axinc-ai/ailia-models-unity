@@ -427,8 +427,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d04b895a864ef04e89038752f3ea8b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  imageManipulationModels: 2
-  gpu_mode: 1
+  imageManipulationModels: 3
+  gpu_mode: 0
   inputDataProcessingShader: {fileID: 7200000, guid: 4ad8a3eeb0183024b80805583ce4281a,
     type: 3}
   outputDataToTextureShader: {fileID: 7200000, guid: 3012291cfcecf1b48887939405da3641,
