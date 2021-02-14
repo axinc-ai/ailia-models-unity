@@ -41,7 +41,7 @@ We are now converting to C#. Please wait to complete conversion.
 
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
-| [dewarpnet](/Assets/AXIP/AILIA-MODELS/Dewarpnet) | [DewarpNet: Single-Image Document Unwarping With Stacked 3D and 2D Regression Networks](https://github.com/cvlab-stonybrook/DewarpNet) | Pytorch | 1.2.1 and later |
+| [dewarpnet](/Assets/AXIP/AILIA-MODELS/ImageDeformatin/) | [DewarpNet: Single-Image Document Unwarping With Stacked 3D and 2D Regression Networks](https://github.com/cvlab-stonybrook/DewarpNet) | Pytorch | 1.2.1 and later |
 
 ## Image segmentation
 
