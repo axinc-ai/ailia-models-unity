@@ -2,7 +2,7 @@
 
 The collection of pre-trained, state-of-the-art models for Unity.
 
-<img src="Demo/colorization.png" width=512px>
+[<img src="Demo/colorization.png" width=512px>](/Assets/AXIP/AILIA-MODELS/ImageManipulation/)
 
 ## Setup
 
@@ -55,6 +55,7 @@ We are now converting to C#. Please wait to complete conversion.
 | [srresnet](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://github.com/twtygqyy/pytorch-SRResNet) | Pytorch | 1.2.0 and later |
 | [noise2noise](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Learning Image Restoration without Clean Data](https://github.com/joeylitalien/noise2noise-pytorch) | Pytorch | 1.2.0 and later |
 | [illnet](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Document Rectification and Illumination Correction using a Patch-based CNN](https://github.com/xiaoyu258/DocProj) | Pytorch | 1.2.2 and later |
+| [colorization](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Colorful Image Colorization](https://github.com/richzhang/colorization) | Pytorch | 1.2.2 and later |
 
 ## Object detection
 
