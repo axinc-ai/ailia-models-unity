@@ -237,6 +237,34 @@ namespace ailiaSDK {
 					}));
 
 					break;
+
+				case AiliaModelsConst.AiliaModelTypes.yolov4:
+					mode_text.text = "ailia yolov4 Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
+					threshold = 0.4f;
+					iou = 0.45f;
+					category_n = 80;
+
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV4,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov4", file_name = "yolov4.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov4", file_name = "yolov4.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov4.onnx.prototxt", asset_path + "/yolov4.onnx");
+					}));
+
+					break;
+				
+
 				case AiliaModelsConst.AiliaModelTypes.mobilenet_ssd:
 					mode_text.text = "ailia mobilenet_ssd Detector. Pretraine model : " + pretrainedModel;
 					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
