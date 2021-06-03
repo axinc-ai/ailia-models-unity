@@ -50,6 +50,10 @@ namespace ailiaSDK
 			yolov3_face,
 			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("yolov3-hand")]
 			yolov3_hand,
+			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("yolov4")]
+			yolov4,
+			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("yolov4-tiny")]
+			yolov4_tiny,
 			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("mobilenet_ssd")]
 			mobilenet_ssd,
 			[System.ComponentModel.Category("Object Detection"), System.ComponentModel.Description("maskrcnn")]
