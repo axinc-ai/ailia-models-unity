@@ -47,7 +47,7 @@ We are now converting to C#. Please wait to complete conversion.
 | [hrnet_segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [High-resolution networks (HRNets) for Semantic Segmentation](https://github.com/HRNet/HRNet-Semantic-Segmentation) | Pytorch | 1.2.1 and later |
 | [hair_segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [hair segmentation in mobile device](https://github.com/thangtran480/hair-segmentation) | Keras | 1.2.1 and later |
 | [pspnet-hair-segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [pytorch-hair-segmentation](https://github.com/YBIGTA/pytorch-hair-segmentation) | Pytorch | 1.2.2 and later |
-| [human_part_segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection](https://github.com/xuebinqin/U-2-Net) | Pytorch | 1.2.2 and later |
+| [U2net](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection](https://github.com/xuebinqin/U-2-Net) | Pytorch | 1.2.2 and later |
 
 ## Image manipulation
 
