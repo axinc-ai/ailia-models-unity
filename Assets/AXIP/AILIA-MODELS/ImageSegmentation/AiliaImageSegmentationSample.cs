@@ -403,6 +403,9 @@ namespace ailiaSDK
 					weight = 1f / 127.5f;
 					bias = -1;
 					break;
+				case ImageSegmentaionModels.human_part_segmentation:
+					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
+					return;
 				default:
 					break;
 			}
