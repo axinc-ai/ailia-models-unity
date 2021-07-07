@@ -30,6 +30,8 @@ namespace ailiaSDK
 			hrnet_segmentation,
 			[System.ComponentModel.Category("Image Segmentation"), System.ComponentModel.Description("hair_segmentation")]
 			hair_segmentation,
+			[System.ComponentModel.Category("Image Segmentation"), System.ComponentModel.Description("u2net")]
+			u2net,
 			[System.ComponentModel.Category("Image Manipulation"), System.ComponentModel.Description("srresnet")]
 			srresnet,
 			[System.ComponentModel.Category("Image Manipulation"), System.ComponentModel.Description("srresnet")]
