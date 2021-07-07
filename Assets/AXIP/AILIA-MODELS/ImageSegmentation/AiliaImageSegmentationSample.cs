@@ -18,6 +18,9 @@ namespace ailiaSDK
 			hair_segmentation,
 			pspnet_hair_segmentation,
 			deeplabv3,
+			u2net,
+			human_part_segmentation,
+
 		}
 		//Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
@@ -179,6 +182,8 @@ namespace ailiaSDK
 					LabelPaintHairSegmentation(output, outputImage, Color.red);
 				else if (imageSegmentaionModels == ImageSegmentaionModels.pspnet_hair_segmentation)
 					LabelPaintPspnet(output, outputImage, Color.red);
+				else if (imageSegmentaionModels == ImageSegmentaionModels.u2net)
+					LabelPaintU2net(output, outputImage, Color.white); 
 				else
 					LabelPaint(output, outputImage, OutputChannel, colorPalette);
 
@@ -259,6 +264,16 @@ namespace ailiaSDK
 					prototxtName = "deeplabv3.opt.onnx.prototxt";
 					onnxName = "deeplabv3.opt.onnx";
 					break;
+				case ImageSegmentaionModels.u2net:
+					serverFolderName = "u2net";
+					prototxtName = "u2net_opset11.onnx.prototxt";
+					onnxName = "u2net_opset11.onnx";
+					break;
+				case ImageSegmentaionModels.human_part_segmentation:
+					serverFolderName = "human_part_segmentation";
+					prototxtName = "resnet-lip.onnx.prototxt";
+					onnxName = "resnet-lip.onnx";
+					break;
 			}
 
 			ailiaModel = new AiliaModel();
@@ -317,6 +332,29 @@ namespace ailiaSDK
 					OutputHeight = AiliaImageSource.Height;
 					OutputChannel = 1;
 					break;
+
+				case ImageSegmentaionModels.u2net:
+					shape = ailiaModel.GetInputShape();
+					InputWidth = (int)shape.x;
+					InputHeight = (int)shape.y;
+					InputChannel = (int)shape.z;
+					shape = ailiaModel.GetOutputShape();
+					OutputWidth = (int)shape.x;
+					OutputHeight = (int)shape.y;
+					OutputChannel = (int)shape.z;
+					break;
+				
+				case ImageSegmentaionModels.human_part_segmentation:
+					shape = ailiaModel.GetInputShape();
+					InputWidth = (int)shape.x;
+					InputHeight = (int)shape.y;
+					InputChannel = (int)shape.z;
+					shape = ailiaModel.GetOutputShape();
+					OutputWidth = (int)shape.x;
+					OutputHeight = (int)shape.y;
+					OutputChannel = (int)shape.z;
+					break;
+
 			}
 		}
 
@@ -338,6 +376,13 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.deeplabv3:
 					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/couple.jpg");
 					break;
+				case ImageSegmentaionModels.u2net:
+					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/girl.png");
+					break;
+				case ImageSegmentaionModels.human_part_segmentation:
+					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/demo.jpg");
+					break;
+
 			}
 		}
 
@@ -413,6 +458,9 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.deeplabv3:
 					weight = 2;
 					bias = -1;
+					break;
+				case ImageSegmentaionModels.u2net:
+					weight = 2;
 					break;
 				default:
 					break;
@@ -504,10 +552,19 @@ namespace ailiaSDK
 			for (int i = 0; i < pixelBuffer.Length; i++)
 			{
 				pixelBuffer[i] = color;
-
 				float k = Mathf.Exp(labelData[i]);
 				pixelBuffer[i].a = (byte)(k / (1.0f + k) * 255);
 			}
+		}
+
+		void LabelPaintU2net(float[] labelData, Color32[] pixelBuffer, Color32 color)
+		{
+			Debug.Assert(labelData.Length == pixelBuffer.Length, "wrong parameter");	
+			for (int i = 0; i < pixelBuffer.Length; i++)
+			{
+				pixelBuffer[i] = color;
+				pixelBuffer[i].a = (byte)(Mathf.Clamp01(labelData[i]) * 255);
+			}	 
 		}
 
 		void OnApplicationQuit()
