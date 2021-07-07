@@ -20,7 +20,6 @@ namespace ailiaSDK
 			deeplabv3,
 			u2net,
 			human_part_segmentation,
-
 		}
 		//Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
@@ -382,7 +381,6 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.human_part_segmentation:
 					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/demo.jpg");
 					break;
-
 			}
 		}
 
