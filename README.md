@@ -48,6 +48,7 @@ We are now converting to C#. Please wait to complete conversion.
 | [hair_segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [hair segmentation in mobile device](https://github.com/thangtran480/hair-segmentation) | Keras | 1.2.1 and later |
 | [pspnet-hair-segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [pytorch-hair-segmentation](https://github.com/YBIGTA/pytorch-hair-segmentation) | Pytorch | 1.2.2 and later |
 | [U2net](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection](https://github.com/xuebinqin/U-2-Net) | Pytorch | 1.2.2 and later |
+| [Human-Part-Segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [Human-Part-Segmentation](https://github.com/mayankgrwl97/human-part-segmentation) | Pytorch | 1.2.2 and later |
 
 ## Image manipulation
 
@@ -69,8 +70,8 @@ We are now converting to C#. Please wait to complete conversion.
 | [yolov3-tiny](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/) | ONNX Runtime | 1.2.1 and later |
 | [yolov3-face](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [Face detection using keras-yolov3](https://github.com/axinc-ai/yolov3-face) | Keras | 1.2.1 and later |
 | [yolov3-hand](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [Hand detection branch of Face detection using keras-yolov3](https://github.com/axinc-ai/yolov3-face/tree/hand_detection) | Keras | 1.2.1 and later |
-| [yolov4](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/) | Pytorch | 1.2.7 and later |
-| [yolov4-tiny](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/) | Pytorch | 1.2.7 and later |
+| [yolov4](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/) | Pytorch | 1.2.1 and later |
+| [yolov4-tiny](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/) | Pytorch | 1.2.1 and later |
 | [mobilenet_ssd](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [MobileNetV1, MobileNetV2, VGG based SSD/SSD-lite implementation in Pytorch](https://github.com/qfgaohao/pytorch-ssd) | Pytorch | 1.2.1 and later |
 
 ## Pose estimation

@@ -19,6 +19,8 @@ namespace ailiaSDK
 			pspnet_hair_segmentation,
 			deeplabv3,
 			u2net,
+			human_part_segmentation,
+
 		}
 		//Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
@@ -267,6 +269,11 @@ namespace ailiaSDK
 					prototxtName = "u2net_opset11.onnx.prototxt";
 					onnxName = "u2net_opset11.onnx";
 					break;
+				case ImageSegmentaionModels.human_part_segmentation:
+					serverFolderName = "human_part_segmentation";
+					prototxtName = "resnet-lip.onnx.prototxt";
+					onnxName = "resnet-lip.onnx";
+					break;
 			}
 
 			ailiaModel = new AiliaModel();
@@ -336,6 +343,17 @@ namespace ailiaSDK
 					OutputHeight = (int)shape.y;
 					OutputChannel = (int)shape.z;
 					break;
+				
+				case ImageSegmentaionModels.human_part_segmentation:
+					shape = ailiaModel.GetInputShape();
+					InputWidth = (int)shape.x;
+					InputHeight = (int)shape.y;
+					InputChannel = (int)shape.z;
+					shape = ailiaModel.GetOutputShape();
+					OutputWidth = (int)shape.x;
+					OutputHeight = (int)shape.y;
+					OutputChannel = (int)shape.z;
+					break;
 
 			}
 		}
@@ -361,6 +379,9 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.u2net:
 					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/girl.png");
 					break;
+				case ImageSegmentaionModels.human_part_segmentation:
+					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/demo.jpg");
+					break;
 
 			}
 		}
@@ -382,6 +403,12 @@ namespace ailiaSDK
 					weight = 1f / 127.5f;
 					bias = -1;
 					break;
+				case ImageSegmentaionModels.u2net:
+					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
+					return;
+				case ImageSegmentaionModels.human_part_segmentation:
+					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
+					return;
 				default:
 					break;
 			}
@@ -437,9 +464,6 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.deeplabv3:
 					weight = 2;
 					bias = -1;
-					break;
-				case ImageSegmentaionModels.u2net:
-					weight = 2;
 					break;
 				default:
 					break;
@@ -531,7 +555,6 @@ namespace ailiaSDK
 			for (int i = 0; i < pixelBuffer.Length; i++)
 			{
 				pixelBuffer[i] = color;
-
 				float k = Mathf.Exp(labelData[i]);
 				pixelBuffer[i].a = (byte)(k / (1.0f + k) * 255);
 			}
