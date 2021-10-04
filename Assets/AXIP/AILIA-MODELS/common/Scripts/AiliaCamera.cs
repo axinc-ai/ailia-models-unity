@@ -21,6 +21,7 @@ namespace ailiaSDK
 
 		//WebCamera Instance
 		private WebCamTexture webcamTexture = null;
+		private Texture2D webcamTexture2d = null;
 
 		// Texture buffer
 		Color32[] image = new Color32[0];
@@ -131,6 +132,22 @@ namespace ailiaSDK
 				}
 			}
 			return crop;
+		}
+
+		public Texture2D GetTexture2D()
+		{
+			if (webcamTexture == null)
+			{
+				return null;
+			}
+
+			if (webcamTexture2d == null)
+			{
+				webcamTexture2d = new Texture2D(webcamTexture.width, webcamTexture.height, TextureFormat.RGBA32, webcamTexture.mipmapCount, true);
+			}
+
+			Graphics.CopyTexture(webcamTexture, webcamTexture2d);
+			return webcamTexture2d;
 		}
 
 		public int GetWidth()
