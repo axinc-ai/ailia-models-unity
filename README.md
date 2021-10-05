@@ -21,6 +21,12 @@ This repository does not include ailia libraries. So you must get license and im
 
 We are now converting to C#. Please wait to complete conversion.
 
+## Audio processing
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [pytorch-dc-tts](/audio_processing/pytorch-dc-tts/) | [Efficiently Trainable Text-to-Speech System Based on Deep Convolutional Networks with Guided Attention](https://github.com/tugstugi/pytorch-dc-tts)   | Pytorch | 1.2.6 and later |
+
 ## Image classification
 
 | Name | Detail | Exported From | Supported Ailia Version |
