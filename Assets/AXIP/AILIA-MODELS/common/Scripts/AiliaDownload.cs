@@ -194,7 +194,7 @@ namespace ailiaSDK
 						// Error
 						if (www.isHttpError || www.isNetworkError)
 						{
-							Debug.LogError(www.error);
+							Debug.LogError($"Error fetching '{url}': {www.error}");
 							content += "<color=red>" + www.error + "</color>" + "\n";
 							if (ContentsText.cachedTextGenerator.lineCount > ContentLineCount)
 							{
