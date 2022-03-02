@@ -58,6 +58,12 @@ We are now converting to C#. Please wait to complete conversion.
 | [illnet](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Document Rectification and Illumination Correction using a Patch-based CNN](https://github.com/xiaoyu258/DocProj) | Pytorch | 1.2.2 and later |
 | [colorization](/Assets/AXIP/AILIA-MODELS/ImageManipulation/) | [Colorful Image Colorization](https://github.com/richzhang/colorization) | Pytorch | 1.2.2 and later |
 
+## Image captioning
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [image_captioning_pytorch](/Assets/AXIP/AILIA-MODELS/ImageCaptioning/)|[Image Captioning pytorch](https://github.com/ruotianluo/ImageCaptioning.pytorch) | Pytorch | 1.2.5 and later |
+
 ## Object detection
 
 | Name | Detail | Exported From | Supported Ailia Version |

@@ -513,5 +513,11 @@ namespace ailiaSDK
 				ailia = IntPtr.Zero;
 			}
 		}
+
+		//エラー詳細の取得
+		public string GetErrorDetail()
+		{
+			return Marshal.PtrToStringAnsi(Ailia.ailiaGetErrorDetail(ailia));
+		}
 	}
 }
