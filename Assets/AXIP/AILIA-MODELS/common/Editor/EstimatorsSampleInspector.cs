@@ -13,6 +13,9 @@ namespace ailiaSDK
 		SerializedProperty gpuMode;
 		SerializedProperty cameraID;
 		SerializedProperty optimizedModel;
+		SerializedProperty blazeposeFullbodyConmputeShader;
+		SerializedProperty ikTarget;
+
 		MonoScript script = null;
 
 		AiliaModelsConst.AiliaModelTypes[] modelArr;
@@ -28,6 +31,9 @@ namespace ailiaSDK
 			gpuMode = serializedObject.FindProperty("gpu_mode");
 			cameraID = serializedObject.FindProperty("camera_id");
 			optimizedModel = serializedObject.FindProperty("optimizedModel");
+			blazeposeFullbodyConmputeShader = serializedObject.FindProperty("computeShaderBlazepose");
+			ikTarget = serializedObject.FindProperty("ikTarget");
+
 			// Get all model types in the same category
 			// var category = ((AiliaModelsConst.AiliaModelTypes)ailiaModelType.enumValueIndex).GetCategory(); //Get category by ailiaModelType default value.
 			var allModelsTypes = Enum.GetValues(typeof(AiliaModelsConst.AiliaModelTypes)) as AiliaModelsConst.AiliaModelTypes[];
@@ -54,6 +60,13 @@ namespace ailiaSDK
 				EditorGUILayout.PropertyField(optimizedModel, new GUIContent("Optimized Model"));
 				EditorGUI.indentLevel--;
 
+			}
+			if (ailiaModelType.enumValueIndex == (int)AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
+			{
+				EditorGUI.indentLevel++;
+				EditorGUILayout.PropertyField(blazeposeFullbodyConmputeShader, new GUIContent("Affine Transform Shader"));
+				EditorGUILayout.PropertyField(ikTarget);
+				EditorGUI.indentLevel--;
 			}
 
 			serializedObject.ApplyModifiedProperties();

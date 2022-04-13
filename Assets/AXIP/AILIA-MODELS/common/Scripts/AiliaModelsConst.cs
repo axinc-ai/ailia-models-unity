@@ -66,6 +66,8 @@ namespace ailiaSDK
 			lightweight_human_pose_estimation,
 			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("lightweight-human-pose-estimation-3d")]
 			lightweight_human_pose_estimation_3d,
+			[System.ComponentModel.Category("Pose Estimation"), System.ComponentModel.Description("blazepose-fullbody")]
+			blazepose_fullbody,
 			[System.ComponentModel.Category("Gaze Estimation"), System.ComponentModel.Description("gazeml")]
 			gazeml,
 			[System.ComponentModel.Category("Face Recognization"), System.ComponentModel.Description("face_classification")]

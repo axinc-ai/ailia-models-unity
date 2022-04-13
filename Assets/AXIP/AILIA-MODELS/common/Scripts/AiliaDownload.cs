@@ -150,6 +150,13 @@ namespace ailiaSDK
 			return www.downloadHandler.data;
 		}
 
+		string savePath;
+		public void SetSaveFolderPath(string path)
+		{
+			path = path.Replace('\\', '/');
+			savePath = path + (path[path.Length - 1] == '/' ? "" : "/");
+		}
+
 		public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted)
 		{
 			if (urlList.Count == 0) yield break;
@@ -162,7 +169,7 @@ namespace ailiaSDK
 
 			foreach (var downloadUrl in urlList)
 			{
-				string toPath = Application.temporaryCachePath + "/" + downloadUrl.file_name;
+				string toPath = (savePath == null ? Application.temporaryCachePath + "/" : savePath) + downloadUrl.file_name;
 
 				if (System.IO.File.Exists(toPath) == true)
 				{

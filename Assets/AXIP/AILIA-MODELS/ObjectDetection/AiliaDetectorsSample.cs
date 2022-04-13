@@ -438,7 +438,6 @@ namespace ailiaSDK {
 			// Set up lines
 			line_panel = UICanvas.transform.Find("LinePanel").gameObject;
 			lines = UICanvas.transform.Find("LinePanel/Lines").gameObject;
-			line = UICanvas.transform.Find("LinePanel/Lines/Line").gameObject;
 			text_panel = UICanvas.transform.Find("TextPanel").gameObject;
 			text_base = UICanvas.transform.Find("TextPanel/TextHolder").gameObject;
 
