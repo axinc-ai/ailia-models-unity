@@ -7,13 +7,13 @@ using UnityEngine;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using ailiaSDK;
 
 public class AiliaModel {
     protected IntPtr ailia = IntPtr.Zero;
 
     private int env_id=Ailia.AILIA_ENVIRONMENT_ID_AUTO;
     private uint memory_mode=Ailia.AILIA_MEMORY_OPTIMAIZE_DEFAULT;
+    private bool disalbe_layer_fusion = false;
 
     private string env_name="auto";
 
@@ -55,7 +55,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetEnvironmentCount(ref count);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetEnvironmentCount failed "+status);
+                Debug.Log("ailiaGetEnvironmentCount failed "+status+" ("+GetStatusString(status)+")");
             }
             return -1;
         }
@@ -67,7 +67,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetEnvironment(ref env_ptr, (uint)idx, Ailia.AILIA_ENVIRONMENT_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetEnvironment failed "+status);
+                Debug.Log("ailiaGetEnvironment failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -94,7 +94,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetSelectedEnvironment(ailia, ref env_ptr, Ailia.AILIA_ENVIRONMENT_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetSelectedEnvironment failed "+status);
+                Debug.Log("ailiaGetSelectedEnvironment failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -115,7 +115,7 @@ public class AiliaModel {
                     int status=Status=Ailia.ailiaSetTemporaryCachePath(_CacheDir);
                     if(status!=Ailia.AILIA_STATUS_SUCCESS){
                         if(logging){
-                            Debug.Log("ailiaSetTemporaryCachePath failed "+status);
+                            Debug.Log("ailiaSetTemporaryCachePath failed "+status+" ("+GetStatusString(status)+")");
                         }
                         return false;
                     }
@@ -141,6 +141,10 @@ public class AiliaModel {
         memory_mode=set_memory_mode;
     }
 
+    public void DisableLayerFusion() {
+        disalbe_layer_fusion = true;
+    }
+
     //ファイルを開く（ファイル）
     public virtual bool OpenFile(string prototxt_path,string model_path){
         Close();
@@ -149,7 +153,7 @@ public class AiliaModel {
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             DisplayLicenseError(status);
             if(logging){
-                Debug.Log("ailiaCreate failed "+status);
+                Debug.Log("ailiaCreate failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -158,7 +162,17 @@ public class AiliaModel {
             status=Status=Ailia.ailiaSetMemoryMode(ailia,memory_mode);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaSetMemoryMode failed"+status);
+                    Debug.Log("ailiaSetMemoryMode failed "+status+" ("+GetStatusString(status)+")");
+                }
+                Close();
+                return false;
+            }
+        }
+        if (disalbe_layer_fusion) {
+            status=Status=Ailia.ailiaDisableLayerFusion(ailia);
+            if(status!=Ailia.AILIA_STATUS_SUCCESS){
+                if(logging){
+                    Debug.Log("ailiaDisableLayerFusion failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -169,7 +183,7 @@ public class AiliaModel {
             status=Status=Ailia.ailiaOpenStreamFile(ailia,prototxt_path);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaOpenStreamFile failed"+status);
+                    Debug.Log("ailiaOpenStreamFile failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -179,7 +193,7 @@ public class AiliaModel {
         status=Status=Ailia.ailiaOpenWeightFile(ailia,model_path);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaOpenWeightFile failed"+status);
+                Debug.Log("ailiaOpenWeightFile failed "+status+" ("+GetStatusString(status)+")");
             }
             Close();
             return false;
@@ -203,7 +217,7 @@ public class AiliaModel {
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             DisplayLicenseError(status);
             if(logging){
-                Debug.Log("ailiaCreate failed "+status);
+                Debug.Log("ailiaCreate failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -212,7 +226,17 @@ public class AiliaModel {
             status=Status=Ailia.ailiaSetMemoryMode(ailia,memory_mode);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaSetMemoryMode failed"+status);
+                    Debug.Log("ailiaSetMemoryMode failed "+status+" ("+GetStatusString(status)+")");
+                }
+                Close();
+                return false;
+            }
+        }
+        if (disalbe_layer_fusion) {
+            status=Status=Ailia.ailiaDisableLayerFusion(ailia);
+            if(status!=Ailia.AILIA_STATUS_SUCCESS){
+                if(logging){
+                    Debug.Log("ailiaDisableLayerFusion failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -223,7 +247,7 @@ public class AiliaModel {
             status=Status=Ailia.ailiaOpenStreamMem(ailia,prototxt_buf,(uint)prototxt_buf.Length);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaOpenStreamMem failed "+status);
+                    Debug.Log("ailiaOpenStreamMem failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -233,7 +257,7 @@ public class AiliaModel {
         status=Status=Ailia.ailiaOpenWeightMem(ailia,model_buf,(uint)model_buf.Length);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaOpenWeightMem filed "+status);
+                Debug.Log("ailiaOpenWeightMem filed "+status+" ("+GetStatusString(status)+")");
             }
             Close();
             return false;
@@ -250,7 +274,7 @@ public class AiliaModel {
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             DisplayLicenseError(status);
             if(logging){
-                Debug.Log("ailiaCreate failed"+status);
+                Debug.Log("ailiaCreate failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -259,7 +283,17 @@ public class AiliaModel {
             status=Status=Ailia.ailiaSetMemoryMode(ailia,memory_mode);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaSetMemoryMode failed"+status);
+                    Debug.Log("ailiaSetMemoryMode failed "+status+" ("+GetStatusString(status)+")");
+                }
+                Close();
+                return false;
+            }
+        }
+        if (disalbe_layer_fusion) {
+            status=Status=Ailia.ailiaDisableLayerFusion(ailia);
+            if(status!=Ailia.AILIA_STATUS_SUCCESS){
+                if(logging){
+                    Debug.Log("ailiaDisableLayerFusion failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -270,7 +304,7 @@ public class AiliaModel {
             status=Status=Ailia.ailiaOpenStreamEx(ailia,arg1,callback,Ailia.AILIA_FILE_CALLBACK_VERSION);
             if(status!=Ailia.AILIA_STATUS_SUCCESS){
                 if(logging){
-                    Debug.Log("ailiaOpenStreamFileEx failed"+status);
+                    Debug.Log("ailiaOpenStreamFileEx failed "+status+" ("+GetStatusString(status)+")");
                 }
                 Close();
                 return false;
@@ -280,7 +314,7 @@ public class AiliaModel {
         status=Status=Ailia.ailiaOpenWeightEx(ailia,arg2,callback,Ailia.AILIA_FILE_CALLBACK_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaOpenWeightFileEx failed"+status);
+                Debug.Log("ailiaOpenWeightFileEx failed "+status+" ("+GetStatusString(status)+")");
             }
             Close();
             return false;
@@ -311,7 +345,7 @@ public class AiliaModel {
 
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaPredict failed"+status);
+                Debug.Log("ailiaPredict failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -324,7 +358,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetInputShape(ailia,shape,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetInputShape failed"+status);
+                Debug.Log("ailiaGetInputShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -336,7 +370,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetInputDim(ailia,ref dim);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetInputDim failed"+status);
+                Debug.Log("ailiaGetInputDim failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -344,7 +378,7 @@ public class AiliaModel {
         status=Status=Ailia.ailiaGetInputShapeND(ailia,shape,dim);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetInputShapeND failed"+status);
+                Debug.Log("ailiaGetInputShapeND failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -360,7 +394,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaSetInputShape(ailia,shape,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaSetInputShape failed"+status);
+                Debug.Log("ailiaSetInputShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -375,7 +409,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaSetInputShapeND(ailia,shape,(uint)dim);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaSetInputShapeND failed"+status);
+                Debug.Log("ailiaSetInputShapeND failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -391,7 +425,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetOutputShape(ailia,shape,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetOutputShape failed"+status);
+                Debug.Log("ailiaGetOutputShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -403,7 +437,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetOutputDim(ailia,ref dim);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetOutputDim failed"+status);
+                Debug.Log("ailiaGetOutputDim failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -411,7 +445,7 @@ public class AiliaModel {
         status=Status=Ailia.ailiaGetOutputShapeND(ailia,shape,dim);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetOutputShapeND failed"+status);
+                Debug.Log("ailiaGetOutputShapeND failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -429,14 +463,14 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaFindBlobIndexByName(ailia,ref id,layer_name);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaFindBlobIndexByName failed"+status);
+                Debug.Log("ailiaFindBlobIndexByName failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
         status=Status=Ailia.ailiaGetBlobShape(ailia,shape,id,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetBlobShape failed"+status);
+                Debug.Log("ailiaGetBlobShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -449,7 +483,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaFindBlobIndexByName(ailia,ref idx,name);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("FindBlobIndexByName failed"+status);
+                Debug.Log("FindBlobIndexByName failed "+status+" ("+GetStatusString(status)+")");
             }
             return -1;
         }
@@ -466,7 +500,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaGetBlobShape(ailia,shape,(uint)idx,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetBlobShape failed"+status);
+                Debug.Log("ailiaGetBlobShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return null;
         }
@@ -486,7 +520,7 @@ public class AiliaModel {
 
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaGetBlobData failed"+status);
+                Debug.Log("ailiaGetBlobData failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -506,7 +540,7 @@ public class AiliaModel {
 
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaSetInputBlobData failed"+status);
+                Debug.Log("ailiaSetInputBlobData failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -522,7 +556,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaSetInputBlobShape(ailia,shape,(uint)idx,Ailia.AILIA_SHAPE_VERSION);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaSetInputBlobShape failed"+status);
+                Debug.Log("ailiaSetInputBlobShape failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -537,7 +571,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaSetInputBlobShapeND(ailia,shape,(uint)dim,(uint)idx);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaSetInputBlobShapeND failed"+status);
+                Debug.Log("ailiaSetInputBlobShapeND failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -602,7 +636,7 @@ public class AiliaModel {
         int status=Status=Ailia.ailiaUpdate(ailia);
         if(status!=Ailia.AILIA_STATUS_SUCCESS){
             if(logging){
-                Debug.Log("ailiaUpdate failed"+status);
+                Debug.Log("ailiaUpdate failed "+status+" ("+GetStatusString(status)+")");
             }
             return false;
         }
@@ -617,10 +651,48 @@ public class AiliaModel {
         }
     }
 
+    // ステータス文字列の取得
+    public string GetStatusString(int status){
+        return Marshal.PtrToStringAnsi(Ailia.ailiaGetStatusString(status));
+    }
+
     //エラー詳細の取得
     public string GetErrorDetail(){
         return Marshal.PtrToStringAnsi(Ailia.ailiaGetErrorDetail(ailia));
     }
 
     public int Status { get; protected set; }
+
+    //プロファイルモード有効
+    public bool SetProfileMode(uint profile_mode){
+        int status=Status=Ailia.ailiaSetProfileMode(ailia,profile_mode);
+        if(status!=Ailia.AILIA_STATUS_SUCCESS){
+            if(logging){
+                Debug.Log("ailiaSetProfileMode failed "+status+" ("+GetStatusString(status)+")");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    //プロファイル結果取得
+    public string GetSummary(){
+        uint buffer_size=0;
+        int status=Status=Ailia.ailiaGetSummaryLength(ailia,ref buffer_size);
+        if(status!=Ailia.AILIA_STATUS_SUCCESS){
+            if(logging){
+                Debug.Log("ailiaGetSummaryLength failed "+status+" ("+GetStatusString(status)+")");
+            }
+            return null;
+        }
+        byte [] buffer = new byte [buffer_size];
+        status=Status=Ailia.ailiaSummary(ailia,buffer,buffer_size);
+        if(status!=Ailia.AILIA_STATUS_SUCCESS){
+            if(logging){
+                Debug.Log("ailiaSummary failed "+status+" ("+GetStatusString(status)+")");
+            }
+            return null;
+        }
+        return System.Text.Encoding.ASCII.GetString(buffer);
+    }
 }
