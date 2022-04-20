@@ -170,17 +170,41 @@ namespace ailiaSDK {
 				{
 					int x = (int)(face.keypoints[k].x * tex_width);
 					int y = (int)(face.keypoints[k].y * tex_height);
-					DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
+					DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
 				}
 			}
 
-			//Estimate ROI
+			//Compute facemesh
 			long recognition_time = 0;
 			if(ailiaModelType==FaceDetectorModels.facemesh){
+				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				List<AiliaFaceMeshSample.FaceInfo> rec_result_detections = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections);
+				List<AiliaFaceMeshSample.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
+
+				//Draw result
+				for (int i = 0; i < result_facemesh.Count; i++)
+				{
+					AiliaFaceMeshSample.FaceMeshInfo face = result_facemesh[i];
+					Debug.Log(""+face.theta);
+
+					int fw = (int)(face.width * tex_width);
+					int fh = (int)(face.height * tex_height);
+					int fx = (int)(face.center.x * tex_width) - fw / 2;
+					int fy = (int)(face.center.y * tex_height) - fh / 2;
+					DrawAffine2D(Color.green, fx, fy, fw, fh, tex_width, tex_height, face.theta);
+
+					float scale = fw / 192.0f;
+
+					for (int k = 0; k < AiliaFaceMeshSample.NUM_KEYPOINTS; k++)
+					{
+						int x = (int)(face.center.x * tex_width - face.width * tex_width / 2 + face.keypoints[k].x * scale);// * tex_width);
+						int y = (int)(face.center.y * tex_height - face.height * tex_height / 2 + face.keypoints[k].y * scale);// * tex_height);
+						Debug.Log(""+x+"/"+y);
+						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
+					}
+				}
 			}
 
 			if (label_text != null)
