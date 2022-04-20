@@ -26,77 +26,96 @@ namespace ailiaSDK
 		}
 
 		// Update is called once per frame
-		public List<FaceInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazefaceSample.FaceInfo> result_detections)
+		public List<AiliaFaceMeshSample.FaceInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazefaceSample.FaceInfo> result_detections)
 		{
-			/*
-			//リサイズ
-			float[] data = new float[128 * 128 * 3];
-			int w = 128;
-			int h = 128;
-			float scale = 1.0f * tex_width / w;
-			for (int y = 0; y < h; y++)
+			List<AiliaFaceMeshSample.FaceInfo> result = new List<AiliaFaceMeshSample.FaceInfo>();
+			for (int i = 0; i < result_detections.Count; i++)
 			{
-				for (int x = 0; x < w; x++)
+				//extract roi
+				AiliaBlazefaceSample.FaceInfo face = result_detections[i];
+				int fw = (int)(face.width * tex_width);
+				int fh = (int)(face.height * tex_height);
+				int fx = (int)(face.center.x * tex_width);
+				int fy = (int)(face.center.y * tex_height);
+				const int RIGHT_EYE=0;
+				const int LEFT_EYE=1;
+				float theta_x = (float)(face.keypoints[LEFT_EYE].x - face.keypoints[RIGHT_EYE].x);
+				float theta_y = (float)(face.keypoints[LEFT_EYE].y - face.keypoints[RIGHT_EYE].y);
+				int theta = (int)(System.Math.Atan2(theta_y,theta_x)*360);
+
+				Debug.Log("x"+fx+" y"+fy+" theta "+theta_x+" "+theta_y+" "+theta);
+				
+				//extract data
+				/*
+				//リサイズ
+				float[] data = new float[128 * 128 * 3];
+				int w = 128;
+				int h = 128;
+				float scale = 1.0f * tex_width / w;
+				for (int y = 0; y < h; y++)
 				{
-					int y2 = (int)(1.0 * y * scale);
-					int x2 = (int)(1.0 * x * scale);
-					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
+					for (int x = 0; x < w; x++)
 					{
-						data[(y * w + x) + 0 * w * h] = 0;
-						data[(y * w + x) + 1 * w * h] = 0;
-						data[(y * w + x) + 2 * w * h] = 0;
-						continue;
-					}
-					data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-					data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-					data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
-				}
-			}
-
-			uint[] input_blobs = ailia_model.GetInputBlobList();
-			if (input_blobs != null)
-			{
-				bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
-				if (!success)
-				{
-					Debug.Log("Can not SetInputBlobData");
-				}
-
-				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				ailia_model.Update();
-
-				List<FaceInfo> detections = null;
-
-				uint[] output_blobs = ailia_model.GetOutputBlobList();
-				if (output_blobs != null && output_blobs.Length >= 2)
-				{
-					Ailia.AILIAShape box_shape = ailia_model.GetBlobShape((int)output_blobs[0]);
-					Ailia.AILIAShape score_shape = ailia_model.GetBlobShape((int)output_blobs[1]);
-
-					if (box_shape != null && score_shape != null)
-					{
-						float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
-						float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
-
-						if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
-								ailia_model.GetBlobData(score_data, (int)output_blobs[1]))
+						int y2 = (int)(1.0 * y * scale);
+						int x2 = (int)(1.0 * x * scale);
+						if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 						{
-							float aspect = (float)tex_width / tex_height;
-							detections = PostProcess(box_data, box_shape, score_data, score_shape, w, h, aspect);
+							data[(y * w + x) + 0 * w * h] = 0;
+							data[(y * w + x) + 1 * w * h] = 0;
+							data[(y * w + x) + 2 * w * h] = 0;
+							continue;
+						}
+						data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
+						data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
+						data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+					}
+				}
+
+				uint[] input_blobs = ailia_model.GetInputBlobList();
+				if (input_blobs != null)
+				{
+					bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
+					if (!success)
+					{
+						Debug.Log("Can not SetInputBlobData");
+					}
+
+					long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+					ailia_model.Update();
+
+					List<FaceInfo> detections = null;
+
+					uint[] output_blobs = ailia_model.GetOutputBlobList();
+					if (output_blobs != null && output_blobs.Length >= 2)
+					{
+						Ailia.AILIAShape box_shape = ailia_model.GetBlobShape((int)output_blobs[0]);
+						Ailia.AILIAShape score_shape = ailia_model.GetBlobShape((int)output_blobs[1]);
+
+						if (box_shape != null && score_shape != null)
+						{
+							float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
+							float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+
+							if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
+									ailia_model.GetBlobData(score_data, (int)output_blobs[1]))
+							{
+								float aspect = (float)tex_width / tex_height;
+								detections = PostProcess(box_data, box_shape, score_data, score_shape, w, h, aspect);
+							}
 						}
 					}
-				}
 
-				if (detections != null)
-				{
-					detections = WeightedNonMaxSuppression(detections);
-					//Debug.Log("Num faces: " + detections.Count);
+					if (detections != null)
+					{
+						detections = WeightedNonMaxSuppression(detections);
+						//Debug.Log("Num faces: " + detections.Count);
+					}
+					return detections;
 				}
-				return detections;
+				*/
 			}
-			*/
 
-			return null;
+			return result;
 		}
 
 		/*
