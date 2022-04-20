@@ -85,6 +85,12 @@ We are now converting to C#. Please wait to complete conversion.
 |:-----------|------------:|:------------:|:------------:|
 | [adain](/Assets/AXIP/AILIA-MODELS/StyleTransfer/) | [Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization](https://github.com/naoto0804/pytorch-AdaIN)| Pytorch | 1.2.1 and later |
 
+## Face detection
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+|[blazeface](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [BlazeFace-PyTorch](https://github.com/hollance/BlazeFace-PyTorch) | Pytorch | 1.2.1 and later |
+
 ## Face identification
 
 | Name | Detail | Exported From | Supported Ailia Version |
