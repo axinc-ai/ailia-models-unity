@@ -140,6 +140,7 @@ namespace ailiaSDK {
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			List<AiliaBlazefaceSample.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			long detection_time = (end_time - start_time);
 
 			//Draw result
 			for (int i = 0; i < result_detections.Count; i++)
@@ -174,12 +175,21 @@ namespace ailiaSDK {
 			}
 
 			//Estimate ROI
-
-
+			long recognition_time = 0;
+			if(ailiaModelType==FaceDetectorModels.facemesh){
+				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaFaceMeshSample.FaceInfo> rec_result_detections = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections);
+				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				recognition_time = (rec_end_time - rec_start_time);
+			}
 
 			if (label_text != null)
 			{
-				label_text.text = (end_time - start_time) + "ms\n" + ailia_face_detector.EnvironmentName();
+				if(ailiaModelType==FaceDetectorModels.facemesh){
+					label_text.text = detection_time + "ms + " + recognition_time + "ms\n" + ailia_face_detector.EnvironmentName();
+				}else{
+					label_text.text = detection_time + "ms\n" + ailia_face_detector.EnvironmentName();
+				}
 			}
 
 			//Apply
