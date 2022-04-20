@@ -29,7 +29,7 @@ namespace ailiaSDK
 		}
 
 		// Update is called once per frame
-		public List<AiliaFaceMeshSample.FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazefaceSample.FaceInfo> result_detections)
+		public List<AiliaFaceMeshSample.FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazefaceSample.FaceInfo> result_detections, bool debug=false)
 		{
 			List<AiliaFaceMeshSample.FaceMeshInfo> result = new List<AiliaFaceMeshSample.FaceMeshInfo>();
 			for (int i = 0; i < result_detections.Count; i++)
@@ -51,12 +51,16 @@ namespace ailiaSDK
 				int w = 192;
 				int h = 192;
 				float scale = 1.0f * fw / w;
+				float ss=(float)System.Math.Sin(-theta);
+				float cs=(float)System.Math.Cos(-theta);
 				for (int y = 0; y < h; y++)
 				{
 					for (int x = 0; x < w; x++)
 					{
-						int y2 = (int)(1.0 * y * scale + fy - fh/2);
-						int x2 = (int)(1.0 * x * scale + fx - fw/2);
+						int ox = (x - w/2);
+						int oy = (y - h/2);
+						int x2 = (int)((ox *  cs + oy * ss) * scale + fx);
+						int y2 = (int)((ox * -ss + oy * cs) * scale + fy);
 						if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 						{
 							data[(y * w + x) + 0 * w * h] = 0;
@@ -71,13 +75,15 @@ namespace ailiaSDK
 				}
 
 				//debug display data
-				for (int y = 0; y < h; y++)
-				{
-					for (int x = 0; x < w; x++)
+				if(debug){
+					for (int y = 0; y < h; y++)
 					{
-						camera[tex_width*(tex_height-1-y)+x].r = (byte)((data[y * w + x + 0 * w * h] + 1.0) * 127.5);
-						camera[tex_width*(tex_height-1-y)+x].g = (byte)((data[y * w + x + 1 * w * h] + 1.0) * 127.5);
-						camera[tex_width*(tex_height-1-y)+x].b = (byte)((data[y * w + x + 2 * w * h] + 1.0) * 127.5);
+						for (int x = 0; x < w; x++)
+						{
+							camera[tex_width*(tex_height-1-y)+x].r = (byte)((data[y * w + x + 0 * w * h] + 1.0) * 127.5);
+							camera[tex_width*(tex_height-1-y)+x].g = (byte)((data[y * w + x + 1 * w * h] + 1.0) * 127.5);
+							camera[tex_width*(tex_height-1-y)+x].b = (byte)((data[y * w + x + 2 * w * h] + 1.0) * 127.5);
+						}
 					}
 				}
 
@@ -101,13 +107,15 @@ namespace ailiaSDK
 				}
 
 				//display
-				for(int j=0;j<NUM_KEYPOINTS;j++){
-					int x = (int)(output[j*3+0]);
-					int y = (int)(output[j*3+1]);
-					if(x>=0 && y>=0 && x<=w && y<=h){
-						camera[tex_width*(tex_height-1-y)+x].r = 0;
-						camera[tex_width*(tex_height-1-y)+x].g = 255;
-						camera[tex_width*(tex_height-1-y)+x].b = 0;
+				if(debug){
+					for(int j=0;j<NUM_KEYPOINTS;j++){
+						int x = (int)(output[j*3+0]);
+						int y = (int)(output[j*3+1]);
+						if(x>=0 && y>=0 && x<=w && y<=h){
+							camera[tex_width*(tex_height-1-y)+x].r = 0;
+							camera[tex_width*(tex_height-1-y)+x].g = 255;
+							camera[tex_width*(tex_height-1-y)+x].b = 0;
+						}
 					}
 				}
 

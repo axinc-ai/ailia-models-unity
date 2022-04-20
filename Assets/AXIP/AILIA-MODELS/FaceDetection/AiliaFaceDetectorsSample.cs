@@ -28,6 +28,8 @@ namespace ailiaSDK {
 		private bool gpu_mode = false;
 		[SerializeField]
 		private int camera_id = 0;
+		[SerializeField]
+		private bool debug = false;
 
 		//Result
 		RawImage raw_image = null;
@@ -143,34 +145,22 @@ namespace ailiaSDK {
 			long detection_time = (end_time - start_time);
 
 			//Draw result
-			for (int i = 0; i < result_detections.Count; i++)
-			{
-				AiliaBlazefaceSample.FaceInfo face = result_detections[i];
-				int fw = (int)(face.width * tex_width);
-				int fh = (int)(face.height * tex_height);
-				int fx = (int)(face.center.x * tex_width) - fw / 2;
-				int fy = (int)(face.center.y * tex_height) - fh / 2;
-				//Debug.Log("==>> " + fx + ", " + fy + ", " + fw + ", " + fh);
-				DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
-
-				/*
-				Vector2 from = new Vector2((fx + fx + fw) * 0.5f, (fy + fy + fh * 0.7f) * 0.5f);
-				Vector2 ahead = ((face.keypoints[0] + face.keypoints[1]) * 0.5f + face.keypoints[2]) * 0.5f;
-				ahead.x *= tex_width;
-				ahead.y *= tex_height;
-				const float length = 3;
-				ahead = ahead + (ahead - from) * length;
-				Vector2 offset = new Vector2(face.keypoints[2].x * tex_width - from.x, face.keypoints[2].y * tex_height - from.y);
-				from += offset;
-				ahead += offset;
-				DrawLine(Color.red, (int)from.x, (int)from.y, 0, (int)ahead.x, (int)ahead.y, 0, tex_width, tex_height);//, 1.5f);
-				*/
-
-				for (int k = 0; k < AiliaBlazefaceSample.NUM_KEYPOINTS; k++)
+			if(ailiaModelType==FaceDetectorModels.blazeface){
+				for (int i = 0; i < result_detections.Count; i++)
 				{
-					int x = (int)(face.keypoints[k].x * tex_width);
-					int y = (int)(face.keypoints[k].y * tex_height);
-					DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
+					AiliaBlazefaceSample.FaceInfo face = result_detections[i];
+					int fw = (int)(face.width * tex_width);
+					int fh = (int)(face.height * tex_height);
+					int fx = (int)(face.center.x * tex_width) - fw / 2;
+					int fy = (int)(face.center.y * tex_height) - fh / 2;
+					DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
+
+					for (int k = 0; k < AiliaBlazefaceSample.NUM_KEYPOINTS; k++)
+					{
+						int x = (int)(face.keypoints[k].x * tex_width);
+						int y = (int)(face.keypoints[k].y * tex_height);
+						DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
+					}
 				}
 			}
 
@@ -179,7 +169,7 @@ namespace ailiaSDK {
 			if(ailiaModelType==FaceDetectorModels.facemesh){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				List<AiliaFaceMeshSample.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections);
+				List<AiliaFaceMeshSample.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
 
@@ -187,7 +177,6 @@ namespace ailiaSDK {
 				for (int i = 0; i < result_facemesh.Count; i++)
 				{
 					AiliaFaceMeshSample.FaceMeshInfo face = result_facemesh[i];
-					Debug.Log(""+face.theta);
 
 					int fw = (int)(face.width * tex_width);
 					int fh = (int)(face.height * tex_height);
@@ -197,10 +186,13 @@ namespace ailiaSDK {
 
 					float scale = fw / 192.0f;
 
+					float ss=(float)System.Math.Sin(face.theta);
+					float cs=(float)System.Math.Cos(face.theta);
+
 					for (int k = 0; k < AiliaFaceMeshSample.NUM_KEYPOINTS; k++)
 					{
-						int x = (int)(face.center.x * tex_width - face.width * tex_width / 2 + face.keypoints[k].x * scale);// * tex_width);
-						int y = (int)(face.center.y * tex_height - face.height * tex_height / 2 + face.keypoints[k].y * scale);// * tex_height);
+						int x = (int)(face.center.x * tex_width  + ((face.keypoints[k].x - 192/2) * cs + (face.keypoints[k].y - 192/2) * -ss)* scale);
+						int y = (int)(face.center.y * tex_height + ((face.keypoints[k].x - 192/2) * ss + (face.keypoints[k].y - 192/2) *  cs)* scale);
 						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
 					}
 				}
