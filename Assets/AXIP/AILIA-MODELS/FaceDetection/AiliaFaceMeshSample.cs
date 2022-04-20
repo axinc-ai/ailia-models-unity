@@ -15,13 +15,9 @@ namespace ailiaSDK
 {
 	public class AiliaFaceMeshSample
 	{
-		public const int NUM_KEYPOINTS = 6;
+		public const int NUM_KEYPOINTS = 702;
 		public struct FaceInfo
 		{
-			public float score;
-			public Vector2 center;
-			public float width;
-			public float height;
 			public Vector2[] keypoints;
 		}
 
@@ -46,18 +42,16 @@ namespace ailiaSDK
 				Debug.Log("x"+fx+" y"+fy+" theta "+theta_x+" "+theta_y+" "+theta);
 				
 				//extract data
-				/*
-				//リサイズ
-				float[] data = new float[128 * 128 * 3];
-				int w = 128;
-				int h = 128;
-				float scale = 1.0f * tex_width / w;
+				float[] data = new float[192 * 192 * 3];
+				int w = 192;
+				int h = 192;
+				float scale = 1.0f * fw / w;
 				for (int y = 0; y < h; y++)
 				{
 					for (int x = 0; x < w; x++)
 					{
-						int y2 = (int)(1.0 * y * scale);
-						int x2 = (int)(1.0 * x * scale);
+						int y2 = (int)(1.0 * y * scale + fy - fh/2);
+						int x2 = (int)(1.0 * x * scale + fx - fw/2);
 						if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 						{
 							data[(y * w + x) + 0 * w * h] = 0;
@@ -65,12 +59,44 @@ namespace ailiaSDK
 							data[(y * w + x) + 2 * w * h] = 0;
 							continue;
 						}
-						data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-						data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-						data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+						data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
+						data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
+						data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
 					}
 				}
 
+				//debug display data
+				for (int y = 0; y < h; y++)
+				{
+					for (int x = 0; x < w; x++)
+					{
+						camera[tex_width*(tex_height-1-y)+x].r = (byte)((data[y * w + x + 0 * w * h] + 1.0) * 127.5);
+						camera[tex_width*(tex_height-1-y)+x].g = (byte)((data[y * w + x + 1 * w * h] + 1.0) * 127.5);
+						camera[tex_width*(tex_height-1-y)+x].b = (byte)((data[y * w + x + 2 * w * h] + 1.0) * 127.5);
+					}
+				}
+
+				//compute
+				float [] output = new float [1404];
+				bool success = ailia_model.Predict(output,data);
+				if (!success)
+				{
+					Debug.Log("Can not Predict");
+				}
+
+				//display
+				for(int j=0;j<(1404/2);j++){
+					Debug.Log(output[j*2+0]+"/"+output[j*2+1]);
+					int x = (int)(output[j*2+0]);//*w);
+					int y = (int)(output[j*2+1]);//*h);
+					if(x>=0 && y>=0 && x<=w && y<=h){
+						camera[tex_width*(tex_height-1-y)+x].r = 0;
+						camera[tex_width*(tex_height-1-y)+x].g = 255;
+						camera[tex_width*(tex_height-1-y)+x].b = 0;
+					}
+				}
+
+				/*
 				uint[] input_blobs = ailia_model.GetInputBlobList();
 				if (input_blobs != null)
 				{
