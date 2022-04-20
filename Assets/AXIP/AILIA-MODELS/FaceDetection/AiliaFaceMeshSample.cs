@@ -15,7 +15,10 @@ namespace ailiaSDK
 {
 	public class AiliaFaceMeshSample
 	{
-		public const int NUM_KEYPOINTS = 702;
+		public const int NUM_KEYPOINTS = 468;
+
+		private const float DSCALE = 1.5f;
+
 		public struct FaceMeshInfo
 		{
 			public float width;
@@ -33,8 +36,8 @@ namespace ailiaSDK
 			{
 				//extract roi
 				AiliaBlazefaceSample.FaceInfo face = result_detections[i];
-				int fw = (int)(face.width * tex_width);
-				int fh = (int)(face.height * tex_height);
+				int fw = (int)(face.width * tex_width * DSCALE);
+				int fh = (int)(face.height * tex_height * DSCALE);
 				int fx = (int)(face.center.x * tex_width);
 				int fy = (int)(face.center.y * tex_height);
 				const int RIGHT_EYE=0;
@@ -79,7 +82,7 @@ namespace ailiaSDK
 				}
 
 				//compute
-				float [] output = new float [NUM_KEYPOINTS * 2];
+				float [] output = new float [NUM_KEYPOINTS * 3];
 				bool success = ailia_model.Predict(output,data);
 				if (!success)
 				{
@@ -90,17 +93,17 @@ namespace ailiaSDK
 				FaceMeshInfo facemesh_info = new FaceMeshInfo();
 				facemesh_info.center = face.center;
 				facemesh_info.theta = theta;
-				facemesh_info.width = face.width;
-				facemesh_info.height = face.height;
+				facemesh_info.width = face.width * DSCALE;
+				facemesh_info.height = face.height * DSCALE;
 				facemesh_info.keypoints = new Vector2[NUM_KEYPOINTS];
 				for(int j=0;j<NUM_KEYPOINTS;j++){
-					facemesh_info.keypoints[j]=new Vector2(output[j*2+0],output[j*2+1]);
+					facemesh_info.keypoints[j]=new Vector2(output[j*3+0],output[j*3+1]);
 				}
 
 				//display
 				for(int j=0;j<NUM_KEYPOINTS;j++){
-					int x = (int)(output[j*2+0]);
-					int y = (int)(output[j*2+1]);
+					int x = (int)(output[j*3+0]);
+					int y = (int)(output[j*3+1]);
 					if(x>=0 && y>=0 && x<=w && y<=h){
 						camera[tex_width*(tex_height-1-y)+x].r = 0;
 						camera[tex_width*(tex_height-1-y)+x].g = 255;

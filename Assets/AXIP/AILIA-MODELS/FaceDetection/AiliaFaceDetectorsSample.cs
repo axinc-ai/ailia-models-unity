@@ -201,7 +201,6 @@ namespace ailiaSDK {
 					{
 						int x = (int)(face.center.x * tex_width - face.width * tex_width / 2 + face.keypoints[k].x * scale);// * tex_width);
 						int y = (int)(face.center.y * tex_height - face.height * tex_height / 2 + face.keypoints[k].y * scale);// * tex_height);
-						Debug.Log(""+x+"/"+y);
 						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
 					}
 				}
