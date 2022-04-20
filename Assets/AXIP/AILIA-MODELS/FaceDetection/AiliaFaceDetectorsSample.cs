@@ -12,8 +12,14 @@ using UnityEngine.UI;
 
 namespace ailiaSDK {
 	public class AiliaFaceDetectorsSample : AiliaRenderer {
+        public enum FaceDetectorModels
+        {
+            blazeface,
+            facemesh
+        }
+
 		[SerializeField]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.blazeface;
+		private FaceDetectorModels ailiaModelType = FaceDetectorModels.blazeface;
 		[SerializeField]
 		private GameObject UICanvas = null;
 
@@ -33,7 +39,10 @@ namespace ailiaSDK {
 
 		//AILIA
 		private AiliaModel ailia_face_detector = new AiliaModel();
+		private AiliaModel ailia_face_recognizer = new AiliaModel();
+
 		private AiliaBlazefaceSample blaze_face = new AiliaBlazefaceSample();
+		private AiliaFaceMeshSample face_mesh = new AiliaFaceMeshSample();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -41,17 +50,18 @@ namespace ailiaSDK {
 		// AILIA open file
 		private bool FileOpened = false;
 
-		private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
+		private void CreateAiliaDetector(FaceDetectorModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
 			var urlList = new List<ModelDownloadURL>();
 			if (gpu_mode)
 			{
 				ailia_face_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				ailia_face_recognizer.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 			switch (modelType)
 			{		
-				case AiliaModelsConst.AiliaModelTypes.blazeface:
+				case FaceDetectorModels.blazeface:
 					mode_text.text = "ailia face Detector";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
@@ -60,6 +70,22 @@ namespace ailiaSDK {
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+					}));
+
+					break;
+
+				case FaceDetectorModels.facemesh:
+					mode_text.text = "ailia face Recognizer";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh", file_name = "facemesh.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh", file_name = "facemesh.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+						FileOpened = ailia_face_recognizer.OpenFile(asset_path + "/facemesh.onnx.prototxt", asset_path + "/facemesh.onnx");
 					}));
 
 					break;
@@ -74,6 +100,7 @@ namespace ailiaSDK {
 		private void DestroyAiliaDetector()
 		{
 			ailia_face_detector.Close();
+			ailia_face_recognizer.Close();
 		}
 
 		// Use this for initialization
