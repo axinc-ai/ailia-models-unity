@@ -166,90 +166,6 @@ public class AiliaBlazepose : IDisposable
     int ID_Matrix = Shader.PropertyToID("Matrix");
     int ID_BackgroundColor = Shader.PropertyToID("BackgroundColor");
 
-    public static readonly (BodyPartIndex, BodyPartIndex)[] BodyPartConnections = new (BodyPartIndex, BodyPartIndex)[]
-    {
-        (BodyPartIndex.Nose, BodyPartIndex.InnerLeftEye),
-        (BodyPartIndex.InnerLeftEye, BodyPartIndex.LeftEye),
-        (BodyPartIndex.LeftEye, BodyPartIndex.OuterLeftEye),
-        (BodyPartIndex.OuterLeftEye, BodyPartIndex.LeftEar),
-
-        (BodyPartIndex.Nose, BodyPartIndex.InnerRightEye),
-        (BodyPartIndex.InnerRightEye, BodyPartIndex.RightEye),
-        (BodyPartIndex.RightEye, BodyPartIndex.OuterRightEye),
-        (BodyPartIndex.OuterRightEye, BodyPartIndex.RightEar),
-
-        (BodyPartIndex.LeftMouth, BodyPartIndex.RightMouth),
-
-        (BodyPartIndex.LeftShoulder, BodyPartIndex.RightShoulder),
-        (BodyPartIndex.LeftShoulder, BodyPartIndex.LeftElbow),
-        (BodyPartIndex.LeftElbow, BodyPartIndex.LeftWrist),
-        (BodyPartIndex.RightShoulder, BodyPartIndex.RightElbow),
-        (BodyPartIndex.RightElbow, BodyPartIndex.RightWrist),
-
-        (BodyPartIndex.LeftWrist, BodyPartIndex.LeftPinky),
-        (BodyPartIndex.LeftPinky, BodyPartIndex.LeftIndex),
-        (BodyPartIndex.LeftWrist, BodyPartIndex.LeftIndex),
-        (BodyPartIndex.LeftWrist, BodyPartIndex.LeftThumb),
-
-        (BodyPartIndex.RightWrist, BodyPartIndex.RightPinky),
-        (BodyPartIndex.RightPinky, BodyPartIndex.RightIndex),
-        (BodyPartIndex.RightWrist, BodyPartIndex.RightIndex),
-        (BodyPartIndex.RightWrist, BodyPartIndex.RightThumb),
-
-        (BodyPartIndex.LeftShoulder, BodyPartIndex.LeftHip),
-        (BodyPartIndex.RightShoulder, BodyPartIndex.RightHip),
-        (BodyPartIndex.LeftHip, BodyPartIndex.RightHip),
-
-        (BodyPartIndex.LeftHip, BodyPartIndex.LeftKnee),
-        (BodyPartIndex.LeftKnee, BodyPartIndex.LeftAnkle),
-        (BodyPartIndex.RightHip, BodyPartIndex.RightKnee),
-        (BodyPartIndex.RightKnee, BodyPartIndex.RightAnkle),
-
-        (BodyPartIndex.LeftAnkle, BodyPartIndex.LeftHeel),
-        (BodyPartIndex.LeftHeel, BodyPartIndex.LeftFootIndex),
-        (BodyPartIndex.LeftAnkle, BodyPartIndex.LeftFootIndex),
-
-        (BodyPartIndex.RightAnkle, BodyPartIndex.RightHeel),
-        (BodyPartIndex.RightHeel, BodyPartIndex.RightFootIndex),
-        (BodyPartIndex.RightAnkle, BodyPartIndex.RightFootIndex),
-    };
-
-    public static readonly BodyPartIndex[][] bodyBranches = new BodyPartIndex[][]
-    {
-        new BodyPartIndex[] { BodyPartIndex.LeftShoulder, BodyPartIndex.LeftElbow, BodyPartIndex.LeftWrist, BodyPartIndex.LeftThumb },
-        new BodyPartIndex[] { BodyPartIndex.LeftShoulder, BodyPartIndex.LeftElbow, BodyPartIndex.LeftWrist, BodyPartIndex.LeftIndex },
-        new BodyPartIndex[] { BodyPartIndex.LeftShoulder, BodyPartIndex.LeftElbow, BodyPartIndex.LeftWrist, BodyPartIndex.LeftPinky },
-
-        new BodyPartIndex[] { BodyPartIndex.RightShoulder, BodyPartIndex.RightElbow, BodyPartIndex.RightWrist, BodyPartIndex.RightThumb },
-        new BodyPartIndex[] { BodyPartIndex.RightShoulder, BodyPartIndex.RightElbow, BodyPartIndex.RightWrist, BodyPartIndex.RightIndex },
-        new BodyPartIndex[] { BodyPartIndex.RightShoulder, BodyPartIndex.RightElbow, BodyPartIndex.RightWrist, BodyPartIndex.RightPinky },
-
-        new BodyPartIndex[] { BodyPartIndex.LeftHip, BodyPartIndex.LeftKnee, BodyPartIndex.LeftAnkle, BodyPartIndex.LeftFootIndex },
-
-        new BodyPartIndex[] { BodyPartIndex.RightHip, BodyPartIndex.RightKnee, BodyPartIndex.RightAnkle, BodyPartIndex.RightFootIndex },
-    };
-
-    public static readonly (BodyPartIndex, BodyPartIndex)[] connectionToAdjust = new (BodyPartIndex, BodyPartIndex)[]
-        {
-            (BodyPartIndex.LeftHip, BodyPartIndex.LeftShoulder),
-            (BodyPartIndex.RightHip, BodyPartIndex.RightShoulder),
-            (BodyPartIndex.LeftShoulder, BodyPartIndex.RightShoulder),
-
-            (BodyPartIndex.LeftShoulder, BodyPartIndex.LeftElbow),
-            (BodyPartIndex.LeftElbow, BodyPartIndex.LeftWrist),
-
-            (BodyPartIndex.RightShoulder, BodyPartIndex.RightElbow),
-            (BodyPartIndex.RightElbow, BodyPartIndex.RightWrist),
-
-            (BodyPartIndex.LeftHip, BodyPartIndex.LeftKnee),
-            (BodyPartIndex.LeftKnee, BodyPartIndex.LeftAnkle),
-
-            (BodyPartIndex.RightHip, BodyPartIndex.RightKnee),
-            (BodyPartIndex.RightKnee, BodyPartIndex.RightAnkle),
-        };
-
-    public readonly Dictionary<(BodyPartIndex, BodyPartIndex), float> connectionTargetLength = new Dictionary<(BodyPartIndex, BodyPartIndex), float>();
-
     struct JsonFloatArray
     {
         public float[] array;
@@ -821,6 +737,55 @@ public class AiliaBlazepose : IDisposable
 
             smoothLandmarks[i] = smooth;
         }
+    }
+
+    public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult(){
+        List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> result_list=new List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose>();
+        int [] keypoint_list={
+            (int)BodyPartIndex.Nose,
+            (int)BodyPartIndex.LeftEye,
+            (int)BodyPartIndex.RightEye,
+            (int)BodyPartIndex.LeftEar,
+            (int)BodyPartIndex.RightEar,
+            (int)BodyPartIndex.LeftShoulder,
+            (int)BodyPartIndex.RightShoulder,
+            (int)BodyPartIndex.LeftElbow,
+            (int)BodyPartIndex.RightElbow,
+            (int)BodyPartIndex.LeftWrist,
+            (int)BodyPartIndex.RightWrist,
+            (int)BodyPartIndex.LeftHip,
+            (int)BodyPartIndex.RightHip,
+            (int)BodyPartIndex.LeftKnee,
+            (int)BodyPartIndex.RightKnee,
+            (int)BodyPartIndex.LeftAnkle,
+            (int)BodyPartIndex.RightAnkle};
+
+        AiliaPoseEstimator.AILIAPoseEstimatorObjectPose one_pose=new AiliaPoseEstimator.AILIAPoseEstimatorObjectPose();
+        one_pose.points = new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint[19];
+        for(int i=0;i<19;i++){
+            Vector3 pos = Vector3.zero;
+            float conf = 0;
+            if(i<=16){
+                pos = landmarks[keypoint_list[i]].position;
+                conf = landmarks[keypoint_list[i]].confidence;
+            }
+            if(i==17){
+                pos = (landmarks[(int)BodyPartIndex.LeftShoulder].position + landmarks[(int)BodyPartIndex.RightShoulder].position)/2;
+                conf = Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence,landmarks[(int)BodyPartIndex.RightShoulder].confidence);
+            }
+            if(i==18){
+                pos = (landmarks[(int)BodyPartIndex.LeftHip].position + landmarks[(int)BodyPartIndex.RightHip].position + landmarks[(int)BodyPartIndex.LeftShoulder].position + landmarks[(int)BodyPartIndex.RightShoulder].position)/4;
+                conf = Math.Min(Math.Min(landmarks[(int)BodyPartIndex.LeftHip].confidence, landmarks[(int)BodyPartIndex.RightHip].confidence),Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence, landmarks[(int)BodyPartIndex.RightShoulder].confidence));
+            }
+            AiliaPoseEstimator.AILIAPoseEstimatorKeypoint keypoint =new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint();
+            keypoint.x = pos.x;
+            keypoint.y = pos.y;
+            keypoint.z_local = pos.z;
+            keypoint.score = conf;
+            one_pose.points[i] = keypoint;
+        }
+        result_list.Add(one_pose);
+        return result_list;
     }
 
     #region IDisposable Support
