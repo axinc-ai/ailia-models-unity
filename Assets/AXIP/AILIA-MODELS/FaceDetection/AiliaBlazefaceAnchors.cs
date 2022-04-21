@@ -1,5 +1,5 @@
-﻿/* AILIA Unity Plugin Simple Sample */
-/* Copyright 2018 AXELL CORPORATION */
+﻿/* AILIA Unity Plugin Blazeface Anchors */
+/* Copyright 2022 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ using UnityEngine.Video;
 
 namespace ailiaSDK
 {
-	public class AiliaBlazefaceSampleAnchors
+	public class AiliaBlazefaceAnchors
 	{
 		public double[] anchors = {
 	0.03125,0.03125,1,1,0.03125,0.03125,1,1,0.09375,0.03125,1,1,0.09375,0.03125,1,1,

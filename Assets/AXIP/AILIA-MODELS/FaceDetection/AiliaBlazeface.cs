@@ -1,5 +1,5 @@
-﻿/* AILIA Unity Plugin Simple Sample */
-/* Copyright 2018 AXELL CORPORATION */
+﻿/* AILIA Unity Plugin Blazeface Sample */
+/* Copyright 2022 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -13,11 +13,14 @@ using UnityEngine.Video;
 
 namespace ailiaSDK
 {
-	public class AiliaBlazefaceSample
+	public class AiliaBlazeface
 	{
-		AiliaBlazefaceSampleAnchors anchors_holder = new AiliaBlazefaceSampleAnchors();
+		AiliaBlazefaceAnchors anchors_holder = new AiliaBlazefaceAnchors();
 
 		public const int NUM_KEYPOINTS = 6;
+		public const int DETECTION_WIDTH = 128;
+		public const int DETECTION_HEIGHT = 128;
+
 		public struct FaceInfo
 		{
 			public float score;
@@ -31,9 +34,9 @@ namespace ailiaSDK
 		public List<FaceInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height)
 		{
 			//リサイズ
-			float[] data = new float[128 * 128 * 3];
-			int w = 128;
-			int h = 128;
+			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
+			int w = DETECTION_WIDTH;
+			int h = DETECTION_HEIGHT;
 			float scale = 1.0f * tex_width / w;
 			for (int y = 0; y < h; y++)
 			{

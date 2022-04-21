@@ -1,5 +1,5 @@
-/* AILIA Unity Plugin Detector Sample */
-/* Copyright 2021 AXELL CORPORATION */
+/* AILIA Unity Plugin Face Detector Sample */
+/* Copyright 2022 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -43,8 +43,8 @@ namespace ailiaSDK {
 		private AiliaModel ailia_face_detector = new AiliaModel();
 		private AiliaModel ailia_face_recognizer = new AiliaModel();
 
-		private AiliaBlazefaceSample blaze_face = new AiliaBlazefaceSample();
-		private AiliaFaceMeshSample face_mesh = new AiliaFaceMeshSample();
+		private AiliaBlazeface blaze_face = new AiliaBlazeface();
+		private AiliaFaceMesh face_mesh = new AiliaFaceMesh();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -140,7 +140,7 @@ namespace ailiaSDK {
 
 			//BlazeFace
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			List<AiliaBlazefaceSample.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
+			List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			long detection_time = (end_time - start_time);
 
@@ -148,14 +148,14 @@ namespace ailiaSDK {
 			if(ailiaModelType==FaceDetectorModels.blazeface){
 				for (int i = 0; i < result_detections.Count; i++)
 				{
-					AiliaBlazefaceSample.FaceInfo face = result_detections[i];
+					AiliaBlazeface.FaceInfo face = result_detections[i];
 					int fw = (int)(face.width * tex_width);
 					int fh = (int)(face.height * tex_height);
 					int fx = (int)(face.center.x * tex_width) - fw / 2;
 					int fy = (int)(face.center.y * tex_height) - fh / 2;
 					DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
 
-					for (int k = 0; k < AiliaBlazefaceSample.NUM_KEYPOINTS; k++)
+					for (int k = 0; k < AiliaBlazeface.NUM_KEYPOINTS; k++)
 					{
 						int x = (int)(face.keypoints[k].x * tex_width);
 						int y = (int)(face.keypoints[k].y * tex_height);
@@ -169,14 +169,14 @@ namespace ailiaSDK {
 			if(ailiaModelType==FaceDetectorModels.facemesh){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				List<AiliaFaceMeshSample.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
+				List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
 
 				//Draw result
 				for (int i = 0; i < result_facemesh.Count; i++)
 				{
-					AiliaFaceMeshSample.FaceMeshInfo face = result_facemesh[i];
+					AiliaFaceMesh.FaceMeshInfo face = result_facemesh[i];
 
 					int fw = (int)(face.width * tex_width);
 					int fh = (int)(face.height * tex_height);
@@ -184,15 +184,15 @@ namespace ailiaSDK {
 					int fy = (int)(face.center.y * tex_height) - fh / 2;
 					DrawAffine2D(Color.green, fx, fy, fw, fh, tex_width, tex_height, face.theta);
 
-					float scale = fw / 192.0f;
+					float scale = 1.0f * fw / AiliaFaceMesh.DETECTION_WIDTH;
 
 					float ss=(float)System.Math.Sin(face.theta);
 					float cs=(float)System.Math.Cos(face.theta);
 
-					for (int k = 0; k < AiliaFaceMeshSample.NUM_KEYPOINTS; k++)
+					for (int k = 0; k < AiliaFaceMesh.NUM_KEYPOINTS; k++)
 					{
-						int x = (int)(face.center.x * tex_width  + ((face.keypoints[k].x - 192/2) * cs + (face.keypoints[k].y - 192/2) * -ss)* scale);
-						int y = (int)(face.center.y * tex_height + ((face.keypoints[k].x - 192/2) * ss + (face.keypoints[k].y - 192/2) *  cs)* scale);
+						int x = (int)(face.center.x * tex_width  + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * cs + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) * -ss)* scale);
+						int y = (int)(face.center.y * tex_height + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * ss + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) *  cs)* scale);
 						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
 					}
 				}

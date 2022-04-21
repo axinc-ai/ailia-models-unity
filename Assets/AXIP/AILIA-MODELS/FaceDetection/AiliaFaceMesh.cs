@@ -1,5 +1,5 @@
-﻿/* AILIA Unity Plugin Simple Sample */
-/* Copyright 2018 AXELL CORPORATION */
+﻿/* AILIA Unity Plugin FaceMesh Sample */
+/* Copyright 2022 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -13,9 +13,11 @@ using UnityEngine.Video;
 
 namespace ailiaSDK
 {
-	public class AiliaFaceMeshSample
+	public class AiliaFaceMesh
 	{
 		public const int NUM_KEYPOINTS = 468;
+		public const int DETECTION_WIDTH = 192;
+		public const int DETECTION_HEIGHT = 192;
 
 		private const float DSCALE = 1.5f;
 
@@ -29,13 +31,13 @@ namespace ailiaSDK
 		}
 
 		// Update is called once per frame
-		public List<AiliaFaceMeshSample.FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazefaceSample.FaceInfo> result_detections, bool debug=false)
+		public List<FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazeface.FaceInfo> result_detections, bool debug=false)
 		{
-			List<AiliaFaceMeshSample.FaceMeshInfo> result = new List<AiliaFaceMeshSample.FaceMeshInfo>();
+			List<FaceMeshInfo> result = new List<FaceMeshInfo>();
 			for (int i = 0; i < result_detections.Count; i++)
 			{
 				//extract roi
-				AiliaBlazefaceSample.FaceInfo face = result_detections[i];
+				AiliaBlazeface.FaceInfo face = result_detections[i];
 				int fw = (int)(face.width * tex_width * DSCALE);
 				int fh = (int)(face.height * tex_height * DSCALE);
 				int fx = (int)(face.center.x * tex_width);
@@ -46,10 +48,10 @@ namespace ailiaSDK
 				float theta_y = (float)(face.keypoints[LEFT_EYE].y - face.keypoints[RIGHT_EYE].y);
 				float theta = (float)System.Math.Atan2(theta_y,theta_x);
 
-				//extract data (TODO : apply affine)
-				float[] data = new float[192 * 192 * 3];
-				int w = 192;
-				int h = 192;
+				//extract data
+				float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
+				int w = DETECTION_WIDTH;
+				int h = DETECTION_HEIGHT;
 				float scale = 1.0f * fw / w;
 				float ss=(float)System.Math.Sin(-theta);
 				float cs=(float)System.Math.Cos(-theta);
