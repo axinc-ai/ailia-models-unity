@@ -74,8 +74,6 @@ namespace ailiaSDK
 			facial_feature,
 			[System.ComponentModel.Category("Face Recognization"), System.ComponentModel.Description("face_alignment")]
 			face_alignment,
-			[System.ComponentModel.Category("Face Recognization"), System.ComponentModel.Description("blazeface")]
-			blazeface,
 			[System.ComponentModel.Category("Face Recognization"), System.ComponentModel.Description("face_classification")]
 			arcface,
 			[System.ComponentModel.Category("Rotation Estimation"), System.ComponentModel.Description("rotnet")]

@@ -2,6 +2,7 @@ using System.Collections;
 using ailiaSDK;
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -260,6 +261,48 @@ namespace ailiaSDK
 			AppendEdgeOfRect2D(color, x, y + h, tex_width, tex_height, lRend);
 			AppendEdgeOfRect2D(color, x + w, y + h, tex_width, tex_height, lRend);
 			AppendEdgeOfRect2D(color, x + w, y, tex_width, tex_height, lRend);
+
+			newLine.SetActive(true);
+		}
+
+		public void DrawAffine2D(Color32 color, int x, int y, int w, int h, int tex_width, int tex_height, float theta)
+		{
+			GameObject newLine;
+			LineRenderer lRend;
+			if (lineObjectBufferIndex < lineObjectBuffer.Count)
+			{
+				newLine = lineObjectBuffer[lineObjectBufferIndex];
+				lRend = newLine.GetComponent<LineRenderer>();
+			}
+			else
+			{
+				newLine = Instantiate(line, lines.gameObject.transform);
+				newLine.layer = lines.gameObject.layer;
+				lRend = newLine.GetComponent<LineRenderer>();
+				lineObjectBuffer.Add(newLine);
+			}
+			lineObjectBufferIndex++;
+
+			lRend.positionCount = 0;
+			lRend.loop = true;
+
+			Color32 c1 = color;
+			c1.a = 160;
+
+			lRend.startColor = c1;
+			lRend.endColor = c1;
+
+			float lineW = 1.0f;
+			lRend.startWidth = lineW;
+			lRend.endWidth = lineW;
+
+			float cs = (float)System.Math.Cos(-theta);
+			float ss = (float)System.Math.Sin(-theta);
+
+			AppendEdgeOfRect2D(color, (int)(x + w/2 + w/2 * cs + h/2 * ss), (int)(y + h/2 + w/2 * -ss + h/2 * cs), tex_width, tex_height, lRend);
+			AppendEdgeOfRect2D(color, (int)(x + w/2 - w/2 * cs + h/2 * ss), (int)(y + h/2 - w/2 * -ss + h/2 * cs), tex_width, tex_height, lRend);
+			AppendEdgeOfRect2D(color, (int)(x + w/2 - w/2 * cs - h/2 * ss), (int)(y + h/2 - w/2 * -ss - h/2 * cs), tex_width, tex_height, lRend);
+			AppendEdgeOfRect2D(color, (int)(x + w/2 + w/2 * cs - h/2 * ss), (int)(y + h/2 + w/2 * -ss - h/2 * cs), tex_width, tex_height, lRend);
 
 			newLine.SetActive(true);
 		}

@@ -91,6 +91,7 @@ We are now converting to C#. Please wait to complete conversion.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 |[blazeface](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [BlazeFace-PyTorch](https://github.com/hollance/BlazeFace-PyTorch) | Pytorch | 1.2.1 and later |
+|[facemesh](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [facemesh.pytorch](https://github.com/thepowerfuldeez/facemesh.pytorch) | Pytorch | 1.2.2 and later |
 
 ## Face identification
 
