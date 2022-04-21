@@ -63,22 +63,6 @@ namespace ailiaSDK
 			return webcamTexture;
 		}
 
-		public Texture2D GetTexture2D(Texture2D buffer)
-		{
-			if (buffer == null || buffer.width != webcamTexture.width || buffer.height != webcamTexture.height)
-			{
-				int size = webcamTexture.width;
-				if (size > webcamTexture.height)
-				{
-					size = webcamTexture.height;
-				}
-				buffer = new Texture2D(size, size);
-			}
-			buffer.SetPixels32(GetPixels32());
-			buffer.Apply();
-			return buffer;
-		}
-
 		private int GetAngle()
 		{
 			return webcamTexture.videoRotationAngle;

@@ -433,16 +433,26 @@ public class AiliaBlazepose : IDisposable
         return output;
     }
 
-    public void RunPoseEstimation(Texture2D texture)
+     Texture2D input_texture=null;
+
+    public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> RunPoseEstimation(Color32 [] camera, int tex_width, int tex_height)
     {
-        Texture2D detection = RunDetectionModel(texture);
+        if(input_texture==null){
+            input_texture = new Texture2D(tex_width, tex_height);
+        }
+		input_texture.SetPixels32(camera);
+		input_texture.Apply();
+
+        Texture2D detection = RunDetectionModel(input_texture);
         if (detection == null)
         {
             Debug.Log("NO POSE");
-			return;
+			return new List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose>();
         }
 
 		RunEstimationModel(detection);
+
+        return GetResult();
     }
 
     private Texture2D RunDetectionModel(Texture2D inputTexture)

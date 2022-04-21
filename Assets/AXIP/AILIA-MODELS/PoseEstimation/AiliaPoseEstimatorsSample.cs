@@ -27,12 +27,10 @@ namespace ailiaSDK
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
 
-		private AiliaBlazepose ailiaBlazepose;
+		private AiliaBlazepose ailia_blazepose;
 		private Texture2D textureBlazepose;
 		[SerializeField, HideInInspector]
 		private ComputeShader computeShaderBlazepose;
-		RenderTexture avatarViewTexture;
-
 
 		// normal model or optimized model for lightweight-human-pose-estimation
 		[SerializeField]
@@ -86,9 +84,9 @@ namespace ailiaSDK
 					ailia_download.SetSaveFolderPath(assetPath);
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						ailiaBlazepose = new AiliaBlazepose(gpu_mode);
-						ailiaBlazepose.computeShader = computeShaderBlazepose;
-						ailiaBlazepose.Smooth = true;
+						ailia_blazepose = new AiliaBlazepose(gpu_mode);
+						ailia_blazepose.computeShader = computeShaderBlazepose;
+						ailia_blazepose.Smooth = true;
 						FileOpened = true;
 					}));
 
@@ -101,7 +99,6 @@ namespace ailiaSDK
 
 		private void DestroyAiliaPoseEstimator()
 		{
-			avatarViewTexture?.Release();
 			ailia_pose.Close();
 		}
 
@@ -145,12 +142,7 @@ namespace ailiaSDK
 			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
 			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
 			{
-				if(ailiaBlazepose != null)
-				{
-					textureBlazepose = ailia_camera.GetTexture2D(textureBlazepose);
-					ailiaBlazepose.RunPoseEstimation(textureBlazepose);
-					pose=ailiaBlazepose.GetResult();
-				}
+				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
 			}else{
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
 			}
