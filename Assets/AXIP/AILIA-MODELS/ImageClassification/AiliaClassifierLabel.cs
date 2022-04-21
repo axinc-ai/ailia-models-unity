@@ -1,4 +1,4 @@
-﻿/* Imagenet Category List */
+/* Imagenet Category List */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -7,14 +7,11 @@ using System.Runtime.InteropServices;
 
 using UnityEngine;
 
-namespace ailiaSDK
-{
-    public class AiliaClassifierLabel
-    {
+public class AiliaClassifierLabel {
 
-        /* from https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a */
+/* from https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a */
 
-        public static string[] IMAGENET_CATEGORY = {
+    public static string [] IMAGENET_CATEGORY={
  "tench, Tinca tinca",
  "goldfish, Carassius auratus",
  "great white shark, white shark, man-eater, man-eating shark, Carcharodon carcharias",
@@ -1018,12 +1015,12 @@ namespace ailiaSDK
 
 
 
-        /*
-        from https://gist.github.com/PonDad/4dcb4b242b9358e524b4ddecbee385e9
+/*
+from https://gist.github.com/PonDad/4dcb4b242b9358e524b4ddecbee385e9
 
-        */
+*/
 
-        public static string[] IMAGENET_CATEGORY_JP = {
+public static string [] IMAGENET_CATEGORY_JP={
 "テンチ",
 "金魚",
 "ホホジロザメ",
@@ -2026,7 +2023,7 @@ namespace ailiaSDK
 "トイレットペーパー"
 };
 
-        public static string[] EMOTION_CATEGORY = {
+public static string [] EMOTION_CATEGORY={
     "angry",
     "disgust",
     "fear",
@@ -2036,11 +2033,11 @@ namespace ailiaSDK
     "neutral"
 };
 
-        public static string[] GENDER_CATEGORY = {
+public static string [] GENDER_CATEGORY={
     "female","male"
 };
 
-        public static string[] COCO_CATEGORY = {
+public static string[] COCO_CATEGORY = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
     "truck", "boat", "traffic light", "fire hydrant", "stop sign",
     "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
@@ -2056,19 +2053,18 @@ namespace ailiaSDK
     "scissors", "teddy bear", "hair drier", "toothbrush"
 };
 
-        public static string[] VOC_CATEGORY = {
+public static string[] VOC_CATEGORY = {
         "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car",
         "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike",
         "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"
 };
 
-        public static float[] VOC_ANCHORS = {
+public static float[] VOC_ANCHORS = {
     1.08f, 1.19f, 3.42f, 4.41f, 6.63f, 11.38f, 9.42f, 5.11f, 16.62f, 10.52f
 };
 
-        public static float[] COCO_ANCHORS = {
-	0.57273f, 0.677385f, 1.87446f, 2.06253f, 3.33843f, 5.47434f, 7.88282f, 3.52778f, 9.77052f, 9.16828f
+public static float[] COCO_ANCHORS = {
+    0.738768f, 0.874946f, 2.42204f, 2.65704f, 4.30971f, 7.04493f, 10.246f, 4.59428f, 12.6868f, 11.8741f
 };
 
-    }
 }

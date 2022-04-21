@@ -1,4 +1,6 @@
-﻿using System.Collections;
+using System.Collections;
+using ailiaSDK;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -110,12 +112,13 @@ namespace ailiaSDK
 
 			float base_width = r / 2.0f;
 
-			from_z = 0;
-			to_z = 0;
+			//from_z = 0;
+			//to_z = 0;
 
 			lRend.positionCount = 2;
-			lRend.startWidth = (from_z * 100 + 1) * base_width;
-			lRend.endWidth = (to_z * 100 + 1) * base_width;
+			lRend.startWidth = System.Math.Max((-from_z * 10 + 1),1) * base_width;
+			lRend.endWidth = System.Math.Max((-to_z * 10 + 1),1) * base_width;
+
 			Vector3 startVec = pointPos1;
 			Vector3 endVec = pointPos2;
 			lRend.SetPosition(0, startVec);
@@ -290,4 +293,4 @@ namespace ailiaSDK
 			text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
 		}
 	}
-}
+} 

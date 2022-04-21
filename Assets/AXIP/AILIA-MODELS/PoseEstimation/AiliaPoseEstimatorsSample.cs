@@ -8,7 +8,7 @@ namespace ailiaSDK
 	public class AiliaPoseEstimatorsSample : AiliaRenderer
 	{
 		[SerializeField, HideInInspector]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.openpose;
+		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation;
 		[SerializeField, HideInInspector]
 		private GameObject UICanvas = null;
 		//Settings
@@ -19,7 +19,6 @@ namespace ailiaSDK
 		public Text label_text = null;
 		public Text mode_text = null;
 		public RawImage raw_image = null;
-
 		//Preview
 		private Texture2D preview_texture = null;
 
@@ -27,6 +26,11 @@ namespace ailiaSDK
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
+
+		private AiliaBlazepose ailia_blazepose;
+		private Texture2D textureBlazepose;
+		[SerializeField, HideInInspector]
+		private ComputeShader computeShaderBlazepose;
 
 		// normal model or optimized model for lightweight-human-pose-estimation
 		[SerializeField]
@@ -45,20 +49,6 @@ namespace ailiaSDK
 			}
 			switch (ailiaModelType)
 			{
-				case AiliaModelsConst.AiliaModelTypes.openpose:
-					/*
-					// Download url is uncertain.
-					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_OPEN_POSE);
-
-					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_deploy.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_iter_440000.caffemodel" });
-
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
-					{
-						FileOpened = ailia_pose.OpenFile(asset_path + "/pose_deploy.prototxt", asset_path + "/pose_iter_440000.caffemodel");
-					}));
-					*/
-					break;
 				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
 
@@ -72,7 +62,7 @@ namespace ailiaSDK
 					else
 					{
 						model_path += ".onnx.prototxt";
-						weight_path  += ".onnx";
+						weight_path += ".onnx";
 					}
 					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = model_path });
 					urlList.Add(new ModelDownloadURL() { folder_path = "lightweight-human-pose-estimation", file_name = weight_path });
@@ -82,7 +72,22 @@ namespace ailiaSDK
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation_3d:
+				case AiliaModelsConst.AiliaModelTypes.blazepose_fullbody:
+					var folder_path = "blazepose-fullbody";
+					var model_name = "pose_landmark_heavy";
+					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = model_name + ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = "pose_detection.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = "pose_detection.onnx.prototxt" });
+
+					string assetPath = Application.streamingAssetsPath + "/AILIA";
+					ailia_download.SetSaveFolderPath(assetPath);
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						ailia_blazepose = new AiliaBlazepose(gpu_mode);
+						ailia_blazepose.computeShader = computeShaderBlazepose;
+						FileOpened = true;
+					}));
 
 					break;
 				default:
@@ -95,7 +100,6 @@ namespace ailiaSDK
 		{
 			ailia_pose.Close();
 		}
-
 
 		// Use this for initialization
 		void Start()
@@ -113,6 +117,7 @@ namespace ailiaSDK
 			{
 				return;
 			}
+
 			if (!FileOpened)
 			{
 				return;
@@ -132,8 +137,14 @@ namespace ailiaSDK
 			Color32[] camera = ailia_camera.GetPixels32();
 
 			//Pose estimation
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
+			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
+			{
+				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
+			}else{
+				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
+			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 
 			for (int i = 0; i < pose.Count; i++)
@@ -196,6 +207,7 @@ namespace ailiaSDK
 			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
 			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
+
 		void OnApplicationQuit()
 		{
 			DestroyAiliaPoseEstimator();
