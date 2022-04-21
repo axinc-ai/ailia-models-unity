@@ -1,0 +1,49 @@
+﻿#pragma kernel AffineTransform
+
+Texture2D<float4> InputTexture;
+int InputWidth;
+int InputHeight;
+RWTexture2D<float4> OutputTexture;
+int OutputWidth;
+int OutputHeight;
+
+// 2 x 3 Inverse of transformation matrix
+float4x4 Matrix;
+float4 BackgroundColor;
+
+[numthreads(32, 32, 1)]
+void AffineTransform(uint2 id : SV_DispatchThreadID)
+{
+	if (id.x < OutputWidth && id.y < OutputHeight)
+	{
+		float org_x = id.x * Matrix[0].x + id.y * Matrix[0].y + Matrix[0].z;
+		float org_y = id.x * Matrix[1].x + id.y * Matrix[1].y + Matrix[1].z;
+
+
+		if (step(0, org_x) * step(0, org_y) * (1 - step(InputWidth, org_x)) * (1 - step(InputHeight, org_y)) == 0)
+		{
+			OutputTexture[id] = BackgroundColor;
+		}
+		else
+		{
+			uint idx_l = max(floor(org_x), 0);
+			uint idx_r = min(ceil(org_x), InputWidth - 1);
+			uint idx_t = max(floor(org_y), 0);
+			uint idx_b = min(ceil(org_y), InputHeight - 1);
+
+			float4 pix_lt = InputTexture[uint2(idx_l, idx_t)];
+			float4 pix_rt = InputTexture[uint2(idx_r, idx_t)];
+			float4 pix_lb = InputTexture[uint2(idx_l, idx_b)];
+			float4 pix_rb = InputTexture[uint2(idx_r, idx_b)];
+
+			float sx = frac(org_x);
+			float sy = frac(org_y);
+
+			float4 pix_t = lerp(pix_lt, pix_rt, sx);
+			float4 pix_b = lerp(pix_lb, pix_rb, sx);
+
+			OutputTexture[id] = lerp(pix_t, pix_b, sy);
+		}
+	}
+}
+
