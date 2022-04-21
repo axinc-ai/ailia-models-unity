@@ -67,9 +67,14 @@ namespace ailiaSDK
 		{
 			if (buffer == null || buffer.width != webcamTexture.width || buffer.height != webcamTexture.height)
 			{
-				buffer = new Texture2D(webcamTexture.width, webcamTexture.height);
+				int size = webcamTexture.width;
+				if (size > webcamTexture.height)
+				{
+					size = webcamTexture.height;
+				}
+				buffer = new Texture2D(size, size);
 			}
-			buffer.SetPixels32(webcamTexture.GetPixels32());
+			buffer.SetPixels32(GetPixels32());
 			buffer.Apply();
 			return buffer;
 		}

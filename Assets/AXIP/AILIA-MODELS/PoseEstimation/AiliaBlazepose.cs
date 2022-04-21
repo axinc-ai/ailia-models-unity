@@ -303,6 +303,13 @@ public class AiliaBlazepose : IDisposable
         }
     }
 
+    private float affine_xc=0;
+    private float affine_yc=0;
+    private float affine_x1=0;
+    private float affine_y1=0;
+    private float affine_scale=0;
+    private float affine_angle=0;
+
     private Texture2D ExtractROIFromBox(Texture2D texture, Box box)
     {
         float finalSquareLength = Mathf.Max(texture.width, texture.height);
@@ -335,6 +342,13 @@ public class AiliaBlazepose : IDisposable
         float y1 = scaledBox.keypoints[kp2].y;
         float scale = dscale * Mathf.Sqrt((Mathf.Pow(xc - x1, 2) + Mathf.Pow(yc - y1, 2))) * 2;
         float angle = Mathf.Atan2(yc - y1, xc - x1) - theta0;
+
+        affine_xc = box.keypoints[kp1].x;
+        affine_yc = box.keypoints[kp1].y;
+        affine_x1 = box.keypoints[kp2].x;
+        affine_y1 = box.keypoints[kp2].y;
+        affine_scale = dscale * Mathf.Sqrt((Mathf.Pow(affine_xc - affine_x1, 2) + Mathf.Pow(affine_yc - affine_y1, 2))) * 2;
+        affine_angle = Mathf.Atan2(affine_yc - affine_y1, affine_xc - affine_x1) - theta0;
         
         Vector2[] points = new Vector2[]
         {
@@ -562,6 +576,7 @@ public class AiliaBlazepose : IDisposable
 
         DecodeAndProcessLandmarks();
 
+        /*
         if (poseScore < 0.3f)
         {
             poseDetectionBox = null;
@@ -590,6 +605,8 @@ public class AiliaBlazepose : IDisposable
         RecenterLandmarksOnHips();
 
         SmoothLandmarks(Time.time - prevTime);
+        */
+
         prevTime = Time.time;
     }
 
@@ -685,7 +702,7 @@ public class AiliaBlazepose : IDisposable
 
             landmarks.Add(new Landmark
             {
-                position = new Vector3(x, 1 - y, z / 2),
+                position = new Vector3(x, y, z),
                 confidence = Sigmoid(Math.Min(visibility, presence))
             }); ;
         }
@@ -760,6 +777,15 @@ public class AiliaBlazepose : IDisposable
             (int)BodyPartIndex.LeftAnkle,
             (int)BodyPartIndex.RightAnkle};
 
+        if(affine_scale==0){
+            return result_list;
+        }
+
+        Debug.Log(""+affine_xc+"/"+affine_yc+"/"+affine_scale+"/"+affine_angle);
+
+        float cs=(float)Math.Cos(-affine_angle);
+        float ss=(float)Math.Sin(-affine_angle);
+
         AiliaPoseEstimator.AILIAPoseEstimatorObjectPose one_pose=new AiliaPoseEstimator.AILIAPoseEstimatorObjectPose();
         one_pose.points = new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint[19];
         for(int i=0;i<19;i++){
@@ -778,8 +804,8 @@ public class AiliaBlazepose : IDisposable
                 conf = Math.Min(Math.Min(landmarks[(int)BodyPartIndex.LeftHip].confidence, landmarks[(int)BodyPartIndex.RightHip].confidence),Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence, landmarks[(int)BodyPartIndex.RightShoulder].confidence));
             }
             AiliaPoseEstimator.AILIAPoseEstimatorKeypoint keypoint =new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint();
-            keypoint.x = pos.x;
-            keypoint.y = pos.y;
+            keypoint.x = ((pos.x - 0.5f) *  cs + (pos.y - 0.5f) * ss)* affine_scale + affine_xc;
+            keypoint.y = ((pos.x - 0.5f) * -ss + (pos.y - 0.5f) * cs)* affine_scale + affine_yc;
             keypoint.z_local = pos.z;
             keypoint.score = conf;
             one_pose.points[i] = keypoint;
