@@ -131,10 +131,12 @@ namespace ailiaSDK
 							(BodyPartIndex.RightKnee, fbik.fullBodyIK.rightLegEffectors.knee),
 							(BodyPartIndex.RightAnkle, fbik.fullBodyIK.rightLegEffectors.foot),
 						};
+
+						FileOpened = true;
 					}));
-					avatarViewTexture = new RenderTexture(1024, 1024, 32);
-					raw_image.texture = avatarViewTexture;
-					GameObject.Find("avatarCamera").GetComponent<Camera>().targetTexture = avatarViewTexture;
+					//avatarViewTexture = new RenderTexture(1024, 1024, 32);
+					//raw_image.texture = avatarViewTexture;
+					//GameObject.Find("avatarCamera").GetComponent<Camera>().targetTexture = avatarViewTexture;
 
 					break;
 				default:
@@ -165,15 +167,6 @@ namespace ailiaSDK
 			{
 				return;
 			}
-			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
-			{
-				if(ailiaBlazepose != null)
-				{
-					textureBlazepose = ailia_camera.GetTexture2D(textureBlazepose);
-					ailiaBlazepose.RunPoseEstimation(textureBlazepose);
-				}
-				return;
-			}
 
 			if (!FileOpened)
 			{
@@ -194,13 +187,71 @@ namespace ailiaSDK
 			Color32[] camera = ailia_camera.GetPixels32();
 
 			//Pose estimation
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
+			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
+			{
+				if(ailiaBlazepose != null)
+				{
+					textureBlazepose = ailia_camera.GetTexture2D(textureBlazepose);
+					ailiaBlazepose.RunPoseEstimation(textureBlazepose);
+
+					List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> result_list=new List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose>();
+					int [] keypoint_list={
+					    (int)BodyPartIndex.Nose,
+						(int)BodyPartIndex.LeftEye,
+						(int)BodyPartIndex.RightEye,
+						(int)BodyPartIndex.LeftEar,
+						(int)BodyPartIndex.RightEar,
+						(int)BodyPartIndex.LeftShoulder,
+						(int)BodyPartIndex.RightShoulder,
+						(int)BodyPartIndex.LeftElbow,
+						(int)BodyPartIndex.RightElbow,
+						(int)BodyPartIndex.LeftWrist,
+						(int)BodyPartIndex.RightWrist,
+						(int)BodyPartIndex.LeftHip,
+						(int)BodyPartIndex.RightHip,
+						(int)BodyPartIndex.LeftKnee,
+						(int)BodyPartIndex.RightKnee,
+						(int)BodyPartIndex.LeftAnkle,
+						(int)BodyPartIndex.RightAnkle};
+
+					AiliaPoseEstimator.AILIAPoseEstimatorObjectPose one_pose=new AiliaPoseEstimator.AILIAPoseEstimatorObjectPose();
+					one_pose.points = new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint[19];
+					for(int i=0;i<19;i++){
+						Vector3 pos = Vector3.zero;
+						float conf = 0;
+						if(i<=16){
+							pos = ailiaBlazepose.landmarks[keypoint_list[i]].position;
+							conf = ailiaBlazepose.landmarks[keypoint_list[i]].confidence;
+						}
+						if(i==17){
+							pos = (ailiaBlazepose.landmarks[(int)BodyPartIndex.LeftShoulder].position + ailiaBlazepose.landmarks[(int)BodyPartIndex.RightShoulder].position)/2;
+							conf = Math.Min(ailiaBlazepose.landmarks[(int)BodyPartIndex.LeftShoulder].confidence,ailiaBlazepose.landmarks[(int)BodyPartIndex.RightShoulder].confidence);
+						}
+						if(i==18){
+							pos = (ailiaBlazepose.landmarks[(int)BodyPartIndex.LeftHip].position + ailiaBlazepose.landmarks[(int)BodyPartIndex.RightHip].position + ailiaBlazepose.landmarks[(int)BodyPartIndex.LeftShoulder].position + ailiaBlazepose.landmarks[(int)BodyPartIndex.RightShoulder].position)/4;
+						}
+						AiliaPoseEstimator.AILIAPoseEstimatorKeypoint keypoint =new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint();
+						Debug.Log(pos);
+						keypoint.x = pos.x;
+						keypoint.y = pos.y;
+						keypoint.z_local = pos.z;
+						keypoint.score = conf;
+						one_pose.points[i] = keypoint;
+					}
+					result_list.Add(one_pose);
+					pose = result_list;
+				}
+			}else{
+				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
+			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 
 			for (int i = 0; i < pose.Count; i++)
 			{
 				AiliaPoseEstimator.AILIAPoseEstimatorObjectPose obj = pose[i];
+				Debug.Log(obj.total_score);
 				if (obj.total_score < 0)
 				{
 					continue;
@@ -250,6 +301,7 @@ namespace ailiaSDK
 			// Set up lines
 			line_panel = UICanvas.transform.Find("LinePanel").gameObject;
 			lines = UICanvas.transform.Find("LinePanel/Lines").gameObject;
+			line = UICanvas.transform.Find("LinePanel/Lines/Line").gameObject;
 			text_panel = UICanvas.transform.Find("TextPanel").gameObject;
 			text_base = UICanvas.transform.Find("TextPanel/TextHolder").gameObject;
 
@@ -258,7 +310,7 @@ namespace ailiaSDK
 			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
 
-
+		/*
 		public void AnimateWithPosition(int layerIndex)
 		{
 			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody && ikTarget != null && ailiaBlazepose != null)
@@ -306,6 +358,7 @@ namespace ailiaSDK
 			effector.positionWeight = weight;
 			effector.transform.position = position;
 		}
+		*/
 
 		void OnApplicationQuit()
 		{
