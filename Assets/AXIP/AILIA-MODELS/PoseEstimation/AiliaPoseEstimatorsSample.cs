@@ -8,7 +8,7 @@ namespace ailiaSDK
 	public class AiliaPoseEstimatorsSample : AiliaRenderer
 	{
 		[SerializeField, HideInInspector]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.openpose;
+		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation;
 		[SerializeField, HideInInspector]
 		private GameObject UICanvas = null;
 		//Settings
@@ -51,20 +51,6 @@ namespace ailiaSDK
 			}
 			switch (ailiaModelType)
 			{
-				case AiliaModelsConst.AiliaModelTypes.openpose:
-					/*
-					// Download url is uncertain.
-					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_OPEN_POSE);
-
-					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_deploy.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "openpose", file_name = "pose_iter_440000.caffemodel" });
-
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
-					{
-						FileOpened = ailia_pose.OpenFile(asset_path + "/pose_deploy.prototxt", asset_path + "/pose_iter_440000.caffemodel");
-					}));
-					*/
-					break;
 				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
 
@@ -86,9 +72,6 @@ namespace ailiaSDK
 					{
 						FileOpened = ailia_pose.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
-
-					break;
-				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation_3d:
 
 					break;
 				case AiliaModelsConst.AiliaModelTypes.blazepose_fullbody:
@@ -176,7 +159,6 @@ namespace ailiaSDK
 			for (int i = 0; i < pose.Count; i++)
 			{
 				AiliaPoseEstimator.AILIAPoseEstimatorObjectPose obj = pose[i];
-				Debug.Log(obj.total_score);
 				if (obj.total_score < 0)
 				{
 					continue;

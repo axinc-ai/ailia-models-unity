@@ -576,37 +576,6 @@ public class AiliaBlazepose : IDisposable
 
         DecodeAndProcessLandmarks();
 
-        /*
-        if (poseScore < 0.3f)
-        {
-            poseDetectionBox = null;
-        }
-        else
-        {
-            Vector2 hips = (landmarks[(int) BodyPartIndex.LeftHip].position + landmarks[(int) BodyPartIndex.RightHip].position) / 2;
-            Vector2 nose = landmarks[(int) BodyPartIndex.Nose].position;
-            Vector2 aboveHead = hips + 1f * (nose - hips);
-            hips.y = 1 - hips.y;
-            aboveHead.y = 1 - aboveHead.y;
-
-            float halfBoxSize = (aboveHead - hips).sqrMagnitude;
-
-            Box newBox = new Box
-            {
-                area = 4 * Mathf.Pow(halfBoxSize, 2),
-                keypoints = new Vector2[] { hips, aboveHead },
-                xMin = hips.x - halfBoxSize,
-                xMax = hips.x + halfBoxSize,
-                yMin = hips.y - halfBoxSize,
-                yMax = hips.y + halfBoxSize,
-            };
-        }
-
-        RecenterLandmarksOnHips();
-
-        SmoothLandmarks(Time.time - prevTime);
-        */
-
         prevTime = Time.time;
     }
 
@@ -708,54 +677,6 @@ public class AiliaBlazepose : IDisposable
         }
     }
 
-    private void RecenterLandmarksOnHips()
-    {
-        Vector3 poseOrigin = (landmarks[(int)BodyPartIndex.LeftHip].position + landmarks[(int)BodyPartIndex.RightHip].position) / 2;
-
-        for (int i = 0; i < 33; ++i)
-        {
-            landmarks[i] = new Landmark
-            {
-                position = landmarks[i].position - poseOrigin,
-                confidence = landmarks[i].confidence
-            };
-        }
-    }
-
-    private void SmoothLandmarks(float deltaTime = 0.016f)
-    {
-        if (smoothLandmarks.Count == 0)
-        {
-            for (int i = 0; i < landmarks.Count; ++i)
-            {
-                smoothLandmarks.Add(landmarks[i]);
-                smoothDiffLandmarks.Add(new Landmark
-                {
-                    index = i,
-                    confidence = landmarks[i].confidence,
-                    position = Vector2.zero
-                });
-            }
-
-			return;
-		}
-
-        float smoothingFactor = 1 / (2 * Mathf.PI * smoothingCutoff * deltaTime);
-
-        for (int i = 0; i < landmarks.Count; ++i)
-        {
-            Landmark current = landmarks[i];
-            Landmark smooth = new Landmark
-            {
-                index = i,
-                confidence = current.confidence,
-                position = smoothingFactor * current.position + (1 - smoothingFactor) * smoothLandmarks[i].position
-            };
-
-            smoothLandmarks[i] = smooth;
-        }
-    }
-
     public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult(){
         List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> result_list=new List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose>();
         int [] keypoint_list={
@@ -780,8 +701,6 @@ public class AiliaBlazepose : IDisposable
         if(affine_scale==0){
             return result_list;
         }
-
-        Debug.Log(""+affine_xc+"/"+affine_yc+"/"+affine_scale+"/"+affine_angle);
 
         float cs=(float)Math.Cos(-affine_angle);
         float ss=(float)Math.Sin(-affine_angle);
