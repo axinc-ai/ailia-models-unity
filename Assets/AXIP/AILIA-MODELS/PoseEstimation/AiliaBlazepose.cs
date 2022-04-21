@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using SA;
-using static SA.FullBodyIK;
 
 struct Box
 {
@@ -143,7 +141,6 @@ public class AiliaBlazepose : IDisposable
 
     private AiliaModel ailiaPoseDetection = new AiliaModel();
     private AiliaModel ailiaPoseEstimation = new AiliaModel();
-    private FullBodyIKBehaviour referenceModel;
 
     private static readonly int BLAZEPOSE_DETECTOR_INPUT_RESOLUTION = 224;
     private static readonly uint BLAZEPOSE_DETECTOR_INPUT_CHANNEL_COUNT = 3;
@@ -253,47 +250,13 @@ public class AiliaBlazepose : IDisposable
 
     public readonly Dictionary<(BodyPartIndex, BodyPartIndex), float> connectionTargetLength = new Dictionary<(BodyPartIndex, BodyPartIndex), float>();
 
-    public readonly Dictionary<BodyPartIndex, Bone> blazePoseToBodyBone;
-
     struct JsonFloatArray
     {
         public float[] array;
     }
 
-    public AiliaBlazepose(bool gpuMode, FullBodyIKBehaviour referenceModel = null)
+    public AiliaBlazepose(bool gpuMode)
     {
-        this.referenceModel = referenceModel;
-
-        if (this.referenceModel)
-        {
-            blazePoseToBodyBone = new Dictionary<BodyPartIndex, Bone>()
-            {
-                [BodyPartIndex.LeftShoulder] = referenceModel.fullBodyIK.leftArmBones.arm,
-                [BodyPartIndex.LeftElbow] = referenceModel.fullBodyIK.leftArmBones.elbow,
-                [BodyPartIndex.LeftWrist] = referenceModel.fullBodyIK.leftArmBones.wrist,
-
-                [BodyPartIndex.RightShoulder] = referenceModel.fullBodyIK.rightArmBones.arm,
-                [BodyPartIndex.RightElbow] = referenceModel.fullBodyIK.rightArmBones.elbow,
-                [BodyPartIndex.RightWrist] = referenceModel.fullBodyIK.rightArmBones.wrist,
-
-                [BodyPartIndex.LeftHip] = referenceModel.fullBodyIK.leftLegBones.leg,
-                [BodyPartIndex.LeftKnee] = referenceModel.fullBodyIK.leftLegBones.knee,
-                [BodyPartIndex.LeftAnkle] = referenceModel.fullBodyIK.leftLegBones.foot,
-
-                [BodyPartIndex.RightHip] = referenceModel.fullBodyIK.rightLegBones.leg,
-                [BodyPartIndex.RightKnee] = referenceModel.fullBodyIK.rightLegBones.knee,
-                [BodyPartIndex.RightAnkle] = referenceModel.fullBodyIK.rightLegBones.foot,
-            };
-
-            foreach (var connection in connectionToAdjust)
-            {
-                Vector3 startBonePosition = blazePoseToBodyBone[connection.Item1].worldPosition;
-                Vector3 endBonePosition = blazePoseToBodyBone[connection.Item2].worldPosition;
-
-                connectionTargetLength[connection] = Vector3.Distance(startBonePosition, endBonePosition);
-            }
-        }
-
         bool status;
         string assetPath = Application.streamingAssetsPath + "/AILIA";
 
@@ -549,14 +512,7 @@ public class AiliaBlazepose : IDisposable
 			return;
         }
 
-		// For testing purposes, also write to a file in the project folder
-		//byte[] bytes = detection.EncodeToPNG();
-		//Directory.CreateDirectory(Application.dataPath + $"/../BLAZEPOSE");
-		//File.WriteAllBytes(Application.dataPath + $"/../BLAZEPOSE/INTER_{detection.width}x{detection.height}_{Time.renderedFrameCount.ToString("00000")}.png", bytes);
-
 		RunEstimationModel(detection);
-
-        UpdateRenderer();
     }
 
     private Texture2D RunDetectionModel(Texture2D inputTexture)
@@ -833,51 +789,6 @@ public class AiliaBlazepose : IDisposable
         }
     }
 
-    private void AdjustBodyPartsToReferenceModel()
-    {
-        foreach (var connection in connectionToAdjust)
-        {
-            if (blazePoseToBodyBone.ContainsKey(connection.Item1) == false || blazePoseToBodyBone.ContainsKey(connection.Item2) == false)
-            {
-                continue;
-            }
-
-            Transform startTransform = rendererLandmarks.transform.GetChild((int)connection.Item1);
-            Transform endTransform = rendererLandmarks.transform.GetChild((int)connection.Item2);
-
-            float distance = 0;
-
-            if (connectionTargetLength.ContainsKey(connection))
-            {
-                distance = connectionTargetLength[connection]; 
-            }
-            else
-            {
-                continue;
-            }
-
-            Vector3 connectionVector = endTransform.position - startTransform.position;
-            Vector3 differenceVector = (distance - connectionVector.magnitude) * connectionVector.normalized;
-
-            var affectedParts = bodyBranches.Select(a =>
-            {
-                int partOccurenceIndex = Array.IndexOf(a, connection.Item2);
-
-                if (partOccurenceIndex == -1)
-                {
-                    return Enumerable.Empty<BodyPartIndex>();
-                }
-
-                return a.Skip(partOccurenceIndex);
-            }).SelectMany(a => a).Distinct().ToArray();
-
-            foreach (var affectedPart in affectedParts)
-            {
-                rendererLandmarks.transform.GetChild((int)affectedPart).position += differenceVector;
-            }
-        }
-    }
-
     private void SmoothLandmarks(float deltaTime = 0.016f)
     {
         if (smoothLandmarks.Count == 0)
@@ -911,94 +822,6 @@ public class AiliaBlazepose : IDisposable
             smoothLandmarks[i] = smooth;
         }
     }
-
-    private void CreateRenderer()
-    {
-        if (landmarks.Count > 0)
-        {
-            renderer = new GameObject("Body renderer");
-            rendererLandmarks = new GameObject("Landmarks");
-            rendererConnections = new GameObject("Connections");
-
-            var pos = referenceModel.transform.position;
-            pos.y += 0.75f;
-            renderer.transform.position = pos;
-
-            rendererLandmarks.transform.parent = renderer.transform;
-            rendererConnections.transform.parent = renderer.transform;
-            rendererLandmarks.transform.localPosition = Vector3.zero;
-            rendererConnections.transform.localPosition = Vector3.zero;
-            rendererLandmarks.transform.localScale = Vector3.one;
-            rendererConnections.transform.localScale = Vector3.one;
-
-            foreach (var bodyPartIndex in Enum.GetValues(typeof(BodyPartIndex)))
-            {
-                GameObject point = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                point.name = Enum.GetName(typeof(BodyPartIndex), bodyPartIndex);
-                point.transform.parent = rendererLandmarks.transform;
-                point.transform.localScale = 0.01f * Vector3.one;
-                point.transform.localPosition = Vector3.zero;
-            }
-
-            foreach (var connection in BodyPartConnections)
-            {
-                GameObject line = new GameObject($"{Enum.GetName(typeof(BodyPartIndex), connection.Item1)}-{Enum.GetName(typeof(BodyPartIndex), connection.Item2)}");
-                line.transform.parent = rendererConnections.transform;
-                line.transform.localPosition = Vector3.zero;
-
-                LineRenderer lineRenderer = line.AddComponent<LineRenderer>();
-                lineRenderer.useWorldSpace = false;
-                lineRenderer.positionCount = 2;
-                lineRenderer.widthMultiplier = 0.01f;
-
-                lineRenderer.SetPosition(0, Vector3.zero);
-                lineRenderer.SetPosition(1, Vector3.zero);
-            }
-
-            renderer.transform.localScale = new Vector3(1.3f, 2, 1.3f);
-
-        }
-    }
-
-    private void UpdateRenderer()
-    {
-        if (renderer == null)
-        {
-            CreateRenderer();
-        }
-
-		List<Landmark> landmarks = (smoothLandmarks.Count > 0 && Smooth ? smoothLandmarks : this.landmarks);
-
-		renderer?.SetActive((landmarks?.Count ?? 0) > 0);
-        if ((renderer?.activeSelf ?? false) == false && (landmarks?.Count ?? 0) == 0)
-        {
-            return;
-        }
-
-        foreach (var bodyPartIndex in Enum.GetValues(typeof(BodyPartIndex)))
-        {
-            Transform point = rendererLandmarks.transform.GetChild((int) bodyPartIndex);
-            Vector3 p = landmarks[(int)bodyPartIndex].position;
- 
-            point.localPosition = p;
-        }
-
-        if (referenceModel != null)
-        {
-            AdjustBodyPartsToReferenceModel();
-        }
-
-		for (int i = 0; i < BodyPartConnections.Length; ++i)
-		{
-			var connection = BodyPartConnections[i];
-			LineRenderer lineRenderer = rendererConnections.transform.GetChild(i).GetComponent<LineRenderer>();
-
-			Vector3 p1 = rendererLandmarks.transform.GetChild((int)connection.Item1).localPosition;
-			lineRenderer.SetPosition(0, p1);
-			Vector3 p2 = rendererLandmarks.transform.GetChild((int)connection.Item2).localPosition;
-			lineRenderer.SetPosition(1, p2);
-		}
-	}
 
     #region IDisposable Support
     private bool disposedValue = false; // To detect redundant calls

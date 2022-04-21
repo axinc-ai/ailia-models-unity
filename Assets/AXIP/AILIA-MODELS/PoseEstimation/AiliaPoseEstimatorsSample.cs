@@ -1,5 +1,4 @@
-﻿using SA;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,10 +31,6 @@ namespace ailiaSDK
 		private Texture2D textureBlazepose;
 		[SerializeField, HideInInspector]
 		private ComputeShader computeShaderBlazepose;
-		[SerializeField, HideInInspector]
-		public Animator ikTarget;
-		FullBodyIKBehaviour fbik;
-		private (BodyPartIndex, FullBodyIK.Effector)[] bodyPartsMatching;
 		RenderTexture avatarViewTexture;
 
 
@@ -108,35 +103,11 @@ namespace ailiaSDK
 					ailia_download.SetSaveFolderPath(assetPath);
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						fbik = ikTarget.GetComponent<FullBodyIKBehaviour>();
-
-						ailiaBlazepose = new AiliaBlazepose(gpu_mode, fbik);
+						ailiaBlazepose = new AiliaBlazepose(gpu_mode);
 						ailiaBlazepose.computeShader = computeShaderBlazepose;
-
 						ailiaBlazepose.Smooth = true;
-
-						bodyPartsMatching = new (BodyPartIndex, FullBodyIK.Effector)[]
-						{
-							(BodyPartIndex.LeftShoulder, fbik.fullBodyIK.leftArmEffectors.arm),
-							(BodyPartIndex.LeftElbow, fbik.fullBodyIK.leftArmEffectors.elbow),
-							(BodyPartIndex.LeftWrist, fbik.fullBodyIK.leftArmEffectors.wrist),
-
-							(BodyPartIndex.RightShoulder, fbik.fullBodyIK.rightArmEffectors.arm),
-							(BodyPartIndex.RightElbow, fbik.fullBodyIK.rightArmEffectors.elbow),
-							(BodyPartIndex.RightWrist, fbik.fullBodyIK.rightArmEffectors.wrist),
-
-							(BodyPartIndex.LeftKnee, fbik.fullBodyIK.leftLegEffectors.knee),
-							(BodyPartIndex.LeftAnkle, fbik.fullBodyIK.leftLegEffectors.foot),
-
-							(BodyPartIndex.RightKnee, fbik.fullBodyIK.rightLegEffectors.knee),
-							(BodyPartIndex.RightAnkle, fbik.fullBodyIK.rightLegEffectors.foot),
-						};
-
 						FileOpened = true;
 					}));
-					//avatarViewTexture = new RenderTexture(1024, 1024, 32);
-					//raw_image.texture = avatarViewTexture;
-					//GameObject.Find("avatarCamera").GetComponent<Camera>().targetTexture = avatarViewTexture;
 
 					break;
 				default:
@@ -163,15 +134,21 @@ namespace ailiaSDK
 		// Update is called once per frame
 		void Update()
 		{
+			Debug.Log("begin1");
+
 			if (!ailia_camera.IsEnable())
 			{
 				return;
 			}
 
+			Debug.Log("begin2");
+
 			if (!FileOpened)
 			{
 				return;
 			}
+
+			Debug.Log("begin3");
 
 			//Clear label
 			Clear();
@@ -309,56 +286,6 @@ namespace ailiaSDK
 			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
 			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
-
-		/*
-		public void AnimateWithPosition(int layerIndex)
-		{
-			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody && ikTarget != null && ailiaBlazepose != null)
-			{
-				float weight = 1;
-
-				Vector3 hipsPos = (
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.LeftHip) ?? Vector3.zero) +
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.RightHip) ?? Vector3.zero)
-				) / 2;
-
-				SetEffectorPosition(fbik.fullBodyIK.bodyEffectors.hips, hipsPos, weight);
-
-				foreach (var match in bodyPartsMatching)
-				{
-					Vector3 position = ailiaBlazepose.GetLandmarkPosition(match.Item1) ?? match.Item2.worldPosition;
-					SetEffectorPosition(match.Item2, position, weight);
-				}
-
-				Vector3 middleMouth = (
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.LeftMouth) ?? Vector3.zero) +
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.RightMouth) ?? Vector3.zero)
-				) / 2;
-
-				Vector3 lookLeft = (
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.LeftEye) ?? Vector3.zero) -
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.LeftEar) ?? Vector3.zero)
-
-				) / 2;
-				Vector3 lookRight = (
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.RightEye) ?? Vector3.zero) -
-					(ailiaBlazepose.GetLandmarkPosition(BodyPartIndex.RightEar) ?? Vector3.zero)
-				) / 2;
-				Vector3 faceForward = (lookLeft + lookRight) / 2;
-
-				ikTarget.SetLookAtWeight(1);
-				ikTarget.SetLookAtPosition(ikTarget.GetBoneTransform(HumanBodyBones.Head).position + faceForward);
-
-			}
-		}
-		private void SetEffectorPosition(FullBodyIK.Effector effector, Vector3 position, float weight)
-		{
-			effector.pull = 1;
-			effector.positionEnabled = true;
-			effector.positionWeight = weight;
-			effector.transform.position = position;
-		}
-		*/
 
 		void OnApplicationQuit()
 		{
