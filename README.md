@@ -4,22 +4,11 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 [<img src="Demo/colorization.png" width=512px>](/Assets/AXIP/AILIA-MODELS/ImageManipulation/)
 
-## Setup
+# How to use
 
-This repository does not include ailia libraries. So you must get license and import ailia libraries to Plugin folder.
-
-[Download ailia SDK trial version](https://ailia.jp/en/)
-
-[ailia SDK Tutorial (Unity)](https://medium.com/axinc-ai/ailia-sdk-tutorial-unity-54f2a8155b8f)
-
-## Supported platforms
-
-- Unity 2019.3.15f1 and later
-- Deployment to Windows, Mac, iOS, Android and Linux
+[ailia MODELS Unity tutorial](TUTORIAL.md)
 
 # Supporting Models
-
-We are now converting to C#. Please wait to complete conversion.
 
 ## Image classification
 
@@ -98,6 +87,12 @@ We are now converting to C#. Please wait to complete conversion.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 |[vggface2](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [VGGFace2 Dataset for Face Recognition](https://github.com/ox-vgg/vgg_face2) | Caffe | 1.1.0 and later |
+
+# Document
+
+[ailia SDK Tutorial (Unity)](https://medium.com/axinc-ai/ailia-sdk-tutorial-unity-54f2a8155b8f)
+
+[ailia Unity API](https://axinc-ai.github.io/ailia-sdk/api/unity/en/)
 
 # Other languages
 
