@@ -86,7 +86,6 @@ namespace ailiaSDK
 					{
 						ailia_blazepose = new AiliaBlazepose(gpu_mode);
 						ailia_blazepose.computeShader = computeShaderBlazepose;
-						ailia_blazepose.Smooth = true;
 						FileOpened = true;
 					}));
 

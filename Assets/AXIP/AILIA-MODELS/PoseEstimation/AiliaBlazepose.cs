@@ -136,8 +136,6 @@ public enum BodyPartIndex
 public class AiliaBlazepose : IDisposable
 {
     public ComputeShader computeShader = null;
-    internal bool Smooth;
-    float prevTime;
 
     private AiliaModel ailiaPoseDetection = new AiliaModel();
     private AiliaModel ailiaPoseEstimation = new AiliaModel();
@@ -260,26 +258,6 @@ public class AiliaBlazepose : IDisposable
     private float[] estimationOutputBuffer;
     float[] estimationScoreBuffer;
     public List<Landmark> landmarks = new List<Landmark>();
-    public List<Landmark> smoothLandmarks = new List<Landmark>();
-    public List<Landmark> smoothDiffLandmarks = new List<Landmark>();
-
-    public GameObject renderer;
-    public GameObject rendererLandmarks;
-    private GameObject rendererConnections;
-
-    public float smoothingCutoff = 5;
-    public bool straightenModel = true;
-
-
-    public Vector3? GetLandmarkPosition(BodyPartIndex bpi)
-    {
-        if (landmarks.Count == 0)
-        {
-            return null;
-        }
-
-        return rendererLandmarks.transform.GetChild((int) bpi).position;
-    }
 
     private void PreprocessTextureEstimation(Texture2D texture)
     {
@@ -585,8 +563,6 @@ public class AiliaBlazepose : IDisposable
         }
 
         DecodeAndProcessLandmarks();
-
-        prevTime = Time.time;
     }
 
     private float Sigmoid(float x)
@@ -717,24 +693,24 @@ public class AiliaBlazepose : IDisposable
 
         AiliaPoseEstimator.AILIAPoseEstimatorObjectPose one_pose=new AiliaPoseEstimator.AILIAPoseEstimatorObjectPose();
         one_pose.points = new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint[19];
-        for(int i=0;i<19;i++){
+        for(int i=0;i<AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_CNT;i++){
             Vector3 pos = Vector3.zero;
             float conf = 0;
-            if(i<=16){
+            if(i<=AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_RIGHT){
                 pos = landmarks[keypoint_list[i]].position;
                 conf = landmarks[keypoint_list[i]].confidence;
             }
-            if(i==17){
+            if(i==AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER){
                 pos = (landmarks[(int)BodyPartIndex.LeftShoulder].position + landmarks[(int)BodyPartIndex.RightShoulder].position)/2;
                 conf = Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence,landmarks[(int)BodyPartIndex.RightShoulder].confidence);
             }
-            if(i==18){
+            if(i==AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_BODY_CENTER){
                 pos = (landmarks[(int)BodyPartIndex.LeftHip].position + landmarks[(int)BodyPartIndex.RightHip].position + landmarks[(int)BodyPartIndex.LeftShoulder].position + landmarks[(int)BodyPartIndex.RightShoulder].position)/4;
                 conf = Math.Min(Math.Min(landmarks[(int)BodyPartIndex.LeftHip].confidence, landmarks[(int)BodyPartIndex.RightHip].confidence),Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence, landmarks[(int)BodyPartIndex.RightShoulder].confidence));
             }
             AiliaPoseEstimator.AILIAPoseEstimatorKeypoint keypoint =new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint();
-            keypoint.x = ((pos.x - 0.5f) *  cs + (pos.y - 0.5f) * ss)* affine_scale + affine_xc;
-            keypoint.y = ((pos.x - 0.5f) * -ss + (pos.y - 0.5f) * cs)* affine_scale + affine_yc;
+            keypoint.x = ((pos.x - 0.5f) *  cs + (pos.y - 0.5f) * ss) * affine_scale + affine_xc;
+            keypoint.y = ((pos.x - 0.5f) * -ss + (pos.y - 0.5f) * cs) * affine_scale + affine_yc;
             keypoint.z_local = pos.z;
             keypoint.score = conf;
             one_pose.points[i] = keypoint;
