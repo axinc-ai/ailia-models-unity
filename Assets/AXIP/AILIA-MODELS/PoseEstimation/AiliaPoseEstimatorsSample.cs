@@ -7,8 +7,14 @@ namespace ailiaSDK
 {
 	public class AiliaPoseEstimatorsSample : AiliaRenderer
 	{
-		[SerializeField, HideInInspector]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation;
+		public enum PoseEstimatorModels
+		{
+			lightweight_human_pose_estimation,
+			blazepose_fullbody
+		}
+
+		[SerializeField]
+		private PoseEstimatorModels ailiaModelType = PoseEstimatorModels.lightweight_human_pose_estimation;
 		[SerializeField, HideInInspector]
 		private GameObject UICanvas = null;
 		//Settings
@@ -49,7 +55,7 @@ namespace ailiaSDK
 			}
 			switch (ailiaModelType)
 			{
-				case AiliaModelsConst.AiliaModelTypes.lightweight_human_pose_estimation:
+				case PoseEstimatorModels.lightweight_human_pose_estimation:
 					ailia_pose.Settings(AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_ALGORITHM_LW_HUMAN_POSE);
 
 					var model_path = "lightweight-human-pose-estimation";
@@ -72,7 +78,7 @@ namespace ailiaSDK
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.blazepose_fullbody:
+				case PoseEstimatorModels.blazepose_fullbody:
 					var folder_path = "blazepose-fullbody";
 					var model_name = "pose_landmark_heavy";
 					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = model_name + ".onnx" });
@@ -139,7 +145,7 @@ namespace ailiaSDK
 			//Pose estimation
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
-			if (ailiaModelType == AiliaModelsConst.AiliaModelTypes.blazepose_fullbody)
+			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
 			}else{
