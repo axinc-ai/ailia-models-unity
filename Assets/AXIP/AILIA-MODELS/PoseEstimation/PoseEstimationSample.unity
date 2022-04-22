@@ -428,7 +428,6 @@ MonoBehaviour:
   raw_image: {fileID: 1813464809}
   computeShaderBlazepose: {fileID: 7200000, guid: cd27272e68d57fa4e85805ce266aa399,
     type: 3}
-  optimizedModel: 1
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
