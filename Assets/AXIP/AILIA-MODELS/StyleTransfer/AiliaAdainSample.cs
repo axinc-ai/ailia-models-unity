@@ -122,8 +122,8 @@ namespace ailiaSDK
 			// Load sample image
 			ContentImageSource = gameObject.AddComponent<AiliaImageSource>();
 			StyleImageSource = gameObject.AddComponent<AiliaImageSource>();
-			ContentImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Adain/SampleImage/cornell.jpg");
-			StyleImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Adain/SampleImage/woman_with_hat_matisse.jpg");
+			ContentImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/StyleTransfer/SampleImage/cornell.jpg");
+			StyleImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/StyleTransfer/SampleImage/woman_with_hat_matisse.jpg");
 		}
 
 		void UISetup()
