@@ -86,11 +86,10 @@ namespace ailiaSDK
 					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = "pose_detection.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = folder_path, file_name = "pose_detection.onnx.prototxt" });
 
-					string assetPath = Application.streamingAssetsPath + "/AILIA";
-					ailia_download.SetSaveFolderPath(assetPath);
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						ailia_blazepose = new AiliaBlazepose(gpu_mode);
+			      		string jsonPath = Application.streamingAssetsPath + "/AILIA";
+						ailia_blazepose = new AiliaBlazepose(gpu_mode, asset_path, jsonPath);
 						ailia_blazepose.computeShader = computeShaderBlazepose;
 						FileOpened = true;
 					}));
