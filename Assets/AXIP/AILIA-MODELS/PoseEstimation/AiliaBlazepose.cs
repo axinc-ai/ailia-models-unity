@@ -169,10 +169,9 @@ public class AiliaBlazepose : IDisposable
         public float[] array;
     }
 
-    public AiliaBlazepose(bool gpuMode)
+    public AiliaBlazepose(bool gpuMode, string assetPath, string jsonPath)
     {
         bool status;
-        string assetPath = Application.streamingAssetsPath + "/AILIA";
 
         if (gpuMode)
         {
@@ -203,7 +202,7 @@ public class AiliaBlazepose : IDisposable
 
         Debug.Log($"Model loaded {modelName}");
 
-        string anchorsJSON = File.ReadAllText($"{assetPath}/blazepose_anchors.json");
+        string anchorsJSON = File.ReadAllText($"{jsonPath}/blazepose_anchors.json");
         float[] anchorsFlat = JsonUtility.FromJson<JsonFloatArray>($"{{ \"array\": {anchorsJSON} }}").array;
 
         anchors = new float[BLAZEPOSE_DETECTOR_TENSOR_COUNT, 4];

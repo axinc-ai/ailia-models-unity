@@ -14,8 +14,15 @@ namespace ailiaSDK
 {
 	public class AiliaImageClassificationSample : AiliaRenderer
 	{
+		public enum ImageClassificationModels
+		{
+			googlenet,
+			resnet50,
+			inceptionv3
+		}
+
 		[SerializeField]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.resnet50;
+		private ImageClassificationModels ailiaModelType = ImageClassificationModels.resnet50;
 		[SerializeField]
 		private GameObject UICanvas = null;
 
@@ -59,11 +66,7 @@ namespace ailiaSDK
 
 			switch (ailiaModelType)
 			{
-				case AiliaModelsConst.AiliaModelTypes.vgg16:
-
-					break;
-
-				case AiliaModelsConst.AiliaModelTypes.googlenet:
+				case ImageClassificationModels.googlenet:
 					ailia_classifier_model.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -78,7 +81,7 @@ namespace ailiaSDK
 						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/googlenet.onnx.prototxt", asset_path + "/googlenet.onnx");
 					}));
 					break;
-				case AiliaModelsConst.AiliaModelTypes.resnet50:
+				case ImageClassificationModels.resnet50:
 					ailia_classifier_model.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -95,7 +98,7 @@ namespace ailiaSDK
 						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 					break;
-				case AiliaModelsConst.AiliaModelTypes.inceptionv3:
+				case ImageClassificationModels.inceptionv3:
 					ailia_classifier_model.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
@@ -109,6 +112,9 @@ namespace ailiaSDK
 					{
 						FileOpened = ailia_classifier_model.OpenFile(asset_path + "/inceptionv3.onnx.prototxt", asset_path + "/inceptionv3.onnx");
 					}));
+					break;
+				default:
+					Debug.Log("Others ailia models are working in progress.");
 					break;
 			}
 		}

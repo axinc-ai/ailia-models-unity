@@ -12,8 +12,26 @@ using UnityEngine.UI;
 
 namespace ailiaSDK {
 	public class AiliaDetectorsSample : AiliaRenderer {
+		public enum DetectorModels
+		{
+			yolov1_tiny,
+			yolov1_face,
+			yolov2,
+			yolov2_tiny,
+			yolov3,
+			yolov3_tiny,
+			yolov3_face,
+			yolov3_hand,
+			yolov4,
+			yolov4_tiny,
+			mobilenet_ssd,
+			yolox_nano,
+			yolox_tiny,
+			yolox_s
+		}
+
 		[SerializeField]
-		private AiliaModelsConst.AiliaModelTypes ailiaModelType = AiliaModelsConst.AiliaModelTypes.yolov3_tiny;
+		private DetectorModels ailiaModelType = DetectorModels.yolov3_tiny;
 		[SerializeField]
 		private GameObject UICanvas = null;
 
@@ -50,7 +68,7 @@ namespace ailiaSDK {
 		string[] classifierLabel;
 		uint category_n = 1;
 
-		private void CreateAiliaDetector(AiliaModelsConst.AiliaModelTypes modelType)
+		private void CreateAiliaDetector(DetectorModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
 			var urlList = new List<ModelDownloadURL>();
@@ -60,7 +78,7 @@ namespace ailiaSDK {
 			}
 			switch (modelType)
 			{
-				case AiliaModelsConst.AiliaModelTypes.yolov1_tiny:
+				case DetectorModels.yolov1_tiny:
 					mode_text.text = "ailia yolov1-tiny Detector";
 					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
 					threshold = 0.2f;
@@ -85,7 +103,7 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov1_face:
+				case DetectorModels.yolov1_face:
 					mode_text.text = "ailia yolov1-face FaceDetector";
 					classifierLabel = new string[] { "face" };
 					threshold = 0.2f;
@@ -110,7 +128,7 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov2:
+				case DetectorModels.yolov2:
 					mode_text.text = "ailia yolov2 Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.2f;
@@ -120,7 +138,7 @@ namespace ailiaSDK {
 					ailia_detector.Settings(
 						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
 						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
-						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_FP32,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32,
 						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV2,
 						category_n,
 						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
@@ -136,7 +154,33 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3:
+				case DetectorModels.yolov2_tiny:
+					mode_text.text = "ailia yolov2-tiny Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
+					threshold = 0.2f;
+					iou = 0.45f;
+					category_n = 80;
+
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV2,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov2-tiny", file_name = "yolov2-tiny-coco.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov2-tiny", file_name = "yolov2-tiny-coco.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov2-tiny-coco.onnx.prototxt", asset_path + "/yolov2-tiny-coco.onnx");
+						ailia_detector.Anchors(AiliaClassifierLabel.COCO_ANCHORS);
+					}));
+
+					break;
+				case DetectorModels.yolov3:
 					mode_text.text = "ailia yolov3 Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.4f;
@@ -152,16 +196,16 @@ namespace ailiaSDK {
 						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
 					);
 
-					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt2.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov3", file_name = "yolov3.opt2.onnx" });
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3.opt.onnx.prototxt", asset_path + "/yolov3.opt.onnx");
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolov3.opt2.onnx.prototxt", asset_path + "/yolov3.opt2.onnx");
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_tiny:
+				case DetectorModels.yolov3_tiny:
 					mode_text.text = "ailia yolov3-tiny Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.4f;
@@ -186,7 +230,7 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_face:
+				case DetectorModels.yolov3_face:
 					mode_text.text = "ailia yolov3-face FaceDetector";
 					classifierLabel = new string[] { "face" };
 					//Face Detection
@@ -212,7 +256,7 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				case AiliaModelsConst.AiliaModelTypes.yolov3_hand:
+				case DetectorModels.yolov3_hand:
 					mode_text.text = "ailia yolov3-hand Detector";
 					classifierLabel = new string[] { "hand" };
 					threshold = 0.4f;
@@ -238,7 +282,7 @@ namespace ailiaSDK {
 
 					break;
 
-				case AiliaModelsConst.AiliaModelTypes.yolov4:
+				case DetectorModels.yolov4:
 					mode_text.text = "ailia yolov4 Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.4f;
@@ -264,7 +308,7 @@ namespace ailiaSDK {
 
 					break;
 				
-				case AiliaModelsConst.AiliaModelTypes.yolov4_tiny:
+				case DetectorModels.yolov4_tiny:
 					mode_text.text = "ailia yolov4-tiny Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
 					threshold = 0.25f;
@@ -290,7 +334,46 @@ namespace ailiaSDK {
 
 					break;
 
-				case AiliaModelsConst.AiliaModelTypes.mobilenet_ssd:
+				case DetectorModels.yolox_nano:
+				case DetectorModels.yolox_tiny:
+				case DetectorModels.yolox_s:
+					string model="";
+					if(modelType==DetectorModels.yolox_nano){
+						model="nano";
+					}
+					if(modelType==DetectorModels.yolox_tiny){
+						model="tiny";
+					}
+					if(modelType==DetectorModels.yolox_s){
+						model="s";
+					}
+
+					mode_text.text = "ailia yolox "+model+" Detector";
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
+					threshold = 0.25f;
+					iou = 0.45f;
+					category_n = 80;
+
+					ailia_detector.Settings(
+						AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR,
+						AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST,
+						AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8,
+						AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOX,
+						category_n,
+						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
+					);
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_"+model+".opt.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_"+model+".opt.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_detector.OpenFile(asset_path + "/yolox_"+model+".opt.onnx.prototxt", asset_path + "/yolox_"+model+".opt.onnx");
+					}));
+
+					break;
+
+				case DetectorModels.mobilenet_ssd:
 					mode_text.text = "ailia mobilenet_ssd Detector. Pretraine model : " + pretrainedModel;
 					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
 					threshold = 0.4f;
@@ -316,23 +399,6 @@ namespace ailiaSDK {
 						FileOpened = ailia_detector.OpenFile(asset_path + "/" + model_path, asset_path + "/" + weight_path);
 					}));
 
-					break;
-				case AiliaModelsConst.AiliaModelTypes.maskrcnn:
-					Debug.Log("maskrcnn is working in progress.");
-					/*
-					mode_text.text = "ailia maskrcnn Detector";
-
-					// Download
-					urlList.Add(new ModelDownloadURL() { folder_path = "mask_rcnn", file_name = "mask_rcnn_R_50_FPN_1x.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "mask_rcnn", file_name = "mask_rcnn_R_50_FPN_1x.onnx" });
-
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
-					{
-						FileOpened = ailia_detector.OpenFile(asset_path + "/mask_rcnn_R_50_FPN_1x.onnx.prototxt", asset_path + "/mask_rcnn_R_50_FPN_1x.onnx");
-						Ailia.AILIAShape shape;
-						shape = ailia_detector.GetInputShape();
-					}));
-					*/
 					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");

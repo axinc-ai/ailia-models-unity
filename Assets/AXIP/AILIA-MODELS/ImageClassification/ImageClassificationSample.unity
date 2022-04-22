@@ -297,7 +297,7 @@ MonoBehaviour:
   line: {fileID: 284098718}
   text_panel: {fileID: 1966900788}
   text_base: {fileID: 134548559}
-  ailiaModelType: 2
+  ailiaModelType: 1
   UICanvas: {fileID: 1166538630}
   gpu_mode: 1
   is_english: 0

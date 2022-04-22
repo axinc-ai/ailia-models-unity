@@ -267,7 +267,7 @@ namespace ailiaSDK
                     blendMaterial.SetTexture(blendTexId, resultRenderTexture);
                 }
 
-                blendMaterial.SetFloat(mainVFlipId, 0);
+                blendMaterial.SetFloat(mainVFlipId, 1);
                 blendMaterial.SetFloat(blendVFlipId, 1);
 
                 raw_image.gameObject.SetActive(true);
