@@ -20,7 +20,6 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | [mobilenetv2](/Assets/AXIP/AILIA-MODELS/ImageClassification/)|[PyTorch Implemention of MobileNet V2](https://github.com/d-li14/mobilenetv2.pytorch)|Pytorch| 1.2.0 and later |
 | [mobilenetv3](/Assets/AXIP/AILIA-MODELS/ImageClassification/)|[PyTorch Implemention of MobileNet V3](https://github.com/d-li14/mobilenetv3.pytorch)|Pytorch| 1.2.1 and later |
 | [partialconv](/Assets/AXIP/AILIA-MODELS/ImageClassification/)|[Partial Convolution Layer for Padding and Image Inpainting](https://github.com/NVIDIA/partialconv)|Pytorch| 1.2.0 and later |
-| [resnet50](/Assets/AXIP/AILIA-MODELS/ImageClassification/) | [Deep Residual Learning for Image Recognition]( https://github.com/KaimingHe/deep-residual-networks) | Chainer | 1.2.0 and later |
 
 ## Image deformation
 
