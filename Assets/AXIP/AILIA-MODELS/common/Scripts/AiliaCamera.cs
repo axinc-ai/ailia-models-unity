@@ -23,10 +23,13 @@ namespace ailiaSDK
 		private WebCamTexture webcamTexture = null;
 
 		// Texture buffer
-		Color32[] image = new Color32[0];
+		private Color32[] image = new Color32[0];
+		private int crop_width = 16;
+		private int crop_height = 16;
+		private bool square = true;
 
 		//Camera ID
-		public void CreateCamera(int camera_id)
+		public void CreateCamera(int camera_id, bool set_square = true)
 		{
 			DestroyCamera();
 			WebCamDevice[] devices = WebCamTexture.devices;
@@ -38,6 +41,7 @@ namespace ailiaSDK
 			int id = camera_id % devices.Length;
 			webcamTexture = new WebCamTexture(devices[id].name, CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS);
 			webcamTexture.Play();
+			square = set_square;
 		}
 
 		public bool IsEnable()
@@ -68,6 +72,35 @@ namespace ailiaSDK
 			return webcamTexture.videoRotationAngle;
 		}
 
+		private void CalculateCropSize()
+		{
+			if (crop_width != 16 || crop_height != 16)
+			{
+				return;	// already calculated
+			}
+			if (webcamTexture.width <= 16 || webcamTexture.height <= 16)
+			{
+				return;				//Wait until a good frame can be captured
+			}
+
+			int size = webcamTexture.width;
+			if (size > webcamTexture.height)
+			{
+				size = webcamTexture.height;
+			}
+			crop_width = webcamTexture.width;
+			crop_height = webcamTexture.height;
+
+			int angle = GetAngle();
+			bool rotate90 = (angle == 90 || angle == 270);
+
+			if(square || rotate90){
+				crop_width = size;
+				crop_height = size;
+			}
+		}
+
+		// This method returns left-to-right bottom-to-top image
 		public Color32[] GetPixels32()
 		{
 			if (image.Length != webcamTexture.width * webcamTexture.height)
@@ -79,18 +112,17 @@ namespace ailiaSDK
 				webcamTexture.GetPixels32(image);
 			}
 
-			//Crop to square
-			int size = webcamTexture.width;
-			if (size > webcamTexture.height)
-			{
-				size = webcamTexture.height;
-			}
-			Color32[] crop = new Color32[size * size];
-			int x_offset = (webcamTexture.width - size) / 2;
-			int y_offset = (webcamTexture.height - size) / 2;
-			int angle = GetAngle();
+			// Get crop size
+			CalculateCropSize();
 
+			// Crop to square
+			int angle = GetAngle();
 			bool rotate90 = (angle == 90 || angle == 270);
+
+			Color32[] crop = new Color32[crop_width * crop_height];
+			int x_offset = (webcamTexture.width - crop_width) / 2;
+			int y_offset = (webcamTexture.height - crop_height) / 2;
+
 			bool v_flip = false;
 			if (angle == 90) v_flip = true;
 			if (angle == 180) v_flip = true;
@@ -98,33 +130,33 @@ namespace ailiaSDK
 
 			if (rotate90)
 			{
-				for (int y = 0; y < size; y++)
+				for (int y = 0; y < crop_height; y++)
 				{
 					int src_adr_y = (y + y_offset) * webcamTexture.width;
-					for (int x = 0; x < size; x++)
+					for (int x = 0; x < crop_width; x++)
 					{
 						int x2 = y;
 						int y2 = x;
 						if (v_flip)
 						{
-							y2 = size - 1 - y2;
+							y2 = crop_height - 1 - y2;
 						}
-						crop[y2 * size + x2] = image[src_adr_y + (x + x_offset)];
+						crop[y2 * crop_width + x2] = image[src_adr_y + (x + x_offset)];
 					}
 				}
 			}
 			else
 			{
-				for (int y = 0; y < size; y++)
+				for (int y = 0; y < crop_height; y++)
 				{
 					int y2 = y;
 					if (v_flip)
 					{
-						y2 = size - 1 - y2;
+						y2 = crop_height - 1 - y2;
 					}
-					int dst_adr_y = y2 * size;
+					int dst_adr_y = y2 * crop_width;
 					int src_adr_y = (y + y_offset) * webcamTexture.width;
-					for (int x = 0; x < size; x++)
+					for (int x = 0; x < crop_width; x++)
 					{
 						crop[dst_adr_y + x] = image[src_adr_y + (x + x_offset)];
 					}
@@ -135,20 +167,14 @@ namespace ailiaSDK
 
 		public int GetWidth()
 		{
-			if (webcamTexture.height > webcamTexture.width)
-			{
-				return webcamTexture.width;
-			}
-			return webcamTexture.height;
+			CalculateCropSize();
+			return crop_width;
 		}
 
 		public int GetHeight()
 		{
-			if (webcamTexture.height > webcamTexture.width)
-			{
-				return webcamTexture.width;
-			}
-			return webcamTexture.height;
+			CalculateCropSize();
+			return crop_height;
 		}
 
 		public void DestroyCamera()

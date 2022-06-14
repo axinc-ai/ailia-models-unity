@@ -1,5 +1,5 @@
-/* AILIA Unity Plugin Detector Sample */
-/* Copyright 2018-2019 AXELL CORPORATION */
+/* AILIA Unity Plugin Segmentation Sample */
+/* Copyright 2018-2022 AXELL CORPORATION */
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ namespace ailiaSDK
 {
 	public class AiliaImageSegmentationSample : MonoBehaviour
 	{
+		// Model list
 		public enum ImageSegmentaionModels
 		{
 			HRNetV2_W18_Small_v2,
@@ -20,17 +21,20 @@ namespace ailiaSDK
 			deeplabv3,
 			u2net,
 		}
-		//Settings
+
+		// Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
 		public bool gpu_mode = false;
 		public ComputeShader inputDataProcessingShader = null;
 		public GameObject UICanvas = null;
-		public bool oneshot = true;
+		public bool camera_mode = true;
+		public int camera_id = 0;
 
-		//Result
+		// Result
 		RawImage raw_image = null;
 		Text label_text = null;
 		Text mode_text = null;
+		private bool oneshot = true;
 
 		// compute shader id
 		int computeShaderWeightId;
@@ -44,13 +48,14 @@ namespace ailiaSDK
 		int channelFirstKernel;
 		int channelFirstUpsideDownKernel;
 
-		//AILIA
+		// AILIA
 		private AiliaModel ailiaModel;
+		private AiliaCamera ailia_camera = new AiliaCamera();
 
 		// Input source
 		AiliaImageSource AiliaImageSource;
 
-		// shader
+		// Pre-and-Post processing Shader
 		Material blendMaterial;
 		int mainTexId;
 		int blendTexId;
@@ -58,6 +63,7 @@ namespace ailiaSDK
 		int mainVFlipId;
 		int blendVFlipId;
 
+		// Model input and output
 		int InputWidth;
 		int InputHeight;
 		int InputChannel;
@@ -105,7 +111,14 @@ namespace ailiaSDK
 				channelFirstUpsideDownKernel = inputDataProcessingShader.FindKernel("ChannelFirstUpsideDown");
 			}
 
+			// for Processing
 			AiliaInit();
+
+			// for Camera
+			if(camera_mode){
+				bool crop_square = false;
+				ailia_camera.CreateCamera(camera_id, crop_square);
+			}
 		}
 
 		void AiliaInit()
@@ -114,6 +127,24 @@ namespace ailiaSDK
 			ailiaModel = CreateAiliaNet(imageSegmentaionModels, gpu_mode);
 			// Load sample image
 			LoadImage(imageSegmentaionModels, AiliaImageSource);
+			// Allocate tensor
+			AllocateInputAndOutputTensor();
+		}
+
+		void AllocateInputAndOutputTensor()
+		{
+			float rawImageRatio = rawImageSize.x / rawImageSize.y;
+			float ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
+			raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
+
+			SetShape(imageSegmentaionModels);
+
+			// texture & buffer allocate
+			labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
+			AiliaImageSource.Resize(InputWidth, InputHeight);
+			input = new float[InputWidth * InputHeight * InputChannel];
+			output = new float[OutputWidth * OutputHeight * OutputChannel];
+			outputImage = new Color32[OutputWidth * OutputHeight];
 		}
 
 		void UISetup()
@@ -134,82 +165,9 @@ namespace ailiaSDK
 			{
 				return;
 			}
-
-			if (output == null)
+			if (camera_mode && !ailia_camera.IsEnable())
 			{
-				float rawImageRatio = rawImageSize.x / rawImageSize.y;
-				float ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
-				raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
-
-				SetShape(imageSegmentaionModels);
-
-				// texture & buffer allocate
-				labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
-				AiliaImageSource.Resize(InputWidth, InputHeight);
-				input = new float[InputWidth * InputHeight * InputChannel];
-				output = new float[OutputWidth * OutputHeight * OutputChannel];
-				outputImage = new Color32[OutputWidth * OutputHeight];
-			}
-
-			if (oneshot)
-			{
-				oneshot = false;
-
-				// Make input data
-				Rect rect = new Rect(0, 0, InputWidth, InputHeight);
-				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				Color32[] inputImage = null;
-				if (!gpu_mode || inputDataProcessingShader == null)
-				{
-					inputImage = AiliaImageSource.GetPixels32(rect, true);
-					InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
-				}
-				else
-				{
-					originalTexture = AiliaImageSource.GetTexture(rect);
-					InputDataProcessing(imageSegmentaionModels, originalTexture, input, true);
-				}
-				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-				// Predict
-				long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				bool result = ailiaModel.Predict(output, input);
-
-				// convert result to image
-				if (imageSegmentaionModels == ImageSegmentaionModels.hair_segmentation)
-					LabelPaintHairSegmentation(output, outputImage, Color.red);
-				else if (imageSegmentaionModels == ImageSegmentaionModels.pspnet_hair_segmentation)
-					LabelPaintPspnet(output, outputImage, Color.red);
-				else if (imageSegmentaionModels == ImageSegmentaionModels.u2net)
-					LabelPaintU2net(output, outputImage, Color.white); 
-				else
-					LabelPaint(output, outputImage, OutputChannel, colorPalette);
-
-				long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-				if (label_text != null)
-				{
-					label_text.text = ((end_time - start_time) + (end_time2 - start_time2)).ToString() + "ms\n" + ailiaModel.EnvironmentName();
-				}
-
-				// for viewer
-				if (!gpu_mode || inputDataProcessingShader == null)
-				{
-					originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
-					originalTexture.SetPixels32(inputImage);
-					originalTexture.Apply();
-				}
-				raw_image.texture = originalTexture;
-				blendMaterial.SetTexture(mainTexId, originalTexture);
-
-				labelTexture.SetPixels32(outputImage);
-				labelTexture.Apply();
-				blendMaterial.SetTexture(blendTexId, labelTexture);
-
-				blendMaterial.SetFloat(mainVFlipId, 0);
-				blendMaterial.SetFloat(blendVFlipId, 1);
-
-				raw_image.gameObject.SetActive(true);
+				return;
 			}
 
 			// When space key down, draw original image
@@ -221,6 +179,88 @@ namespace ailiaSDK
 			{
 				blendMaterial.SetFloat(blendFlagId, 1);
 			}
+
+			// Only one shot processing for image mode
+			if (!oneshot && !camera_mode)
+			{
+				return;
+			}
+
+			// Make input data
+			Rect rect = new Rect(0, 0, InputWidth, InputHeight);
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			Color32[] inputImage = null;
+			if(camera_mode){
+				int tex_width = ailia_camera.GetWidth();
+				int tex_height = ailia_camera.GetHeight();
+				inputImage = ailia_camera.GetPixels32(); // Bottom2Top format
+				inputImage = ResizeImage(inputImage, tex_width, tex_height, InputWidth, InputHeight);	// Convert to Top2Bottom format
+				InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
+			}else{
+				bool convert_to_top2bottom = true;	// Convert to Top2Bottom format
+				if (!gpu_mode || inputDataProcessingShader == null)
+				{
+					inputImage = AiliaImageSource.GetPixels32(rect, convert_to_top2bottom);
+					InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
+				}
+				else
+				{
+					originalTexture = AiliaImageSource.GetTexture(rect);
+					InputDataProcessing(imageSegmentaionModels, originalTexture, input, convert_to_top2bottom);
+				}
+			}
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+
+			// Predict
+			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			bool result = ailiaModel.Predict(output, input);
+
+			// convert result to image
+			if (imageSegmentaionModels == ImageSegmentaionModels.hair_segmentation)
+				LabelPaintHairSegmentation(output, outputImage, Color.red);
+			else if (imageSegmentaionModels == ImageSegmentaionModels.pspnet_hair_segmentation)
+				LabelPaintPspnet(output, outputImage, Color.red);
+			else if (imageSegmentaionModels == ImageSegmentaionModels.u2net)
+				LabelPaintU2net(output, outputImage, Color.green); 
+			else
+				LabelPaint(output, outputImage, OutputChannel, colorPalette);
+
+			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+
+			if (label_text != null)
+			{
+				label_text.text = ((end_time - start_time) + (end_time2 - start_time2)).ToString() + "ms\n" + ailiaModel.EnvironmentName();
+			}
+
+			// for viewer
+			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
+			{
+				if(originalTexture == null){
+					originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
+				}
+				originalTexture.SetPixels32(inputImage);
+				originalTexture.Apply();
+			}
+			raw_image.texture = originalTexture;
+			blendMaterial.SetTexture(mainTexId, originalTexture);
+
+			labelTexture.SetPixels32(outputImage);
+			labelTexture.Apply();
+			blendMaterial.SetTexture(blendTexId, labelTexture);
+
+			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
+			{
+				blendMaterial.SetFloat(mainVFlipId, 1);	//originalTexture is Top2Bottom
+			}
+			else
+			{
+				blendMaterial.SetFloat(mainVFlipId, 0);	//originalTexture is Bottom2Top
+			}
+			blendMaterial.SetFloat(blendVFlipId, 1);	//outputImage is Top2Bottom
+
+			raw_image.gameObject.SetActive(true);
+
+			oneshot = false;
 		}
 
 		// Download models and Create ailiaModel
@@ -363,6 +403,18 @@ namespace ailiaSDK
 					break;
 
 			}
+		}
+
+		Color32 [] ResizeImage(Color32[] inputImage, int tex_width, int tex_height, int InputWidth, int InputHeight){
+			Color32[] outputImage = new Color32[InputWidth * InputHeight];
+			for(int y=0;y<InputHeight;y++){
+				for(int x=0;x<InputWidth;x++){
+					int x2 = x*tex_width/InputWidth;
+					int y2 = y*tex_height/InputHeight;
+					outputImage[(InputHeight-1-y)*InputHeight+x]=inputImage[y2*tex_width+x2];
+				}
+			}
+			return outputImage;
 		}
 
 		void InputDataProcessingCPU(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
@@ -543,7 +595,7 @@ namespace ailiaSDK
 			for (int i = 0; i < pixelBuffer.Length; i++)
 			{
 				pixelBuffer[i] = color;
-				pixelBuffer[i].a = (byte)(Mathf.Clamp01(labelData[i]) * 255);
+				pixelBuffer[i].a = (byte)(255 - Mathf.Clamp01(labelData[i]) * 255);
 			}	 
 		}
 
