@@ -24,6 +24,15 @@ Open the unity package included in the SDK and import only the plugin.
 
 ![import](Demo/import.png)
 
+Place license file here.
+
+```
+- For Windows
+ - Place ailia.lic in Assets/Plugins/x86_64/
+- For Mac
+ - Place ailia.lic in ~/Library/SHALO/
+```
+
 ## Run
 
 You can run it by opening the sample scene (AXIP/AILIA-MODELS/FaceDetection/FaceDetectionSample.unity) and pressing Run.
