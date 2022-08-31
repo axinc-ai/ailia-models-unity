@@ -79,7 +79,8 @@ namespace ailiaSDK
 		Color32[] outputImage;
 		Color32[] colorPalette = AiliaImageUtil.CreatePalette(256, 127);
 
-		bool modelPrepared;
+		bool modelPrepared = false;
+		bool modelAllocated = false;
 
 		void Start()
 		{
@@ -128,8 +129,6 @@ namespace ailiaSDK
 			ailiaModel = CreateAiliaNet(imageSegmentaionModels, gpu_mode);
 			// Load sample image
 			LoadImage(imageSegmentaionModels, AiliaImageSource);
-			// Allocate tensor
-			AllocateInputAndOutputTensor();
 		}
 
 		void AllocateInputAndOutputTensor()
@@ -165,6 +164,11 @@ namespace ailiaSDK
 			if (!AiliaImageSource.IsPrepared || !modelPrepared)
 			{
 				return;
+			}
+			if (modelPrepared && !modelAllocated)
+			{
+				AllocateInputAndOutputTensor();
+				modelAllocated = true;
 			}
 			if (camera_mode && !ailia_camera.IsEnable())
 			{
