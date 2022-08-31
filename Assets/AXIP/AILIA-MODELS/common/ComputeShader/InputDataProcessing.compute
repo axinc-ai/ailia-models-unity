@@ -11,8 +11,8 @@ Texture2D<float4> texure;
 RWBuffer<float> result_buffer;
 float weight;
 float bias;
-int width;
-int height;
+uint width;
+uint height;
 
 [numthreads(32, 32, 1)]
 void ChannelLast(uint2 id : SV_DispatchThreadID)
