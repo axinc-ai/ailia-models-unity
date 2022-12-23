@@ -344,7 +344,7 @@ namespace ailiaSDK
 					feature_text = "Distance " + distance + "\n";
 					same_person = distance < threshold;
 				}
-				if (ailiaModelType == FeatureExtractorModels.arcface)
+				if (ailiaModelType == FeatureExtractorModels.arcface || ailiaModelType == FeatureExtractorModels.arcfacem)
 				{
 					feature_text = "Similality " + similality + "\n";
 					same_person = similality > threshold;
