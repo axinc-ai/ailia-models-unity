@@ -1,5 +1,5 @@
 /* AILIA Unity Plugin FeatureExtractor Sample */
-/* Copyright 2018-2019 AXELL CORPORATION */
+/* Copyright 2018-2022 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -18,7 +18,8 @@ namespace ailiaSDK
 		{
 			vggface2,
 			arcface,	// official model
-			arcfacem	// ax ratrained model
+			arcfacem,	// ax ratrained model
+			person_reid_baseline
 		}
 
 		[SerializeField]
@@ -53,6 +54,7 @@ namespace ailiaSDK
 		private float threshold_vggface2 = 1.24f;  	 	 //VGGFace2 predefined value
 		private float threshold_arcface = 0.25572845f;	// arcface predefined value
 		private float threshold_arcfacem = 0.45f;
+		private float threshold_person_reid_baseline = 0.45f;
 
 		//settings for arcface
 		private const int ARCFACE_BATCH = 2;
@@ -60,33 +62,53 @@ namespace ailiaSDK
 		private const int ARCFACE_HEIGHT = 128;
 		private const int ARCFACE_FEATURE_LEN = 2 * 512;
 
+		private const int PERSON_REID_BASELINE_CHANNELS = 3;
+		private const int PERSON_REID_BASELINE_WIDTH = 128;
+		private const int PERSON_REID_BASELINE_HEIGHT = 256;
+		private const int PERSON_REID_BASELINE_FEATURE_LEN = 512;
+
 		private float threshold = 0.0f;
 
 		private void CreateAiliaDetector()
 		{
 			string asset_path = Application.temporaryCachePath;
+			uint category_n = 0;
+			Ailia.AILIAShape shape = null;
 
 			//Face detection
 			if (gpu_mode)
 			{
 				ailia_face.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
-			if (ailiaModelType == FeatureExtractorModels.arcfacem){
-				uint category_n = 1;
+			switch (ailiaModelType){
+			case FeatureExtractorModels.arcfacem:
+				category_n = 1;
 				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.obf.onnx");
 
 				ailia_face.OpenFile(asset_path + "/face-mask-detection-yolov3-tiny.opt.onnx.prototxt", asset_path + "/face-mask-detection-yolov3-tiny.opt.obf.onnx");
-			}else{
-				uint category_n = 2;
+				break;
+			case FeatureExtractorModels.arcface:
+			case FeatureExtractorModels.vggface2:
+				category_n = 2;
 				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
 
 				ailia_face.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+				break;
+			case FeatureExtractorModels.person_reid_baseline:
+				category_n = 80;
+				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOX, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+
+				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx.prototxt");
+				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx");
+
+				ailia_face.OpenFile(asset_path + "/yolox_tiny.opt.onnx.prototxt", asset_path + "/yolox_tiny.opt.onnx");
+				break;
 			}
 
 			//Feature extractor
@@ -112,7 +134,7 @@ namespace ailiaSDK
 					ailia_arcface_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
 				}
 
-				Ailia.AILIAShape shape = new Ailia.AILIAShape();
+				shape = new Ailia.AILIAShape();
 				shape.x = ARCFACE_WIDTH;
 				shape.y = ARCFACE_HEIGHT;
 				shape.z = 1;
@@ -134,6 +156,25 @@ namespace ailiaSDK
 				string layer_name = "conv5_3";
 				ailia_feature_extractor.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8, AiliaFeatureExtractor.AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM, layer_name);
 				ailia_feature_extractor.OpenFile(asset_path + "/resnet50_scratch.prototxt", asset_path + "/resnet50_scratch.caffemodel");
+				break;
+			case FeatureExtractorModels.person_reid_baseline:
+				if (gpu_mode)
+				{
+					ailia_arcface_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				}
+
+				threshold = threshold_person_reid_baseline;
+				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx.prototxt");
+				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx");
+				ailia_arcface_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
+
+				shape = new Ailia.AILIAShape();
+				shape.x = PERSON_REID_BASELINE_WIDTH;
+				shape.y = PERSON_REID_BASELINE_HEIGHT;
+				shape.z = PERSON_REID_BASELINE_CHANNELS;
+				shape.w = 1;
+				shape.dim = 4;
+				ailia_arcface_model.SetInputShape(shape);
 				break;
 			}
 		}
@@ -183,12 +224,25 @@ namespace ailiaSDK
 				raw_image.texture = preview_texture;
 			}
 
-			//Face Detection
+			//Face or Person Detection
 			float det_threshold = 0.2f;
 			float det_iou = 0.25f;
-			List<AiliaDetector.AILIADetectorObject> list = ailia_face.ComputeFromImageB2T(camera, tex_width, tex_height, det_threshold, det_iou);
+			if (ailiaModelType == FeatureExtractorModels.person_reid_baseline){
+				det_threshold = 0.4f;
+			}
 
-			//Face Matching
+			List<AiliaDetector.AILIADetectorObject> list = ailia_face.ComputeFromImageB2T(camera, tex_width, tex_height, det_threshold, det_iou);
+			if (ailiaModelType == FeatureExtractorModels.person_reid_baseline){
+				List<AiliaDetector.AILIADetectorObject> list2 = new List<AiliaDetector.AILIADetectorObject>();
+				for (int i = 0; i < list.Count; i++){
+					AiliaDetector.AILIADetectorObject obj = list[i];
+					if (obj.category == 0){
+						list2.Add(obj);
+					}
+				}
+				list = list2;
+			}
+
 			for (int i = 0; i < list.Count; i++){
 				AiliaDetector.AILIADetectorObject obj = list[i];
 				bool last_face = (i == list.Count - 1);
@@ -217,6 +271,25 @@ namespace ailiaSDK
 				}
 			}
 			return arcface_input;
+		}
+
+		private float[] PreprocessPersonReIDBaseline(Color32[] face, int w, int h){
+			// Rgb, imagenet mean
+			int output_c = PERSON_REID_BASELINE_CHANNELS;
+			int output_w = PERSON_REID_BASELINE_WIDTH;
+			int output_h = PERSON_REID_BASELINE_HEIGHT;
+			float [] input_data = new float[output_w * output_h * output_c];
+			for (int y = 0; y < output_h; y++){
+				for (int x = 0; x < output_w; x++){
+					int x2 = x * w / output_w;
+					int y2 = y * h / output_h;
+					Color32 v = face[y2 * w + x2];
+					input_data[y*output_w+x + output_w * output_h * 0] = (v.r / 255.0f - 0.485f) / 0.229f;
+					input_data[y*output_w+x + output_w * output_h * 1] = (v.g / 255.0f - 0.456f) / 0.224f;
+					input_data[y*output_w+x + output_w * output_h * 2] = (v.b / 255.0f - 0.406f) / 0.225f;
+				}
+			}
+			return input_data;
 		}
 
 		private float CosinMetric(float [] features, float [] capture_feature_value)
@@ -254,6 +327,9 @@ namespace ailiaSDK
 				expand = 1.4f;
 				square = true;
 			}
+			if (ailiaModelType == FeatureExtractorModels.person_reid_baseline){
+				expand = 1.0f;
+			}
 
 			int nw = (int)(w * expand);
 			int nh = (int)(h * expand);
@@ -280,6 +356,8 @@ namespace ailiaSDK
 					if (x + x1 >= 0 && x + x1 < tex_width && y + y1 >= 0 && y + y1 < tex_height)
 					{
 						face[y * w + x] = camera[(tex_height - 1 - y - y1) * tex_width + x + x1];
+					}else{
+						face[y * w + x] = Color.black;
 					}
 				}
 			}
@@ -302,11 +380,20 @@ namespace ailiaSDK
 			float distance = 0.0f;
 			float similality = 0.0f;
 			float[] features = null;
+			float[] face_input = null;
 			switch(ailiaModelType){
 			case FeatureExtractorModels.arcface:
 			case FeatureExtractorModels.arcfacem:
-				float[] face_input = PreprocessArcFace(face, w, h);
+				face_input = PreprocessArcFace(face, w, h);
 				features = new float [ARCFACE_FEATURE_LEN];
+				ailia_arcface_model.Predict(features, face_input);
+				if (capture_feature_value != null){
+					similality = CosinMetric(features, capture_feature_value); //Calc similaity between two feature vectors
+				}
+				break;
+			case FeatureExtractorModels.person_reid_baseline:
+				face_input = PreprocessPersonReIDBaseline(face, w, h);
+				features = new float [PERSON_REID_BASELINE_FEATURE_LEN];
 				ailia_arcface_model.Predict(features, face_input);
 				if (capture_feature_value != null){
 					similality = CosinMetric(features, capture_feature_value); //Calc similaity between two feature vectors
@@ -344,7 +431,7 @@ namespace ailiaSDK
 					feature_text = "Distance " + distance + "\n";
 					same_person = distance < threshold;
 				}
-				if (ailiaModelType == FeatureExtractorModels.arcface || ailiaModelType == FeatureExtractorModels.arcfacem)
+				if (ailiaModelType == FeatureExtractorModels.arcface || ailiaModelType == FeatureExtractorModels.arcfacem || ailiaModelType == FeatureExtractorModels.person_reid_baseline)
 				{
 					feature_text = "Similality " + similality + "\n";
 					same_person = similality > threshold;
