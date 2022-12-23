@@ -88,7 +88,6 @@ namespace ailiaSDK
 		{
 			string asset_path = Application.temporaryCachePath;
 			uint category_n = 0;
-			Ailia.AILIAShape shape = null;
 			var urlList1 = new List<ModelDownloadURL>();
 			var urlList2 = new List<ModelDownloadURL>();
 
@@ -488,7 +487,7 @@ namespace ailiaSDK
 			}
 			else
 			{
-				feature_text = "Please capture face";
+				feature_text = "Please capture target object";
 			}
 
 			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
@@ -510,7 +509,7 @@ namespace ailiaSDK
 			{
 				if (capture_feature_value == null)
 				{
-					label_text.text = "Face not found!";
+					label_text.text = "Target object not found!";
 				}
 				else
 				{
