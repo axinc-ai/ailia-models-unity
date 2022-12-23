@@ -36,12 +36,12 @@ namespace ailiaSDK
 		public RawImage raw_image = null;
 
 		//Preview
-		private Texture2D preview_texture = null;
+		private Texture2D preview_texture = null;	// test using image
 
 		//AILIA
-		private AiliaDetectorModel ailia_face = new AiliaDetectorModel();
+		private AiliaDetectorModel ailia_detector = new AiliaDetectorModel();
 		private AiliaFeatureExtractorModel ailia_feature_extractor = new AiliaFeatureExtractorModel();	// for vggface2
-		private AiliaModel ailia_arcface_model = new AiliaModel();	// for arcface
+		private AiliaModel ailia_feature_model = new AiliaModel();	// for arcface and person_reid_baseline
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -56,7 +56,7 @@ namespace ailiaSDK
 		private float threshold_arcfacem = 0.45f;
 		private float threshold_person_reid_baseline = 0.45f;
 
-		//settings for arcface
+		//settings for arcface and person reid
 		private const int ARCFACE_BATCH = 2;
 		private const int ARCFACE_WIDTH = 128;
 		private const int ARCFACE_HEIGHT = 128;
@@ -78,36 +78,36 @@ namespace ailiaSDK
 			//Face detection
 			if (gpu_mode)
 			{
-				ailia_face.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 			switch (ailiaModelType){
 			case FeatureExtractorModels.arcfacem:
 				category_n = 1;
-				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.obf.onnx");
 
-				ailia_face.OpenFile(asset_path + "/face-mask-detection-yolov3-tiny.opt.onnx.prototxt", asset_path + "/face-mask-detection-yolov3-tiny.opt.obf.onnx");
+				ailia_detector.OpenFile(asset_path + "/face-mask-detection-yolov3-tiny.opt.onnx.prototxt", asset_path + "/face-mask-detection-yolov3-tiny.opt.obf.onnx");
 				break;
 			case FeatureExtractorModels.arcface:
 			case FeatureExtractorModels.vggface2:
 				category_n = 2;
-				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
 
-				ailia_face.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+				ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
 				break;
 			case FeatureExtractorModels.person_reid_baseline:
 				category_n = 80;
-				ailia_face.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOX, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
+				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOX, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
 				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx");
 
-				ailia_face.OpenFile(asset_path + "/yolox_tiny.opt.onnx.prototxt", asset_path + "/yolox_tiny.opt.onnx");
+				ailia_detector.OpenFile(asset_path + "/yolox_tiny.opt.onnx.prototxt", asset_path + "/yolox_tiny.opt.onnx");
 				break;
 			}
 
@@ -117,21 +117,21 @@ namespace ailiaSDK
 			case FeatureExtractorModels.arcfacem:
 				if (gpu_mode)
 				{
-					ailia_arcface_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					ailia_feature_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				}
 
 				if (ailiaModelType == FeatureExtractorModels.arcface){
 					threshold = threshold_arcface;
 					ailia_download.DownloadModelFromUrl("arcface", "arcface.onnx.prototxt");
 					ailia_download.DownloadModelFromUrl("arcface", "arcface.onnx");
-					ailia_arcface_model.OpenFile(asset_path + "/arcface.onnx.prototxt", asset_path + "/arcface.onnx");
+					ailia_feature_model.OpenFile(asset_path + "/arcface.onnx.prototxt", asset_path + "/arcface.onnx");
 				}
 
 				if (ailiaModelType == FeatureExtractorModels.arcfacem){
 					threshold = threshold_arcfacem;
 					ailia_download.DownloadModelFromUrl("arcface", "arcface_mixed_90_82.onnx.prototxt");
 					ailia_download.DownloadModelFromUrl("arcface", "arcface_mixed_90_82.obf.onnx");
-					ailia_arcface_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
+					ailia_feature_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
 				}
 
 				shape = new Ailia.AILIAShape();
@@ -140,7 +140,7 @@ namespace ailiaSDK
 				shape.z = 1;
 				shape.w = ARCFACE_BATCH;
 				shape.dim = 4;
-				ailia_arcface_model.SetInputShape(shape);
+				ailia_feature_model.SetInputShape(shape);
 				break;
 			case FeatureExtractorModels.vggface2:
 				threshold = threshold_vggface2;
@@ -160,13 +160,13 @@ namespace ailiaSDK
 			case FeatureExtractorModels.person_reid_baseline:
 				if (gpu_mode)
 				{
-					ailia_arcface_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+					ailia_feature_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				}
 
 				threshold = threshold_person_reid_baseline;
 				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx.prototxt");
 				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx");
-				ailia_arcface_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
+				ailia_feature_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
 
 				shape = new Ailia.AILIAShape();
 				shape.x = PERSON_REID_BASELINE_WIDTH;
@@ -174,16 +174,27 @@ namespace ailiaSDK
 				shape.z = PERSON_REID_BASELINE_CHANNELS;
 				shape.w = 1;
 				shape.dim = 4;
-				ailia_arcface_model.SetInputShape(shape);
+				ailia_feature_model.SetInputShape(shape);
 				break;
 			}
 		}
 
 		private void DestroyAiliaDetector()
 		{
-			ailia_face.Close();
+			ailia_detector.Close();
 			ailia_feature_extractor.Close();
-			ailia_arcface_model.Close();
+			ailia_feature_model.Close();
+		}
+
+		private List<AiliaDetector.AILIADetectorObject> FilterOnlyPerson(List<AiliaDetector.AILIADetectorObject> list){
+			List<AiliaDetector.AILIADetectorObject> list2 = new List<AiliaDetector.AILIADetectorObject>();
+			for (int i = 0; i < list.Count; i++){
+				AiliaDetector.AILIADetectorObject obj = list[i];
+				if (obj.category == 0){
+					list2.Add(obj);
+				}
+			}
+			return list2;
 		}
 
 		// Use this for initialization
@@ -231,16 +242,9 @@ namespace ailiaSDK
 				det_threshold = 0.4f;
 			}
 
-			List<AiliaDetector.AILIADetectorObject> list = ailia_face.ComputeFromImageB2T(camera, tex_width, tex_height, det_threshold, det_iou);
+			List<AiliaDetector.AILIADetectorObject> list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, det_threshold, det_iou);
 			if (ailiaModelType == FeatureExtractorModels.person_reid_baseline){
-				List<AiliaDetector.AILIADetectorObject> list2 = new List<AiliaDetector.AILIADetectorObject>();
-				for (int i = 0; i < list.Count; i++){
-					AiliaDetector.AILIADetectorObject obj = list[i];
-					if (obj.category == 0){
-						list2.Add(obj);
-					}
-				}
-				list = list2;
+				list = FilterOnlyPerson(list);
 			}
 
 			for (int i = 0; i < list.Count; i++){
@@ -292,9 +296,8 @@ namespace ailiaSDK
 			return input_data;
 		}
 
-		private float CosinMetric(float [] features, float [] capture_feature_value)
-		{
-			// cos similaity
+		private float CosinMetric(float [] features, float [] capture_feature_value){
+			// cos similaity between two features
 			// np.dot(x1, x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 			float dot_sum = 0.0f;
 			float norm1 = 0.0f, norm2 = 0.0f;
@@ -386,7 +389,7 @@ namespace ailiaSDK
 			case FeatureExtractorModels.arcfacem:
 				face_input = PreprocessArcFace(face, w, h);
 				features = new float [ARCFACE_FEATURE_LEN];
-				ailia_arcface_model.Predict(features, face_input);
+				ailia_feature_model.Predict(features, face_input);
 				if (capture_feature_value != null){
 					similality = CosinMetric(features, capture_feature_value); //Calc similaity between two feature vectors
 				}
@@ -394,7 +397,7 @@ namespace ailiaSDK
 			case FeatureExtractorModels.person_reid_baseline:
 				face_input = PreprocessPersonReIDBaseline(face, w, h);
 				features = new float [PERSON_REID_BASELINE_FEATURE_LEN];
-				ailia_arcface_model.Predict(features, face_input);
+				ailia_feature_model.Predict(features, face_input);
 				if (capture_feature_value != null){
 					similality = CosinMetric(features, capture_feature_value); //Calc similaity between two feature vectors
 				}
@@ -459,7 +462,7 @@ namespace ailiaSDK
 
 			if (label_text != null)
 			{
-				label_text.text = elspsed_time + "ms\n" + ailia_face.EnvironmentName();
+				label_text.text = elspsed_time + "ms\n" + ailia_detector.EnvironmentName();
 			}
 		}
 
