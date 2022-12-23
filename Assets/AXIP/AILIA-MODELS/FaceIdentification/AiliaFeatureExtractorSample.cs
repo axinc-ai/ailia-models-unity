@@ -24,6 +24,8 @@ namespace ailiaSDK
 
 		[SerializeField]
 		private FeatureExtractorModels ailiaModelType = FeatureExtractorModels.arcface;
+		[SerializeField]
+		private GameObject UICanvas = null;
 
 		//Settings
 		public bool gpu_mode = false;
@@ -69,13 +71,28 @@ namespace ailiaSDK
 
 		private float threshold = 0.0f;
 
+		private bool FileOpened1 = false;
+		private bool FileOpened2 = false;
+
+		private void SetInputShape(AiliaModel model, uint x, uint y, uint z, uint w){
+			Ailia.AILIAShape shape = new Ailia.AILIAShape();
+			shape.x = x;
+			shape.y = y;
+			shape.z = z;
+			shape.w = w;
+			shape.dim = 4;
+			model.SetInputShape(shape);
+		}
+
 		private void CreateAiliaDetector()
 		{
 			string asset_path = Application.temporaryCachePath;
 			uint category_n = 0;
 			Ailia.AILIAShape shape = null;
+			var urlList1 = new List<ModelDownloadURL>();
+			var urlList2 = new List<ModelDownloadURL>();
 
-			//Face detection
+			//Face or Person detection
 			if (gpu_mode)
 			{
 				ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
@@ -85,29 +102,38 @@ namespace ailiaSDK
 				category_n = 1;
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("face-mask-detection", "face-mask-detection-yolov3-tiny.opt.obf.onnx");
+				urlList1.Add(new ModelDownloadURL() { folder_path = "face-mask-detection", file_name = "face-mask-detection-yolov3-tiny.opt.onnx.prototxt" });
+				urlList1.Add(new ModelDownloadURL() { folder_path = "face-mask-detection", file_name = "face-mask-detection-yolov3-tiny.opt.obf.onnx" });
 
-				ailia_detector.OpenFile(asset_path + "/face-mask-detection-yolov3-tiny.opt.onnx.prototxt", asset_path + "/face-mask-detection-yolov3-tiny.opt.obf.onnx");
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				{
+					FileOpened1 = ailia_detector.OpenFile(asset_path + "/face-mask-detection-yolov3-tiny.opt.onnx.prototxt", asset_path + "/face-mask-detection-yolov3-tiny.opt.obf.onnx");
+				}));
 				break;
 			case FeatureExtractorModels.arcface:
 			case FeatureExtractorModels.vggface2:
 				category_n = 2;
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_RGB, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_FP32, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOV3, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("yolov3-face", "yolov3-face.opt.onnx");
+				urlList1.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx.prototxt" });
+				urlList1.Add(new ModelDownloadURL() { folder_path = "yolov3-face", file_name = "yolov3-face.opt.onnx" });
 
-				ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				{
+					FileOpened1 = ailia_detector.OpenFile(asset_path + "/yolov3-face.opt.onnx.prototxt", asset_path + "/yolov3-face.opt.onnx");
+				}));
 				break;
 			case FeatureExtractorModels.person_reid_baseline:
 				category_n = 80;
 				ailia_detector.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_UNSIGNED_INT8, AiliaDetector.AILIA_DETECTOR_ALGORITHM_YOLOX, category_n, AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL);
 
-				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("yolox", "yolox_tiny.opt.onnx");
+				urlList1.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_tiny.opt.onnx.prototxt" });
+				urlList1.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_tiny.opt.onnx" });
 
-				ailia_detector.OpenFile(asset_path + "/yolox_tiny.opt.onnx.prototxt", asset_path + "/yolox_tiny.opt.onnx");
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				{
+					FileOpened1 = ailia_detector.OpenFile(asset_path + "/yolox_tiny.opt.onnx.prototxt", asset_path + "/yolox_tiny.opt.onnx");
+				}));
 				break;
 			}
 
@@ -122,25 +148,29 @@ namespace ailiaSDK
 
 				if (ailiaModelType == FeatureExtractorModels.arcface){
 					threshold = threshold_arcface;
-					ailia_download.DownloadModelFromUrl("arcface", "arcface.onnx.prototxt");
-					ailia_download.DownloadModelFromUrl("arcface", "arcface.onnx");
-					ailia_feature_model.OpenFile(asset_path + "/arcface.onnx.prototxt", asset_path + "/arcface.onnx");
+
+					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface.onnx.prototxt" });
+					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+					{
+						FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/arcface.onnx.prototxt", asset_path + "/arcface.onnx");
+						SetInputShape(ailia_feature_model, ARCFACE_WIDTH, ARCFACE_HEIGHT, 1, ARCFACE_BATCH);
+					}));
 				}
 
 				if (ailiaModelType == FeatureExtractorModels.arcfacem){
 					threshold = threshold_arcfacem;
-					ailia_download.DownloadModelFromUrl("arcface", "arcface_mixed_90_82.onnx.prototxt");
-					ailia_download.DownloadModelFromUrl("arcface", "arcface_mixed_90_82.obf.onnx");
-					ailia_feature_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
-				}
 
-				shape = new Ailia.AILIAShape();
-				shape.x = ARCFACE_WIDTH;
-				shape.y = ARCFACE_HEIGHT;
-				shape.z = 1;
-				shape.w = ARCFACE_BATCH;
-				shape.dim = 4;
-				ailia_feature_model.SetInputShape(shape);
+					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface_mixed_90_82.onnx.prototxt" });
+					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface_mixed_90_82.obf.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+					{
+						FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
+						SetInputShape(ailia_feature_model, ARCFACE_WIDTH, ARCFACE_HEIGHT, 1, ARCFACE_BATCH);
+					}));
+				}
 				break;
 			case FeatureExtractorModels.vggface2:
 				threshold = threshold_vggface2;
@@ -150,12 +180,15 @@ namespace ailiaSDK
 					ailia_feature_extractor.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				}
 
-				ailia_download.DownloadModelFromUrl("vggface2", "resnet50_scratch.prototxt");
-				ailia_download.DownloadModelFromUrl("vggface2", "resnet50_scratch.caffemodel");
+				urlList2.Add(new ModelDownloadURL() { folder_path = "vggface2", file_name = "resnet50_scratch.prototxt" });
+				urlList2.Add(new ModelDownloadURL() { folder_path = "vggface2", file_name = "resnet50_scratch.caffemodel" });
 
-				string layer_name = "conv5_3";
-				ailia_feature_extractor.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8, AiliaFeatureExtractor.AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM, layer_name);
-				ailia_feature_extractor.OpenFile(asset_path + "/resnet50_scratch.prototxt", asset_path + "/resnet50_scratch.caffemodel");
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				{
+					string layer_name = "conv5_3";
+					ailia_feature_extractor.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8, AiliaFeatureExtractor.AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM, layer_name);
+					FileOpened2 = ailia_feature_extractor.OpenFile(asset_path + "/resnet50_scratch.prototxt", asset_path + "/resnet50_scratch.caffemodel");
+				}));
 				break;
 			case FeatureExtractorModels.person_reid_baseline:
 				if (gpu_mode)
@@ -164,17 +197,15 @@ namespace ailiaSDK
 				}
 
 				threshold = threshold_person_reid_baseline;
-				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx.prototxt");
-				ailia_download.DownloadModelFromUrl("person_reid_baseline_pytorch", "ft_ResNet50.onnx");
-				ailia_feature_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
 
-				shape = new Ailia.AILIAShape();
-				shape.x = PERSON_REID_BASELINE_WIDTH;
-				shape.y = PERSON_REID_BASELINE_HEIGHT;
-				shape.z = PERSON_REID_BASELINE_CHANNELS;
-				shape.w = 1;
-				shape.dim = 4;
-				ailia_feature_model.SetInputShape(shape);
+				urlList2.Add(new ModelDownloadURL() { folder_path = "person_reid_baseline_pytorch", file_name = "ft_ResNet50.onnx.prototxt" });
+				urlList2.Add(new ModelDownloadURL() { folder_path = "person_reid_baseline_pytorch", file_name = "ft_ResNet50.onnx" });
+
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				{
+					FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
+					SetInputShape(ailia_feature_model, PERSON_REID_BASELINE_WIDTH, PERSON_REID_BASELINE_HEIGHT, PERSON_REID_BASELINE_CHANNELS, 1);
+				}));
 				break;
 			}
 		}
@@ -200,6 +231,7 @@ namespace ailiaSDK
 		// Use this for initialization
 		void Start()
 		{
+			SetUIProperties();
 			mode_text.text = "ailia FeatureExtractor";
 			CreateAiliaDetector();
 			ailia_camera.CreateCamera(camera_id);
@@ -209,6 +241,10 @@ namespace ailiaSDK
 		void Update()
 		{
 			if (!ailia_camera.IsEnable())
+			{
+				return;
+			}
+			if (!FileOpened1 || !FileOpened2)
 			{
 				return;
 			}
@@ -481,6 +517,24 @@ namespace ailiaSDK
 					label_text.text = "Capture success!";
 				}
 			}
+		}
+
+		void SetUIProperties()
+		{
+			if (UICanvas == null) return;
+			// Set up UI for AiliaDownloader
+			var downloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel");
+			ailia_download.DownloaderProgressPanel = downloaderProgressPanel.gameObject;
+			// Set up lines
+			line_panel = UICanvas.transform.Find("LinePanel").gameObject;
+			lines = UICanvas.transform.Find("LinePanel/Lines").gameObject;
+			line = UICanvas.transform.Find("LinePanel/Lines/Line").gameObject;
+			text_panel = UICanvas.transform.Find("TextPanel").gameObject;
+			text_base = UICanvas.transform.Find("TextPanel/TextHolder").gameObject;
+
+			raw_image = UICanvas.transform.Find("RawImage").gameObject.GetComponent<RawImage>();
+			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
+			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
 
 		void OnApplicationQuit()
