@@ -31,6 +31,7 @@ namespace ailiaSDK
 		public bool gpu_mode = false;
 		public int camera_id = 0;
 		public Texture2D test_image = null;
+		public bool debug_feature_input = false;
 
 		//Result
 		public Text label_text = null;
@@ -293,45 +294,90 @@ namespace ailiaSDK
 			preview_texture.Apply();
 		}
 
-		private float[] PreprocessArcFace(Color32[] face, int w, int h){
+		private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
+		{
+			int x2 = (int)fx;
+			int y2 = (int)fy;
+			float xa = 1.0f - (fx - x2);
+			float xb = 1.0f - xa;
+			float ya = 1.0f - (fx - x2);
+			float yb = 1.0f - ya;
+			Color32 c1 = face[y2 * w + x2];
+			Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
+			Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
+			Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
+			byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
+			byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
+			byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
+			return new Color32(r, g, b, 255);
+		}
+
+		private float[] PreprocessArcFace(Color32[] face, int w, int h)
+		{
 			// GrayScale, image / 127.5 - 1.0, flip batch
-			int arcface_c = ARCFACE_BATCH;
-			int arcface_w = ARCFACE_WIDTH;
-			int arcface_h = ARCFACE_HEIGHT;
-			float [] arcface_input = new float[arcface_w * arcface_h * arcface_c];
-			for (int y = 0; y < arcface_h; y++){
-				for (int x = 0; x < arcface_w; x++){
-					int x2 = x * w / arcface_w;
-					int y2 = y * h / arcface_h;
-					Color32 v = face[y2 * w + x2];
-					float v2 = (v.r + v.g + v.b) / 3.0f / 127.5f - 1.0f;
-					arcface_input[y*arcface_w+x] = v2;	// normal
-					arcface_input[y*arcface_w+(arcface_w-1-x)+arcface_w*arcface_h] = v2; // flip
+			float [] arcface_input = new float[ARCFACE_WIDTH * ARCFACE_HEIGHT * ARCFACE_BATCH];
+			for (int y = 0; y < ARCFACE_HEIGHT; y++){
+				for (int x = 0; x < ARCFACE_WIDTH; x++){
+					float fx = x * w / ARCFACE_WIDTH;
+					float fy = y * h / ARCFACE_HEIGHT;
+					Color32 v = Bilinear(face, w, h, fx, fy);
+					float v2 = (v.r + v.g + v.b) / 3.0f;
+					v2 = v2 / 127.5f - 1.0f;
+					arcface_input[y*ARCFACE_WIDTH+x] = v2;	// normal
+					arcface_input[y*ARCFACE_WIDTH+(ARCFACE_WIDTH-1-x)+ARCFACE_WIDTH*ARCFACE_HEIGHT] = v2; // flip
 				}
 			}
 			return arcface_input;
 		}
 
-		private float[] PreprocessPersonReIDBaseline(Color32[] face, int w, int h){
+		private float[] PreprocessPersonReIDBaseline(Color32[] face, int w, int h)
+		{
 			// Rgb, imagenet mean
-			int output_c = PERSON_REID_BASELINE_CHANNELS;
-			int output_w = PERSON_REID_BASELINE_WIDTH;
-			int output_h = PERSON_REID_BASELINE_HEIGHT;
-			float [] input_data = new float[output_w * output_h * output_c];
-			for (int y = 0; y < output_h; y++){
-				for (int x = 0; x < output_w; x++){
-					int x2 = x * w / output_w;
-					int y2 = y * h / output_h;
-					Color32 v = face[y2 * w + x2];
-					input_data[y*output_w+x + output_w * output_h * 0] = (v.r / 255.0f - 0.485f) / 0.229f;
-					input_data[y*output_w+x + output_w * output_h * 1] = (v.g / 255.0f - 0.456f) / 0.224f;
-					input_data[y*output_w+x + output_w * output_h * 2] = (v.b / 255.0f - 0.406f) / 0.225f;
+			float [] input_data = new float[PERSON_REID_BASELINE_WIDTH * PERSON_REID_BASELINE_HEIGHT * PERSON_REID_BASELINE_CHANNELS];
+			int stride = PERSON_REID_BASELINE_WIDTH * PERSON_REID_BASELINE_HEIGHT;
+			for (int y = 0; y < PERSON_REID_BASELINE_HEIGHT; y++){
+				for (int x = 0; x < PERSON_REID_BASELINE_WIDTH; x++){
+					float fx = x * w / PERSON_REID_BASELINE_WIDTH;
+					float fy = y * h / PERSON_REID_BASELINE_HEIGHT;
+					Color32 v = Bilinear(face, w, h, fx, fy);
+					input_data[y * PERSON_REID_BASELINE_WIDTH + x + stride * 0] = (v.r / 255.0f - 0.485f) / 0.229f;
+					input_data[y * PERSON_REID_BASELINE_WIDTH + x + stride * 1] = (v.g / 255.0f - 0.456f) / 0.224f;
+					input_data[y * PERSON_REID_BASELINE_WIDTH + x + stride * 2] = (v.b / 255.0f - 0.406f) / 0.225f;
 				}
 			}
 			return input_data;
 		}
 
-		private float CosinMetric(float [] features, float [] capture_feature_value){
+		private void DebugArcFaceInput(float [] face_input, Color32 [] camera, int tex_width, int tex_height)
+		{
+			for (int y = 0; y < ARCFACE_HEIGHT; y++){
+				for (int x = 0; x < ARCFACE_WIDTH; x++){
+					// normal
+					byte r = (byte)((face_input[y * ARCFACE_WIDTH + x] + 1.0f) * 127.5f);
+					camera[(tex_height - 1 - y) * tex_width + x] = new Color32(r, r, r, 255);
+					
+					// flip
+					r = (byte)((face_input[y * ARCFACE_WIDTH + x + ARCFACE_WIDTH * ARCFACE_HEIGHT] + 1.0f) * 127.5f);
+					camera[(tex_height - 1 - y) * tex_width + x + ARCFACE_WIDTH] = new Color32(r, r, r, 255);
+				}
+			}
+		}
+
+		private void DebugPersonReIDInput(float [] face_input, Color32 [] camera, int tex_width, int tex_height)
+		{
+			int stride = PERSON_REID_BASELINE_WIDTH * PERSON_REID_BASELINE_HEIGHT;
+			for (int y = 0; y < PERSON_REID_BASELINE_HEIGHT; y++){
+				for (int x = 0; x < PERSON_REID_BASELINE_WIDTH; x++){
+					byte r = (byte)((face_input[y * PERSON_REID_BASELINE_WIDTH + x + stride * 0] * 0.229f + 0.485f) * 255.0f);
+					byte g = (byte)((face_input[y * PERSON_REID_BASELINE_WIDTH + x + stride * 1] * 0.224f + 0.456f) * 255.0f);
+					byte b = (byte)((face_input[y * PERSON_REID_BASELINE_WIDTH + x + stride * 2] * 0.225f + 0.406f) * 255.0f);
+					camera[(tex_height - 1 - y) * tex_width + x] = new Color32(r, g, b, 255);					
+				}
+			}
+		}
+
+		private float CosinMetric(float [] features, float [] capture_feature_value)
+		{
 			// cos similaity between two features
 			// np.dot(x1, x2) / (np.linalg.norm(x1) * np.linalg.norm(x2))
 			float dot_sum = 0.0f;
@@ -344,7 +390,8 @@ namespace ailiaSDK
 			return dot_sum / (Mathf.Sqrt(norm1) * Mathf.Sqrt(norm2));
 		}
 
-		private void GetFacePosition(AiliaDetector.AILIADetectorObject box, int tex_width, int tex_height, ref int x1, ref int y1, ref int w, ref int h){
+		private void GetFacePosition(AiliaDetector.AILIADetectorObject box, int tex_width, int tex_height, ref int x1, ref int y1, ref int w, ref int h)
+		{
 			//Convert to pixel position
 			x1 = (int)(box.x * tex_width);
 			y1 = (int)(box.y * tex_height);
@@ -357,6 +404,7 @@ namespace ailiaSDK
 
 			float expand = 1.4f;
 			bool square = false;
+			bool rectangle = false;
 			if (ailiaModelType == FeatureExtractorModels.arcface){
 				expand = 1.2f;
 				square = true;
@@ -367,6 +415,7 @@ namespace ailiaSDK
 			}
 			if (ailiaModelType == FeatureExtractorModels.person_reid_baseline){
 				expand = 1.0f;
+				rectangle = true;
 			}
 
 			int nw = (int)(w * expand);
@@ -383,6 +432,9 @@ namespace ailiaSDK
 			y1 -= (int)(nh - h) / 2;
 			w = nw;
 			h = nh;
+			if (rectangle){
+				h = w * 2;
+			}
 		}
 
 		private void GetFaceImage(Color32[] face, int x1, int y1, int w, int h, Color32[] camera, int tex_width, int tex_height)
@@ -423,6 +475,9 @@ namespace ailiaSDK
 			case FeatureExtractorModels.arcface:
 			case FeatureExtractorModels.arcfacem:
 				face_input = PreprocessArcFace(face, w, h);
+				if (debug_feature_input){
+					DebugArcFaceInput(face_input, camera, tex_width, tex_height);
+				}
 				features = new float [ARCFACE_FEATURE_LEN];
 				ailia_feature_model.Predict(features, face_input);
 				if (capture_feature_value != null){
@@ -431,6 +486,9 @@ namespace ailiaSDK
 				break;
 			case FeatureExtractorModels.person_reid_baseline:
 				face_input = PreprocessPersonReIDBaseline(face, w, h);
+				if (debug_feature_input){
+					DebugPersonReIDInput(face_input, camera, tex_width, tex_height);
+				}
 				features = new float [PERSON_REID_BASELINE_FEATURE_LEN];
 				ailia_feature_model.Predict(features, face_input);
 				if (capture_feature_value != null){
@@ -454,7 +512,8 @@ namespace ailiaSDK
 			DisplayResult(distance, similality, (end_time - start_time), x1, y1, w, h, tex_width, tex_height, last_face);
 		}
 
-		private void DisplayResult(float distance, float similality, float elspsed_time, int x1, int y1, int w, int h, int tex_width, int tex_height, bool last_face){
+		private void DisplayResult(float distance, float similality, float elspsed_time, int x1, int y1, int w, int h, int tex_width, int tex_height, bool last_face)
+		{
 			string feature_text = "";
 			Color color = Color.white;
 			if (last_face && capture_feature_value == null){
