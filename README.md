@@ -88,6 +88,13 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 |[vggface2](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [VGGFace2 Dataset for Face Recognition](https://github.com/ox-vgg/vgg_face2) | Caffe | 1.1.0 and later |
+|[arcface](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [pytorch implement of arcface](https://github.com/ronghuaiyang/arcface-pytorch) | Pytorch | 1.2.1 and later |
+
+## Person ReID
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+|[person_reid_baseline_pytorch](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [UTS-Person-reID-Practical](https://github.com/layumi/Person_reID_baseline_pytorch) | Pytorch | 1.2.6 and later |
 
 # Document
 
