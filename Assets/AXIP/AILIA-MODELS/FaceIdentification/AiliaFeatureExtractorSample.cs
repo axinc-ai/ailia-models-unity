@@ -240,7 +240,7 @@ namespace ailiaSDK
 		// Update is called once per frame
 		void Update()
 		{
-			if (!ailia_camera.IsEnable())
+			if (!ailia_camera.IsEnable() && test_image == null)
 			{
 				return;
 			}
@@ -253,9 +253,16 @@ namespace ailiaSDK
 			Clear();
 
 			//Get camera image
-			int tex_width = ailia_camera.GetWidth();
-			int tex_height = ailia_camera.GetHeight();
-			Color32[] camera = ailia_camera.GetPixels32();
+			int tex_width = 0;
+			int tex_height = 0;
+			Color32[] camera = null;
+
+			//Web camera input
+			if (test_image == null){
+				tex_width = ailia_camera.GetWidth();
+				tex_height = ailia_camera.GetHeight();
+				camera = ailia_camera.GetPixels32();
+			}
 			
 			//Test image input
 			if (test_image != null){
