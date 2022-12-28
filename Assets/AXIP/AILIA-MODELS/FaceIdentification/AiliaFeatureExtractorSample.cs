@@ -152,7 +152,7 @@ namespace ailiaSDK
 					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface.onnx.prototxt" });
 					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface.onnx" });
 
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList2, () =>
 					{
 						FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/arcface.onnx.prototxt", asset_path + "/arcface.onnx");
 						SetInputShape(ailia_feature_model, ARCFACE_WIDTH, ARCFACE_HEIGHT, 1, ARCFACE_BATCH);
@@ -165,7 +165,7 @@ namespace ailiaSDK
 					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface_mixed_90_82.onnx.prototxt" });
 					urlList2.Add(new ModelDownloadURL() { folder_path = "arcface", file_name = "arcface_mixed_90_82.obf.onnx" });
 
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList2, () =>
 					{
 						FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/arcface_mixed_90_82.onnx.prototxt", asset_path + "/arcface_mixed_90_82.obf.onnx");
 						SetInputShape(ailia_feature_model, ARCFACE_WIDTH, ARCFACE_HEIGHT, 1, ARCFACE_BATCH);
@@ -183,7 +183,7 @@ namespace ailiaSDK
 				urlList2.Add(new ModelDownloadURL() { folder_path = "vggface2", file_name = "resnet50_scratch.prototxt" });
 				urlList2.Add(new ModelDownloadURL() { folder_path = "vggface2", file_name = "resnet50_scratch.caffemodel" });
 
-				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList2, () =>
 				{
 					string layer_name = "conv5_3";
 					ailia_feature_extractor.Settings(AiliaFormat.AILIA_NETWORK_IMAGE_FORMAT_BGR, AiliaFormat.AILIA_NETWORK_IMAGE_CHANNEL_FIRST, AiliaFormat.AILIA_NETWORK_IMAGE_RANGE_SIGNED_INT8, AiliaFeatureExtractor.AILIA_FEATURE_EXTRACTOR_DISTANCE_L2NORM, layer_name);
@@ -201,7 +201,7 @@ namespace ailiaSDK
 				urlList2.Add(new ModelDownloadURL() { folder_path = "person_reid_baseline_pytorch", file_name = "ft_ResNet50.onnx.prototxt" });
 				urlList2.Add(new ModelDownloadURL() { folder_path = "person_reid_baseline_pytorch", file_name = "ft_ResNet50.onnx" });
 
-				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList1, () =>
+				StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList2, () =>
 				{
 					FileOpened2 = ailia_feature_model.OpenFile(asset_path + "/ft_ResNet50.onnx.prototxt", asset_path + "/ft_ResNet50.onnx");
 					SetInputShape(ailia_feature_model, PERSON_REID_BASELINE_WIDTH, PERSON_REID_BASELINE_HEIGHT, PERSON_REID_BASELINE_CHANNELS, 1);
@@ -240,7 +240,7 @@ namespace ailiaSDK
 		// Update is called once per frame
 		void Update()
 		{
-			if (!ailia_camera.IsEnable())
+			if (!ailia_camera.IsEnable() && test_image == null)
 			{
 				return;
 			}
@@ -253,9 +253,16 @@ namespace ailiaSDK
 			Clear();
 
 			//Get camera image
-			int tex_width = ailia_camera.GetWidth();
-			int tex_height = ailia_camera.GetHeight();
-			Color32[] camera = ailia_camera.GetPixels32();
+			int tex_width = 0;
+			int tex_height = 0;
+			Color32[] camera = null;
+
+			//Web camera input
+			if (test_image == null){
+				tex_width = ailia_camera.GetWidth();
+				tex_height = ailia_camera.GetHeight();
+				camera = ailia_camera.GetPixels32();
+			}
 			
 			//Test image input
 			if (test_image != null){
