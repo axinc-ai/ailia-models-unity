@@ -13,7 +13,7 @@ using UnityEngine.Video;
 
 namespace ailiaSDK
 {
-    public class AiliaBlazepalmAnchors
+    public class AiliaBlazehandAnchors
     {
         public double[] anchors = {
         0.015625, 0.015625, 1.0     , 1.0     , 0.015625, 0.015625, 1.0     ,
