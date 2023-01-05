@@ -10,6 +10,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 # Supporting Models
 
+## Hand recognition
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [blazehand](/Assets/AXIP/AILIA-MODELS/HandDetection/) | [MediaPipePyTorch](https://github.com/zmurez/MediaPipePyTorch) | Pytorch | 1.2.5 and later |
+
 ## Image classification
 
 | Name | Detail | Exported From | Supported Ailia Version |
