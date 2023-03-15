@@ -126,7 +126,7 @@ namespace ailiaSDK {
 
 			if (label_text != null)
 			{
-				label_text.text = (end_time - start_time) + (end_time_fill - start_time_fill) + "ms\n" + ailia_model.EnvironmentName();
+				label_text.text = (end_time - start_time) + " + " + (end_time_fill - start_time_fill) + "ms\n" + ailia_model.EnvironmentName();
 			}
 
 			//Apply
@@ -154,13 +154,11 @@ namespace ailiaSDK {
 
 			Ailia.AILIAShape input_shape = new Ailia.AILIAShape();
 			int align = 8;
-			input_shape.x = (uint)(((resize_width+align-1)/align)*align);//800;
-			input_shape.y = (uint)(((resize_height+align-1)/align)*align);//600;
+			input_shape.x = (uint)(((resize_width+align-1)/align)*align);
+			input_shape.y = (uint)(((resize_height+align-1)/align)*align);
 			input_shape.z = 3;
 			input_shape.w = 1;
 			input_shape.dim = 4;
-
-			//Debug.Log("Camera "+input_shape.x+"/"+input_shape.y);
 
 			Ailia.AILIAShape hw_shape = new Ailia.AILIAShape();
 			hw_shape.x = 2;
@@ -204,24 +202,6 @@ namespace ailiaSDK {
 				}
 			}
 
-			//現状のコードだとGridSampleで真っ黒画像がエラーになる
-			float sum = 0;
-			float diff = 0;
-			for (int i = 0; i < data.Length; i++){
-				sum = sum + data[i];
-				if (i>0){
-					float d = data[i] - data[i-1];
-					if (d<0){
-						d = -d;
-					}
-					diff = diff + d;
-				}
-			}
-			if (sum < 10 || diff < 10){
-				result_image = camera;
-				return false;
-			}
-
 			//セグメンテーション
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (input_blobs != null)
@@ -254,7 +234,6 @@ namespace ailiaSDK {
 				success = ailia_model.Update();
 				if (!success)
 				{
-					//現状のコードだとGridSampleで真っ黒画像がエラーになる
 					Debug.Log("Can not Update");
 					Debug.Log(ailia_model.GetErrorDetail());
 					return false;
@@ -268,8 +247,6 @@ namespace ailiaSDK {
 					Ailia.AILIAShape class_shape = ailia_model.GetBlobShape((int)output_blobs[2]);
 					Ailia.AILIAShape mask_shape = ailia_model.GetBlobShape((int)output_blobs[3]);
 
-					//Debug.Log("box_shape "+box_shape.z+" "+box_shape.y+" "+box_shape.x);
-					//Debug.Log("mask_shape "+mask_shape.z+" "+mask_shape.y+" "+mask_shape.x);
 					if (box_shape != null && score_shape != null && class_shape != null && mask_shape != null)
 					{
 						if (box_shape.z >= 1){
@@ -319,7 +296,6 @@ namespace ailiaSDK {
 			}
 
 			int category_n = (int)output_shape.z;
-			//Debug.Log("Detected "+category_n);
 
 			for (int py = 0; py < tex_height; py++)
 			{
@@ -426,6 +402,7 @@ namespace ailiaSDK {
 			label_text = UICanvas.transform.Find("LabelText").gameObject.GetComponent<Text>();
 			mode_text = UICanvas.transform.Find("ModeLabel").gameObject.GetComponent<Text>();
 		}
+
 		void OnApplicationQuit()
 		{
 			DestroyAiliaFoundation();
