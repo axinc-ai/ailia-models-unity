@@ -10,6 +10,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 # Supporting Models
 
+## Foundation
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [detic](/Assets/AXIP/AILIA-MODELS/Foundation/) | [Detecting Twenty-thousand Classes using Image-level Supervision](https://github.com/facebookresearch/Detic) | Pytorch | 1.2.14 and later |
+
 ## Hand recognition
 
 | Name | Detail | Exported From | Supported Ailia Version |
