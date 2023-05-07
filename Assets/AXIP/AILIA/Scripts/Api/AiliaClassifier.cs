@@ -4,6 +4,12 @@
 * @brief AILIA Unity Plugin Native Interface
 * @copyright 2018-2021 AXELL Corporation
 * @date July 28, 2021
+* 
+* \~english
+* @file
+* @brief AILIA Unity Plugin Native Interface
+* @copyright 2018-2021 AXELL Corporation
+* @date July 28, 2021
 */
 using UnityEngine;
 using System.Collections;
@@ -49,6 +55,18 @@ public class AiliaClassifier
     *   成功した場合は \ref AILIA_STATUS_SUCCESS 、そうでなければエラーコードを返す。
     * @details
     *   識別オブジェクトを作成します。
+    *   
+    * \~english
+    * @brief   Create an identification object.
+    * @param classifier   Pointer to identification object pointer
+    * @param net          Network object pointer
+    * @param format       Image format of the network (AILIA_NETWORK_IMAGE_FORMAT_*)
+    * @param channel      Image channel of the network (AILIA_NETWORK_IMAGE_CHANNEL_*)
+    * @param range        Image range of the network (AILIA_NETWORK_IMAGE_RANGE_*)
+    * @return
+    *   Returns \ref AILIA_STATUS_SUCCESS if successful, otherwise returns error code.
+    * @details
+    *   Create an identification object
     */
     [DllImport(Ailia.LIBRARY_NAME)]
     public static extern int ailiaCreateClassifier(ref IntPtr classifier,IntPtr net, UInt32 format, UInt32 channel, UInt32 range);
@@ -57,6 +75,10 @@ public class AiliaClassifier
     * \~japanese
     * @brief 識別オブジェクトを破棄します。
     * @param classifier 識別オブジェクトポインタ
+    * 
+    * \~english
+    * @brief   Destroy the identification object.
+    * @param classifier    Distinguished object pointer
     */
     [DllImport(Ailia.LIBRARY_NAME)]
     public static extern void ailiaDestroyClassifier(IntPtr classifier);
@@ -73,6 +95,18 @@ public class AiliaClassifier
     * @param max_class_count             認識結果の最大個数
     * @return
     *   成功した場合は \ref AILIA_STATUS_SUCCESS 、そうでなければエラーコードを返す。
+    * 
+    * \~english
+    * @brief   Object identification.
+    * @param classifier                  Distinguished object pointer
+    * @param src                         video data
+    * @param src_stride                  Bytes per line
+    * @param src_width                   Image width
+    * @param src_height                  Image height
+    * @param src_format                  Image format(AILIA_IMAGE_FORMAT_*)
+    * @param max_class_count             Maximum number of recognition results
+    * @return
+    *   If successful, returns \ref AILIA_STATUS_SUCCESS, otherwise returns an error code.
     */
     [DllImport(Ailia.LIBRARY_NAME)]
     public static extern int ailiaClassifierCompute(IntPtr classifier, IntPtr src, UInt32 src_stride, UInt32 src_width, UInt32 src_height, UInt32 src_format, UInt32 max_class_count);
@@ -84,6 +118,13 @@ public class AiliaClassifier
     * @param cls_count  クラス数
     * @return
     *   成功した場合は \ref AILIA_STATUS_SUCCESS 、そうでなければエラーコードを返す。
+    * 
+    * \~english
+    * @brief   Get the number of recognition results.
+    * @param classifier   Distinguished object pointer
+    * @param cls_count    Number of classes
+    * @return
+    *   If successful, returns \ref AILIA_STATUS_SUCCESS, otherwise returns an error code.
     */
     [DllImport(Ailia.LIBRARY_NAME)]
     public static extern int ailiaClassifierGetClassCount(IntPtr classifier, ref UInt32 cls_count);
@@ -99,7 +140,19 @@ public class AiliaClassifier
     *   成功した場合は \ref AILIA_STATUS_SUCCESS 、そうでなければエラーコードを返す。
     * @details
     *    ailiaPredict() を一度も実行していない場合は \ref AILIA_STATUS_INVALID_STATE が返ります。
-    *   認識結果は確率順でソートされます。
+    *    認識結果は確率順でソートされます。
+    * 
+    * \~english
+    * @brief   Retrieve recognition results.
+    * @param classifier   Distinguished object pointer
+    * @param cls          Class Information
+    * @param cls_idx      class index
+    * @param version      ailia_classifier_class_version
+    * @return
+    *   If successful, returns \ref AILIA_STATUS_SUCCESS, otherwise returns an error code.
+    * @details
+    *    If ailiaPredict() has never been executed, then \ref AILIA_STATUS_INVALID_STATE is returned.
+    *    Recognition results are sorted in order of probability.
     */
     [DllImport(Ailia.LIBRARY_NAME)]
     public static extern int ailiaClassifierGetClass(IntPtr classifier, [In,Out] AILIAClassifierClass obj, UInt32 cls_idx, UInt32 version);
