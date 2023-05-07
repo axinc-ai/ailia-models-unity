@@ -20,7 +20,8 @@ namespace ailiaSDK
 			pspnet_hair_segmentation,
 			deeplabv3,
 			u2net,
-			modnet
+			modnet,
+			road_segmentation_adas
 		}
 
 		// Settings
@@ -316,6 +317,11 @@ namespace ailiaSDK
 					serverFolderName = "modnet";
 					prototxtName = "modnet.opt.onnx.prototxt";
 					onnxName = "modnet.opt.onnx";
+					break;
+				case ImageSegmentaionModels.road_segmentation_adas:
+					serverFolderName = "road-segmentation-adas";
+					prototxtName = "road-segmentation-adas-0001.prototxt";
+					onnxName = "road-segmentation-adas-0001.onnx";
 					break;
 			}
 
