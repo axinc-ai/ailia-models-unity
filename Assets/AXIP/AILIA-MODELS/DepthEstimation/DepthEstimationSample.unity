@@ -447,6 +447,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 222103561153375798, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
+      propertyPath: m_CullTransparentMesh
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 223000755135152570, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
       propertyPath: m_Camera
       value: 
@@ -525,11 +529,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 400
+      value: 800
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 400
+      value: 800
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}

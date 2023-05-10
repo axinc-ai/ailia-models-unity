@@ -81,6 +81,11 @@ namespace ailiaSDK
 
 			AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();
 
+			if (depthEstimatorsModels == DepthEstimatorsModels.midas && !camera_mode){
+				raw_image.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 400);
+				raw_image.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 400);
+			}
+
 			// for Rendering 
 			blendMaterial = new Material(Shader.Find("Ailia/AlphaBlending2Tex"));
 			mainTexId = Shader.PropertyToID("_MainTex");
@@ -111,7 +116,7 @@ namespace ailiaSDK
 
 			// for Camera
 			if(camera_mode){
-				bool crop_square = false;
+				bool crop_square = true;
 				ailia_camera.CreateCamera(camera_id, crop_square);
 			}
 		}
@@ -311,7 +316,7 @@ namespace ailiaSDK
 					OutputWidth = AiliaImageSource.Width/32*32;
 					OutputHeight = AiliaImageSource.Height/32*32;
 					OutputChannel = 1;
-					Debug.Log(OutputChannel+"/"+OutputWidth+"/"+OutputHeight);
+					// Debug.Log(OutputChannel+"/"+OutputWidth+"/"+OutputHeight);
 					break;
 			}
 		}
@@ -321,9 +326,12 @@ namespace ailiaSDK
 			switch (depthEstimatorsModels)
 			{
 				case DepthEstimatorsModels.midas:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/DepthEstimation/SampleImage/road.png");
+					if(camera_mode){
+						ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/DepthEstimation/SampleImage/camera_mode128.png");
+					}else{
+						ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/DepthEstimation/SampleImage/road.png");
+					}
 					break;
-
 			}
 		}
 
