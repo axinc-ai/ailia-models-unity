@@ -10,6 +10,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 # Supporting Models
 
+## Depth estimation
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [midas](/Assets/AXIP/AILIA-MODELS/DepthEstimation/) | [Towards Robust Monocular Depth Estimation:<br/> Mixing Datasets for Zero-shot Cross-dataset Transfer](https://github.com/intel-isl/MiDaS) | Pytorch | 1.2.4 and later |
+
 ## Foundation
 
 | Name | Detail | Exported From | Supported Ailia Version |
