@@ -77,7 +77,7 @@ namespace ailiaSDK
             raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
             raw_image.gameObject.SetActive(false);
 
-            mode_text.text = "ailia Image Manipulation\nSpace key down to original image";
+            mode_text.text = "ailia Super Resolution\nSpace key down to original image";
         }
 
         void Update()
@@ -123,13 +123,13 @@ namespace ailiaSDK
 
                 // convert result to image
                 long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-                OutputDataProcessingCPU(superResolutionModels, output, outputImage, inputImage);
+                OutputDataProcessingCPU(superResolutionModels, output, outputImage);
                 long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
                 if (label_text != null)
                 {
                     string text = "Size " + OutputWidth.ToString() + "x" + OutputHeight.ToString() +"\n";
-                    text += "Pre "+(end_time - start_time).ToString() " ms\n";
+                    text += "Pre " + (end_time - start_time).ToString() + " ms\n";
                     text += "Predict " + (end_time2 - start_time2).ToString() + "ms\n";
                     text += "Post " + (end_time3 - start_time3).ToString() + " ms\n";
                     text += ailiaModel.EnvironmentName();
@@ -273,7 +273,6 @@ namespace ailiaSDK
         {
             float weight = 1f / 255f;
             float bias = 0;
-            bool rgbRepeats = false;
 
             // SRResNet : Channel First, RGB, /255f
             // RealESGGAN : Channel First, RGB, /255f
@@ -286,7 +285,7 @@ namespace ailiaSDK
             }
         }
 
-        void OutputDataProcessingCPU(ImageSuperResolutionModels superResolutionModels, float[] outputData, Color32[] pixelBuffer, Color32[] srcBuffer = null)
+        void OutputDataProcessingCPU(ImageSuperResolutionModels superResolutionModels, float[] outputData, Color32[] pixelBuffer)
         {
             for (int i = 0; i < pixelBuffer.Length; i++)
             {
