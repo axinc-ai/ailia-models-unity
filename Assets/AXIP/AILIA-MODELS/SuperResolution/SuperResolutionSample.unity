@@ -380,10 +380,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1393556304}
-  - component: {fileID: 1393556307}
   - component: {fileID: 1393556305}
+  - component: {fileID: 1393556306}
   m_Layer: 0
-  m_Name: ImageManipulationController
+  m_Name: SuperResolutionController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -415,7 +415,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 934c7647d29ea6d43a6a0acb71083453, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1393556307
+--- !u!114 &1393556306
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -424,15 +424,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1393556303}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d04b895a864ef04e89038752f3ea8b0, type: 3}
+  m_Script: {fileID: 11500000, guid: 6d6b32e58a74f4a009f9b0dd591e274a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  imageManipulationModels: 2
+  superResolutionModels: 2
   gpu_mode: 0
-  inputDataProcessingShader: {fileID: 7200000, guid: 4ad8a3eeb0183024b80805583ce4281a,
-    type: 3}
-  outputDataToTextureShader: {fileID: 7200000, guid: 3012291cfcecf1b48887939405da3641,
-    type: 3}
   UICanvas: {fileID: 1813464803}
   oneshot: 1
 --- !u!1001 &1813464802
