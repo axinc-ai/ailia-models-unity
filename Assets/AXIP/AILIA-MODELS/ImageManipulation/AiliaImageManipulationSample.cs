@@ -1,4 +1,4 @@
-/* AILIA Unity Plugin Detector Sample */
+/* AILIA Unity Plugin Image Manipulation Sample */
 /* Copyright 2018-2019 AXELL CORPORATION */
 
 using System;
@@ -12,13 +12,12 @@ namespace ailiaSDK
     {
         public enum ImageManipulationModels
         {
-            SRResNet,
             Noise2Noise,
             IlluminationCorrection,
             Colorization
         }
         //Settings
-        public ImageManipulationModels imageManipulationModels = ImageManipulationModels.SRResNet;
+        public ImageManipulationModels imageManipulationModels = ImageManipulationModels.Colorization;
         public bool gpu_mode = false;
         public ComputeShader inputDataProcessingShader = null;
         public ComputeShader outputDataToTextureShader = null;
@@ -293,11 +292,6 @@ namespace ailiaSDK
             string onnxName = "";
             switch (modelType)
             {
-                case ImageManipulationModels.SRResNet:
-                    serverFolderName = "srresnet";
-                    prototxtName = "srresnet.opt.onnx.prototxt";
-                    onnxName = "srresnet.opt.onnx";
-                    break;
                 case ImageManipulationModels.Noise2Noise:
                     serverFolderName = "noise2noise";
                     prototxtName = "noise2noise_gaussian.onnx.prototxt";
@@ -342,7 +336,6 @@ namespace ailiaSDK
 
             switch (imageSegmentaionModels)
             {
-                case ImageManipulationModels.SRResNet:
                 case ImageManipulationModels.Noise2Noise:
                     shape = ailiaModel.GetInputShape();
                     InputWidth = (int)shape.x;
@@ -407,9 +400,6 @@ namespace ailiaSDK
         {
             switch (imageManipulationModels)
             {
-                case ImageManipulationModels.SRResNet:
-                    ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageManipulation/SampleImage/lenna.png");
-                    break;
                 case ImageManipulationModels.Noise2Noise:
                     ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageManipulation/SampleImage/monarch-gaussian-noisy.png");
                     break;
