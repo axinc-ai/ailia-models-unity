@@ -197,6 +197,9 @@ namespace ailiaSDK
                 ailiaModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
             }
 
+            uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
+            ailiaModel.SetMemoryMode(memory_mode);
+
             AiliaDownload ailia_download = new AiliaDownload();
             ailia_download.DownloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel").gameObject;
             var urlList = new List<ModelDownloadURL>();
