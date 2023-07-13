@@ -428,7 +428,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   superResolutionModels: 2
-  gpu_mode: 1
+  gpu_mode: 0
   UICanvas: {fileID: 1813464803}
   oneshot: 1
 --- !u!1001 &1813464802
