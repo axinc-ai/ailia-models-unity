@@ -279,6 +279,12 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &688907547 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1813464802}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &900571246
 GameObject:
   m_ObjectHideFlags: 0
@@ -381,9 +387,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1393556304}
   - component: {fileID: 1393556305}
-  - component: {fileID: 1393556306}
   m_Layer: 0
-  m_Name: SuperResolutionController
+  m_Name: AudioProcessingController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -412,25 +417,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 1393556303}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 934c7647d29ea6d43a6a0acb71083453, type: 3}
+  m_Script: {fileID: 11500000, guid: 84ed1bc7841284baf90f2dbe353d00e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1393556306
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1393556303}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d6b32e58a74f4a009f9b0dd591e274a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  superResolutionModels: 2
-  gpu_mode: 1
-  UICanvas: {fileID: 1813464803}
-  oneshot: 1
+  line_panel: {fileID: 0}
+  lines: {fileID: 0}
+  line: {fileID: 0}
+  text_panel: {fileID: 0}
+  text_base: {fileID: 0}
+  ailiaModelType: 0
+  UICanvas: {fileID: 688907547}
+  gpu_mode: 0
+  mic_mode: 0
+  audio_clip: {fileID: 8300000, guid: 7a7fd51ca141746ee845ae5daab35fdb, type: 3}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -535,9 +534,3 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
---- !u!1 &1813464803 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
-    type: 3}
-  m_PrefabInstance: {fileID: 1813464802}
-  m_PrefabAsset: {fileID: 0}
