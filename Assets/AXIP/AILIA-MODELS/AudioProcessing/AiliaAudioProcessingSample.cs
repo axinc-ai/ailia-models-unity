@@ -22,6 +22,12 @@ namespace ailiaSDK {
 		[SerializeField]
 		private GameObject UICanvas = null;
 
+		//Mic
+		[SerializeField] private string m_DeviceName;
+		private AudioClip m_AudioClip;
+		private int m_LastAudioPos;
+		private int input_pointer = 0;
+
 		//Settings
 		[SerializeField]
 		private bool gpu_mode = false;
@@ -37,7 +43,7 @@ namespace ailiaSDK {
 		Text mode_text = null;
 
 		//Preview
-		private Texture2D preview_texture = null;
+		private Texture2D wave_texture = null;
 
 		//AILIA
 		private AiliaModel ailia_model = new AiliaModel();
@@ -82,9 +88,173 @@ namespace ailiaSDK {
 			ailia_model.Close();
 		}
 
+		private string targetDevice = "";
+
+		private void InitializeMic(){
+			if (m_AudioClip != null){
+				return;
+			}
+
+			if (mic_mode == false){
+				Debug.Log("=== Audio File Input ===");
+				m_AudioClip = audio_clip;
+				return;
+			}
+			
+			foreach (var device in Microphone.devices) {
+				Debug.Log($"Device Name: {device}");
+				if (m_DeviceName != "" && device.Contains(m_DeviceName)) {
+					targetDevice = device;
+				}
+			}
+
+			if (targetDevice == "" && Microphone.devices.Length >= 1){
+				targetDevice = Microphone.devices[0];
+			}
+			
+			Debug.Log($"=== Device Set: {targetDevice} ===");
+			if (targetDevice == ""){
+				m_AudioClip = null;
+			}else{
+				m_AudioClip = Microphone.Start(targetDevice, true, 10, 48000);
+			}
+
+			m_LastAudioPos = 0;
+		}
+
+		private void DestroyMic(){
+			if (m_AudioClip == null){
+				return;
+			}
+			if (mic_mode == true){
+				Microphone.End(targetDevice);
+				AudioClip.Destroy(m_AudioClip);
+			}
+			m_AudioClip = null;
+		}
+
+		// Get Pcm
+		float [] GetPcm(ref uint channels, ref uint frequency){
+			channels = (uint)m_AudioClip.channels;
+			frequency = (uint)m_AudioClip.frequency;
+
+			int input_step = (int)(Time.deltaTime * frequency);
+			if (input_step < 1){
+				input_step = 1;
+			}
+			float [] waveData = GetPcmCore(input_step);
+			if (mic_mode == true){
+				input_pointer += (int)(waveData.Length / channels);
+			}
+			return waveData;
+		}
+
+		float [] GetPcmCore(int input_step){
+			float [] waveData;
+			waveData = new float[0];
+			if (mic_mode == false){
+				if(input_pointer < m_AudioClip.samples){
+					if (input_pointer + input_step < m_AudioClip.samples){
+						waveData = new float[input_step * m_AudioClip.channels];
+						m_AudioClip.GetData(waveData, input_pointer);
+					}else{
+						waveData = new float[(m_AudioClip.samples - input_pointer) * m_AudioClip.channels];
+						m_AudioClip.GetData(waveData, input_pointer);
+					}
+					input_pointer = input_pointer + input_step;
+				}
+			}
+			if (mic_mode == true){
+				// from mic input
+				waveData = GetUpdatedMicAudio();
+			}
+			return waveData;
+		}
+
+		private float[] GetUpdatedMicAudio() {
+			float[] waveData = Array.Empty<float>();
+
+			if (m_AudioClip == null){
+				return waveData;
+			}
+
+			int nowAudioPos = Microphone.GetPosition(targetDevice);
+			
+			if (m_LastAudioPos < nowAudioPos) {
+				int audioCount = nowAudioPos - m_LastAudioPos;
+				waveData = new float[audioCount];
+				m_AudioClip.GetData(waveData, m_LastAudioPos);
+			} else if (m_LastAudioPos > nowAudioPos) {
+				int audioBuffer = m_AudioClip.samples * m_AudioClip.channels;
+				int audioCount = audioBuffer - m_LastAudioPos;
+				
+				float[] wave1 = new float[audioCount];
+				m_AudioClip.GetData(wave1, m_LastAudioPos);
+				
+				float[] wave2 = new float[nowAudioPos];
+				if (nowAudioPos != 0) {
+					m_AudioClip.GetData(wave2, 0);
+				}
+
+				waveData = new float[audioCount + nowAudioPos];
+				wave1.CopyTo(waveData, 0);
+				wave2.CopyTo(waveData, audioCount);
+			}
+
+			m_LastAudioPos = nowAudioPos;
+
+			return waveData;
+		}
+
+		private float[] displayWaveData = null;
+		private float[] displayConfData = null;
+
+		private void DisplayPreviewPcm(float [] waveData, float [] conf, uint channels){
+			Color32 [] colors = wave_texture.GetPixels32();
+			int steps = 10;
+			int w = wave_texture.width;
+			int h = wave_texture.height;
+			int buf_w = w * steps;
+
+			if (displayWaveData == null){
+				displayWaveData = new float[buf_w];
+				displayConfData = new float[buf_w];
+			}
+
+			int add_data_n = (int)(waveData.Length / channels);
+			int reuse_data_n = buf_w - add_data_n;
+			for (int i = 0; i < reuse_data_n; i++){
+				displayWaveData[i] = displayWaveData[i + (buf_w - reuse_data_n)];
+				displayConfData[i] = displayConfData[i + (buf_w - reuse_data_n)];
+			}
+			for (int i = reuse_data_n; i < buf_w; i++){
+				if (i >= 0){
+					displayWaveData[i] = waveData[(i - reuse_data_n) * channels];
+					displayConfData[i] = conf[(i - reuse_data_n) * channels];
+				}
+			}
+
+			for (int x = 0; x < w ; x++){
+				for (int y = 0; y < h ; y++){
+					colors[y*w+x] = new Color32(0,0,0,255);
+				}
+				int y2 = (int)(displayWaveData[x * steps] * h / 2 + h / 2);
+				if (y2 >= 0 && y2 < h){
+					colors[y2*w+x] = new Color32(0,255,0,255);
+				}
+				int y3 = (int)(displayConfData[x * steps] * h / 2 + h / 2);
+				if (y3 >= 0 && y3 < h){
+					colors[y3*w+x] = new Color32(255,0,0,255);
+				}
+			}
+			wave_texture.SetPixels32(colors);
+			wave_texture.Apply();
+		}
+
 		// Use this for initialization
 		void Start()
 		{
+			InitializeMic();
 			SetUIProperties();
 			CreateAiliaNetwork(ailiaModelType);
 		}
@@ -103,10 +273,10 @@ namespace ailiaSDK {
 			//Get camera image
 			int tex_width = 480;
 			int tex_height = 480;
-			if (preview_texture == null)
+			if (wave_texture == null)
 			{
-				preview_texture = new Texture2D(tex_width, tex_height);
-				raw_image.texture = preview_texture;
+				wave_texture = new Texture2D(tex_width, tex_height);
+				raw_image.texture = wave_texture;
 			}
 			Color32[] camera = new Color32[tex_width * tex_height];
 			
@@ -119,40 +289,20 @@ namespace ailiaSDK {
 				label_text.text = (end_time - start_time) + "ms\n" + ailia_model.EnvironmentName();
 			}
 
-			//Apply
-			preview_texture.SetPixels32(camera);
-			preview_texture.Apply();
-		}
+			// Get Mic Input
+			float[] waveData = null;
+			uint channels = 1;
+			uint frequency = 1;
+			waveData = GetPcm(ref channels, ref frequency);
 
-		/*
-		private void Classifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
-		{
-			//Convert to pixel domain
-			int x1 = (int)(box.x * tex_width);
-			int y1 = (int)(box.y * tex_height);
-			int x2 = (int)((box.x + box.w) * tex_width);
-			int y2 = (int)((box.y + box.h) * tex_height);
-
-			int w = (x2 - x1);
-			int h = (y2 - y1);
-
-			if (w <= 0 || h <= 0)
-			{
-				return;
+			float[] conf = new float[waveData.Length];
+			for (int i = 0; i < conf.Length; i++){
+				conf[i] = Mathf.Sin(Mathf.PI * i / frequency);
 			}
 
-			Color color = Color.white;
-			color = Color.HSVToRGB((float)box.category / category_n, 1.0f, 1.0f);
-			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
-
-			float p = (int)(box.prob * 100) / 100.0f;
-			string text = "";
-			text += classifierLabel[box.category];
-			text += " " + p;
-			int margin = 4;
-			DrawText(color, text, x1 + margin, y1 + margin, tex_width, tex_height);
+			// Preview
+			DisplayPreviewPcm(waveData, conf, channels);
 		}
-		*/
 
 		void SetUIProperties()
 		{
@@ -174,11 +324,13 @@ namespace ailiaSDK {
 
 		void OnApplicationQuit()
 		{
+			DestroyMic();
 			DestroyAiliaNetwork();
 		}
 
 		void OnDestroy()
 		{
+			DestroyMic();
 			DestroyAiliaNetwork();
 		}
 	}

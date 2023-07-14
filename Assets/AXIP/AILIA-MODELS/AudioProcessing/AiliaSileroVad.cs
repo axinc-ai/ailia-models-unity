@@ -15,12 +15,70 @@ namespace ailiaSDK
 {
 	public class AiliaSileroVad
 	{
-		public const int NUM_INPUTS = 4;
-		public const int NUM_OUTPUTS = 3;
+		private const int NUM_INPUTS = 4;
+		private const int NUM_OUTPUTS = 3;
 
-		// Update is called once per frame
-		public float[] VAD(AiliaModel ailia_model, float [] pcm)
+		private const int batch = 1;
+		private const int sequence = 1536;
+
+		private float[] input;
+		private float[] sr;
+		private float[] h;
+		private float[] c;
+
+		public AiliaSileroVad(){
+			ResetState();
+		}
+
+		public void ResetState(){
+			input = new float[batch * sequence];
+			sr = new float[1];
+			h = new float[2 * batch * 64];
+			c = new float[2 * batch * 64];
+		}
+
+		public List<float> VAD(AiliaModel ailia_model, float [] pcm, int nSamples, int sampleRate)
 		{
+			if (sampleRate != 16000 && sampleRate != 8000){
+				Debug.Log("Sample rate must be 16000 or 8000");
+				return null;
+			}
+			List<float> conf = new List<float>();
+			for (int s = 0; s < nSamples; s+=sequence){
+				for (int i = 0; i < input.Length; i++){
+					if (s + i < nSamples){
+						input[i] = pcm[s + i];
+					}else{
+						input[i] = 0;
+					}
+				}
+				sr[0] = sampleRate;
+
+				List<float[]> inputs = new List<float[]>();
+				inputs.Add(input);
+				inputs.Add(sr);
+				inputs.Add(h);
+				inputs.Add(c);
+
+				float[] output = new float[batch];
+				
+				List<float[]> outputs = new List<float[]>();
+
+				outputs.Add(output);
+				outputs.Add(h);
+				outputs.Add(c);
+
+				bool status = Forward(ailia_model, inputs, outputs);
+				if (status == false){
+					Debug.Log("Forward failed");
+					return null;
+				}
+
+				conf.Add(output[0]);
+			}
+
+			return conf;
+
 			/*
 			uint[] input_blobs = ailia_model.GetInputBlobList();
 			if (input_blobs != null)
@@ -67,143 +125,69 @@ namespace ailiaSDK
 			return null;
 		}
 
-/*
-		int forward(AILIANetwork *ailia, std::vector<float> *inputs[NUM_INPUTS], std::vector<float> *outputs[NUM_OUTPUTS]){
-			int status;
+		private bool Forward(AiliaModel ailia_model, List<float[]> inputs, List<float[]> outputs){
+			bool success;
+			
+			uint[] input_blobs = ailia_model.GetInputBlobList();
 
 			for (int i = 0; i < NUM_INPUTS; i++){
-				unsigned int input_blob_idx = 0;
-				status = ailiaGetBlobIndexByInputIndex(ailia, &input_blob_idx, i);
-				if (status != AILIA_STATUS_SUCCESS) {
-					setErrorDetail("ailiaGetBlobIndexByInputIndex", ailiaGetErrorDetail(ailia));
-					return status;
-				}
+				uint input_blob_idx = input_blobs[i];
 
-				AILIAShape sequence_shape;
-				int batch_size = 1;
+				Ailia.AILIAShape sequence_shape = new Ailia.AILIAShape();
 				if ( i == 0 ){
-					sequence_shape.x=inputs[i]->size() / batch_size;
-					sequence_shape.y=batch_size;
+					sequence_shape.x=(uint)inputs[i].Length / (uint)batch;
+					sequence_shape.y=(uint)batch;
 					sequence_shape.z=1;
 					sequence_shape.w=1;
 					sequence_shape.dim=2;
 				}
 				if ( i == 1 ){
-					sequence_shape.x=inputs[i]->size();
+					sequence_shape.x=(uint)inputs[i].Length;
 					sequence_shape.y=1;
 					sequence_shape.z=1;
 					sequence_shape.w=1;
 					sequence_shape.dim=1;
 				}
 				if ( i == 2 || i == 3){
-					sequence_shape.x=inputs[i]->size() / batch_size / 2;
-					sequence_shape.y=batch_size;
+					sequence_shape.x=(uint)inputs[i].Length / (uint)batch / 2;
+					sequence_shape.y=(uint)batch;
 					sequence_shape.z=2;
 					sequence_shape.w=1;
 					sequence_shape.dim=3;
 				}
-				if (debug){
-					printf("input blob shape %d %d %d %d dims %d\n",sequence_shape.x,sequence_shape.y,sequence_shape.z,sequence_shape.w,sequence_shape.dim);
-				}
 
-				status = ailiaSetInputBlobShape(ailia,&sequence_shape,input_blob_idx,AILIA_SHAPE_VERSION);
-				if(status!=AILIA_STATUS_SUCCESS){
-					setErrorDetail("ailiaSetInputBlobShape",ailiaGetErrorDetail(ailia));
-					return status;
+				success = ailia_model.SetInputBlobShape(sequence_shape, (int)input_blob_idx);
+				if (success == false){
+					Debug.Log("SetInputBlobShape failed");
+					return false;
 				}
-
-				if (inputs[i]->size() > 0){
-					status = ailiaSetInputBlobData(ailia, &(*inputs[i])[0], inputs[i]->size() * sizeof(float), input_blob_idx);
-					if (status != AILIA_STATUS_SUCCESS) {
-						setErrorDetail("ailiaSetInputBlobData",ailiaGetErrorDetail(ailia));
-						return status;
-					}
+				success = ailia_model.SetInputBlobData(inputs[i], (int)input_blob_idx);
+				if (success == false){
+					Debug.Log("SetInputBlobData failed");
+					return false;
 				}
 			}
 
-			status = ailiaUpdate(ailia);
-			if (status != AILIA_STATUS_SUCCESS) {
-				setErrorDetail("ailiaUpdate",ailiaGetErrorDetail(ailia));
-				return status;
+			success = ailia_model.Update();
+			if (success == false) {
+				Debug.Log("Update failed");
+				return false;
 			}
+
+			uint[] output_blobs = ailia_model.GetOutputBlobList();
 
 			for (int i = 0; i < NUM_OUTPUTS; i++){
-				unsigned int output_blob_idx = 0;
-				status = ailiaGetBlobIndexByOutputIndex(ailia, &output_blob_idx, i);
-				if (status != AILIA_STATUS_SUCCESS) {
-					setErrorDetail("ailiaGetBlobIndexByInputIndex",ailiaGetErrorDetail(ailia));
-					return status;
-				}
-
-				AILIAShape output_blob_shape;
-				status=ailiaGetBlobShape(ailia,&output_blob_shape,output_blob_idx,AILIA_SHAPE_VERSION);
-				if(status!=AILIA_STATUS_SUCCESS){
-					setErrorDetail("ailiaGetBlobShape", ailiaGetErrorDetail(ailia));
-					return status;
-				}
-
-				if (debug){
-					printf("output_blob_shape %d %d %d %d dims %d\n",output_blob_shape.x,output_blob_shape.y,output_blob_shape.z,output_blob_shape.w,output_blob_shape.dim);
-				}
-
-				(*outputs[i]).resize(output_blob_shape.x*output_blob_shape.y*output_blob_shape.z*output_blob_shape.w);
-
-				status =ailiaGetBlobData(ailia, &(*outputs[i])[0], outputs[i]->size() * sizeof(float), output_blob_idx);
-				if (status != AILIA_STATUS_SUCCESS) {
-					setErrorDetail("ailiaGetBlobData",ailiaGetErrorDetail(ailia));
-					return status;
-				}
-			}
-
-			return AILIA_STATUS_SUCCESS;
-		}
-
-		std::vector<float> calc_vad(AILIANetwork* net, std::vector<float> wave, int sampleRate, int nChannels, int nSamples)
-		{
-			int batch = 1;
-			int sequence = 1536;
-
-			std::vector<float> input(batch * sequence);
-			std::vector<float> sr(1);
-			std::vector<float> h(2 * batch * 64);
-			std::vector<float> c(2 * batch * 64);
-
-			std::vector<float> conf;
-
-			for (int s = 0; s < nSamples; s+=sequence){
-				for (int i = 0; i < input.size(); i++){
-					if (s + i < nSamples){
-						input[i] = wave[s + i];
-					}else{
-						input[i] = 0;
-					}
-				}
-				sr[0] = sampleRate;
-				if (debug){
-					PRINT_OUT("\n");
-				}
-
-				std::vector<float> *inputs[NUM_INPUTS];
-				inputs[0] = &input;
-				inputs[1] = &sr;
-				inputs[2] = &h;
-				inputs[3] = &c;
-
-				std::vector<float> output(batch);
+				uint output_blob_idx = output_blobs[i];
 				
-				std::vector<float> *outputs[NUM_OUTPUTS];
-				outputs[0] = &output;
-				outputs[1] = &h;
-				outputs[2] = &c;
-
-				forward(net, inputs, outputs);
-
-				conf.push_back(output[0]);
+				Ailia.AILIAShape output_blob_shape = ailia_model.GetBlobShape((int)output_blob_idx);
+				success = ailia_model.GetBlobData(outputs[i], (int)output_blob_idx);
+				if (success == false){
+					Debug.Log("GetBlobData failed");
+					return false;
+				}
 			}
 
-			return conf;
+			return true;
 		}
-*/
-
 	}
 }
