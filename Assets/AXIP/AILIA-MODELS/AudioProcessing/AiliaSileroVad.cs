@@ -26,6 +26,8 @@ namespace ailiaSDK
 		private float[] h;
 		private float[] c;
 
+		private float[] remain_pcm;
+
 		public AiliaSileroVad(){
 			ResetState();
 		}
@@ -35,94 +37,86 @@ namespace ailiaSDK
 			sr = new float[1];
 			h = new float[2 * batch * 64];
 			c = new float[2 * batch * 64];
+			remain_pcm = new float[0];
 		}
 
-		public List<float> VAD(AiliaModel ailia_model, float [] pcm, int nSamples, int sampleRate)
+		public class VadResult{
+			public float [] pcm;
+			public float [] conf;
+		};
+
+		public VadResult VAD(AiliaModel ailia_model, float [] add_pcm, int sampleRate)
 		{
-			if (sampleRate != 16000 && sampleRate != 8000){
-				Debug.Log("Sample rate must be 16000 or 8000");
-				return null;
+			// New buffer
+			float [] pcm = new float [remain_pcm.Length + add_pcm.Length];
+			for (int i = 0; i < remain_pcm.Length; i++){
+				pcm[i] = remain_pcm[i];
 			}
-			List<float> conf = new List<float>();
-			for (int s = 0; s < nSamples; s+=sequence){
+			for (int i = 0; i < add_pcm.Length; i++){
+				pcm[i + remain_pcm.Length] = add_pcm[i];
+			}
+
+			// Create Inference Buffer
+			List<float[]> inputs = new List<float[]>();
+			inputs.Add(input);
+			inputs.Add(sr);
+			inputs.Add(h);
+			inputs.Add(c);
+
+			float[] output = new float[batch];
+				
+			List<float[]> outputs = new List<float[]>();
+			outputs.Add(output);
+			outputs.Add(h);
+			outputs.Add(c);
+
+			// Step Loop
+			int targetSampleRate = 16000;
+			float [] conf = new float[pcm.Length];
+			int steps = sequence * sampleRate / targetSampleRate;
+			int s;
+			for (s = 0; s < pcm.Length - steps; s+=steps){
+				// Resampling to targetSampleRate
 				for (int i = 0; i < input.Length; i++){
-					if (s + i < nSamples){
-						input[i] = pcm[s + i];
+					int i2 = i * sampleRate / targetSampleRate;
+					if (s + i2 < pcm.Length){
+						input[i] = pcm[s + i2];
 					}else{
 						input[i] = 0;
 					}
 				}
-				sr[0] = sampleRate;
+				sr[0] = targetSampleRate;
 
-				List<float[]> inputs = new List<float[]>();
-				inputs.Add(input);
-				inputs.Add(sr);
-				inputs.Add(h);
-				inputs.Add(c);
-
-				float[] output = new float[batch];
-				
-				List<float[]> outputs = new List<float[]>();
-
-				outputs.Add(output);
-				outputs.Add(h);
-				outputs.Add(c);
-
+				// Inference
 				bool status = Forward(ailia_model, inputs, outputs);
 				if (status == false){
 					Debug.Log("Forward failed");
 					return null;
 				}
 
-				conf.Add(output[0]);
+				// Fill Confidence
+				for (int i = s; i < s + steps; i++){
+					conf[i] = output[0];
+				}
 			}
 
-			return conf;
-
-			/*
-			uint[] input_blobs = ailia_model.GetInputBlobList();
-			if (input_blobs != null)
-			{
-				bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
-				if (!success)
-				{
-					Debug.Log("Can not SetInputBlobData");
-				}
-
-				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				ailia_model.Update();
-
-				List<FaceInfo> detections = null;
-
-				uint[] output_blobs = ailia_model.GetOutputBlobList();
-				if (output_blobs != null && output_blobs.Length >= 2)
-				{
-					Ailia.AILIAShape box_shape = ailia_model.GetBlobShape((int)output_blobs[0]);
-					Ailia.AILIAShape score_shape = ailia_model.GetBlobShape((int)output_blobs[1]);
-
-					if (box_shape != null && score_shape != null)
-					{
-						float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
-						float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
-
-						if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
-								ailia_model.GetBlobData(score_data, (int)output_blobs[1]))
-						{
-							float aspect = (float)tex_width / tex_height;
-							detections = PostProcess(box_data, box_shape, score_data, score_shape, w, h, aspect);
-						}
-					}
-				}
-
-				if (detections != null)
-				{
-					detections = WeightedNonMaxSuppression(detections);
-					//Debug.Log("Num faces: " + detections.Count);
-				}
-				return detections;
+			// Save tail for next inference
+			int tail = pcm.Length - s;
+			remain_pcm = new float[tail];
+			float [] processed = new float[s];
+			for (int i = 0; i < s; i++){
+				processed[i] = pcm[i];
 			}
-			*/
-			return null;
+			for (int i = s; i < pcm.Length; i++){
+				remain_pcm[i - s] = pcm[i];
+			}
+
+			// Return value
+			VadResult buf = new VadResult();
+			buf.pcm = processed;
+			buf.conf = conf;
+
+			return buf;
 		}
 
 		private bool Forward(AiliaModel ailia_model, List<float[]> inputs, List<float[]> outputs){

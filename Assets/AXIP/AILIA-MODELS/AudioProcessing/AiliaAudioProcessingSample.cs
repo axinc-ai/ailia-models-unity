@@ -238,13 +238,15 @@ namespace ailiaSDK {
 				for (int y = 0; y < h ; y++){
 					colors[y*w+x] = new Color32(0,0,0,255);
 				}
+				int y3 = (int)(displayConfData[x * steps] * h);
+				if (y3 >= 0 && y3 < h){
+					for (int y = 0; y < y3 ; y++){
+						colors[y*w+x] = new Color32(255,0,0,255);
+					}
+				}
 				int y2 = (int)(displayWaveData[x * steps] * h / 2 + h / 2);
 				if (y2 >= 0 && y2 < h){
 					colors[y2*w+x] = new Color32(0,255,0,255);
-				}
-				int y3 = (int)(displayConfData[x * steps] * h / 2 + h / 2);
-				if (y3 >= 0 && y3 < h){
-					colors[y3*w+x] = new Color32(255,0,0,255);
 				}
 			}
 			wave_texture.SetPixels32(colors);
@@ -280,28 +282,23 @@ namespace ailiaSDK {
 			}
 			Color32[] camera = new Color32[tex_width * tex_height];
 			
-			//Detection
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-
-			if (label_text != null)
-			{
-				label_text.text = (end_time - start_time) + "ms\n" + ailia_model.EnvironmentName();
-			}
-
 			// Get Mic Input
 			float[] waveData = null;
 			uint channels = 1;
 			uint frequency = 1;
 			waveData = GetPcm(ref channels, ref frequency);
 
-			float[] conf = new float[waveData.Length];
-			for (int i = 0; i < conf.Length; i++){
-				conf[i] = Mathf.Sin(Mathf.PI * i / frequency);
+			// VAD
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(ailia_model, waveData, (int)frequency);
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			if (label_text != null)
+			{
+				label_text.text = (end_time - start_time) + "ms\n" + ailia_model.EnvironmentName();
 			}
 
 			// Preview
-			DisplayPreviewPcm(waveData, conf, channels);
+			DisplayPreviewPcm(vad_result.pcm, vad_result.conf, channels);
 		}
 
 		void SetUIProperties()
