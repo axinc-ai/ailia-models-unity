@@ -22,12 +22,6 @@ namespace ailiaSDK {
 		[SerializeField]
 		private GameObject UICanvas = null;
 
-		//Mic
-		[SerializeField] private string m_DeviceName;
-		private AudioClip m_AudioClip;
-		private int m_LastAudioPos;
-		private int input_pointer = 0;
-
 		//Settings
 		[SerializeField]
 		private bool gpu_mode = false;
@@ -46,8 +40,8 @@ namespace ailiaSDK {
 		private Texture2D wave_texture = null;
 
 		//AILIA
-		private AiliaModel ailia_model = new AiliaModel();
 		private AiliaSileroVad ailia_vad = new AiliaSileroVad();
+		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
 
 		private AiliaDownload ailia_download = new AiliaDownload();
 
@@ -58,10 +52,6 @@ namespace ailiaSDK {
 		{
 			string asset_path = Application.temporaryCachePath;
 			var urlList = new List<ModelDownloadURL>();
-			if (gpu_mode)
-			{
-				ailia_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-			}
 			switch (modelType)
 			{
 				case AudioProcessingModels.silero_vad:
@@ -72,7 +62,7 @@ namespace ailiaSDK {
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						FileOpened = ailia_model.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx");
+						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 					}));
 
 					break;
@@ -82,129 +72,10 @@ namespace ailiaSDK {
 			}
 		}
 
-
 		private void DestroyAiliaNetwork()
 		{
-			ailia_model.Close();
-		}
-
-		private string targetDevice = "";
-
-		private void InitializeMic(){
-			if (m_AudioClip != null){
-				return;
-			}
-
-			if (mic_mode == false){
-				Debug.Log("=== Audio File Input ===");
-				m_AudioClip = audio_clip;
-				return;
-			}
-			
-			foreach (var device in Microphone.devices) {
-				Debug.Log($"Device Name: {device}");
-				if (m_DeviceName != "" && device.Contains(m_DeviceName)) {
-					targetDevice = device;
-				}
-			}
-
-			if (targetDevice == "" && Microphone.devices.Length >= 1){
-				targetDevice = Microphone.devices[0];
-			}
-			
-			Debug.Log($"=== Device Set: {targetDevice} ===");
-			if (targetDevice == ""){
-				m_AudioClip = null;
-			}else{
-				m_AudioClip = Microphone.Start(targetDevice, true, 10, 48000);
-			}
-
-			m_LastAudioPos = 0;
-		}
-
-		private void DestroyMic(){
-			if (m_AudioClip == null){
-				return;
-			}
-			if (mic_mode == true){
-				Microphone.End(targetDevice);
-				AudioClip.Destroy(m_AudioClip);
-			}
-			m_AudioClip = null;
-		}
-
-		// Get Pcm
-		float [] GetPcm(ref uint channels, ref uint frequency){
-			channels = (uint)m_AudioClip.channels;
-			frequency = (uint)m_AudioClip.frequency;
-
-			int input_step = (int)(Time.deltaTime * frequency);
-			if (input_step < 1){
-				input_step = 1;
-			}
-			float [] waveData = GetPcmCore(input_step);
-			if (mic_mode == true){
-				input_pointer += (int)(waveData.Length / channels);
-			}
-			return waveData;
-		}
-
-		float [] GetPcmCore(int input_step){
-			float [] waveData;
-			waveData = new float[0];
-			if (mic_mode == false){
-				if(input_pointer < m_AudioClip.samples){
-					if (input_pointer + input_step < m_AudioClip.samples){
-						waveData = new float[input_step * m_AudioClip.channels];
-						m_AudioClip.GetData(waveData, input_pointer);
-					}else{
-						waveData = new float[(m_AudioClip.samples - input_pointer) * m_AudioClip.channels];
-						m_AudioClip.GetData(waveData, input_pointer);
-					}
-					input_pointer = input_pointer + input_step;
-				}
-			}
-			if (mic_mode == true){
-				// from mic input
-				waveData = GetUpdatedMicAudio();
-			}
-			return waveData;
-		}
-
-		private float[] GetUpdatedMicAudio() {
-			float[] waveData = Array.Empty<float>();
-
-			if (m_AudioClip == null){
-				return waveData;
-			}
-
-			int nowAudioPos = Microphone.GetPosition(targetDevice);
-			
-			if (m_LastAudioPos < nowAudioPos) {
-				int audioCount = nowAudioPos - m_LastAudioPos;
-				waveData = new float[audioCount];
-				m_AudioClip.GetData(waveData, m_LastAudioPos);
-			} else if (m_LastAudioPos > nowAudioPos) {
-				int audioBuffer = m_AudioClip.samples * m_AudioClip.channels;
-				int audioCount = audioBuffer - m_LastAudioPos;
-				
-				float[] wave1 = new float[audioCount];
-				m_AudioClip.GetData(wave1, m_LastAudioPos);
-				
-				float[] wave2 = new float[nowAudioPos];
-				if (nowAudioPos != 0) {
-					m_AudioClip.GetData(wave2, 0);
-				}
-
-				waveData = new float[audioCount + nowAudioPos];
-				wave1.CopyTo(waveData, 0);
-				wave2.CopyTo(waveData, audioCount);
-			}
-
-			m_LastAudioPos = nowAudioPos;
-
-			return waveData;
-		}
+			ailia_vad.Close();
+		}		
 
 		private float[] displayWaveData = null;
 		private float[] displayConfData = null;
@@ -256,7 +127,7 @@ namespace ailiaSDK {
 		// Use this for initialization
 		void Start()
 		{
-			InitializeMic();
+			ailia_mic.InitializeMic(mic_mode, audio_clip);
 			SetUIProperties();
 			CreateAiliaNetwork(ailiaModelType);
 		}
@@ -280,21 +151,20 @@ namespace ailiaSDK {
 				wave_texture = new Texture2D(tex_width, tex_height);
 				raw_image.texture = wave_texture;
 			}
-			Color32[] camera = new Color32[tex_width * tex_height];
 			
 			// Get Mic Input
 			float[] waveData = null;
 			uint channels = 1;
 			uint frequency = 1;
-			waveData = GetPcm(ref channels, ref frequency);
+			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
 			// VAD
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(ailia_model, waveData, (int)frequency);
+			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)frequency);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 			if (label_text != null)
 			{
-				label_text.text = (end_time - start_time) + "ms\n" + ailia_model.EnvironmentName();
+				label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 			}
 
 			// Preview
@@ -321,13 +191,13 @@ namespace ailiaSDK {
 
 		void OnApplicationQuit()
 		{
-			DestroyMic();
+			ailia_mic.DestroyMic();
 			DestroyAiliaNetwork();
 		}
 
 		void OnDestroy()
 		{
-			DestroyMic();
+			ailia_mic.DestroyMic();
 			DestroyAiliaNetwork();
 		}
 	}

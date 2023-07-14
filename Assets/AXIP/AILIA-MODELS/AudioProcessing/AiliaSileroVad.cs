@@ -27,9 +27,27 @@ namespace ailiaSDK
 		private float[] c;
 
 		private float[] remain_pcm;
+		private AiliaModel ailia_model = new AiliaModel();
 
 		public AiliaSileroVad(){
 			ResetState();
+		}
+
+		public bool OpenFile(string stream, string weight, bool gpu_mode){
+			Close();
+			if (gpu_mode)
+			{
+				ailia_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+			}
+			return ailia_model.OpenFile(stream, weight);
+		}
+
+		public void Close(){
+			ailia_model.Close();
+		}
+
+		public string EnvironmentName(){
+			return ailia_model.EnvironmentName();
 		}
 
 		public void ResetState(){
@@ -45,7 +63,7 @@ namespace ailiaSDK
 			public float [] conf;
 		};
 
-		public VadResult VAD(AiliaModel ailia_model, float [] add_pcm, int sampleRate)
+		public VadResult VAD(float [] add_pcm, int sampleRate)
 		{
 			// New buffer
 			float [] pcm = new float [remain_pcm.Length + add_pcm.Length];
@@ -88,7 +106,7 @@ namespace ailiaSDK
 				sr[0] = targetSampleRate;
 
 				// Inference
-				bool status = Forward(ailia_model, inputs, outputs);
+				bool status = Forward(inputs, outputs);
 				if (status == false){
 					Debug.Log("Forward failed");
 					return null;
@@ -119,7 +137,7 @@ namespace ailiaSDK
 			return buf;
 		}
 
-		private bool Forward(AiliaModel ailia_model, List<float[]> inputs, List<float[]> outputs){
+		private bool Forward(List<float[]> inputs, List<float[]> outputs){
 			bool success;
 			
 			uint[] input_blobs = ailia_model.GetInputBlobList();
