@@ -12,6 +12,7 @@ using UnityEngine.UI;
 
 namespace ailiaSDK {
 	public class AiliaAudioProcessingSample : AiliaRenderer {
+		//Models
 		public enum AudioProcessingModels
 		{
 			silero_vad,
@@ -28,8 +29,15 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool mic_mode = false;
 
-		//Target
+		//Input Audio Clip
 		public AudioClip audio_clip = null;
+
+		//Output VAD Audio Clip
+		private List<AudioClip> vad_audio_clip = new List<AudioClip>();
+		private List<AudioClip> vad_audio_clip_play_list = new List<AudioClip>();
+
+		//Output Audio Source
+		public AudioSource audio_source = null;
 
 		//Result
 		RawImage raw_image = null;
@@ -42,10 +50,10 @@ namespace ailiaSDK {
 		//AILIA
 		private AiliaSileroVad ailia_vad = new AiliaSileroVad();
 		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
-
-		private AiliaDownload ailia_download = new AiliaDownload();
+		private AiliaSplitAudio ailia_split = new AiliaSplitAudio();
 
 		// AILIA open file
+		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
 
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
@@ -77,15 +85,17 @@ namespace ailiaSDK {
 			ailia_vad.Close();
 		}		
 
+		// Display pcm and vad confidence value
 		private float[] displayWaveData = null;
 		private float[] displayConfData = null;
 
-		private void DisplayPreviewPcm(float [] waveData, float [] conf, uint channels){
-			Color32 [] colors = wave_texture.GetPixels32();
+		private void DisplayPreviewPcm(Color32 [] colors, float [] waveData, float [] conf, uint channels){
 			int steps = 10;
 			int w = wave_texture.width;
-			int h = wave_texture.height;
+			int h = wave_texture.height / 4;
+			int original_h = wave_texture.height;
 			int buf_w = w * steps;
+			int offset_y = 3 * h;
 
 			if (displayWaveData == null){
 				displayWaveData = new float[buf_w];
@@ -106,22 +116,46 @@ namespace ailiaSDK {
 			}
 
 			for (int x = 0; x < w ; x++){
-				for (int y = 0; y < h ; y++){
+				for (int y = 0; y < original_h ; y++){
 					colors[y*w+x] = new Color32(0,0,0,255);
 				}
 				int y3 = (int)(displayConfData[x * steps] * h);
 				if (y3 >= 0 && y3 < h){
 					for (int y = 0; y < y3 ; y++){
-						colors[y*w+x] = new Color32(255,0,0,255);
+						colors[(y+offset_y)*w+x] = new Color32(255,0,0,255);
 					}
 				}
 				int y2 = (int)(displayWaveData[x * steps] * h / 2 + h / 2);
 				if (y2 >= 0 && y2 < h){
-					colors[y2*w+x] = new Color32(0,255,0,255);
+					colors[(y2+offset_y)*w+x] = new Color32(0,255,0,255);
 				}
 			}
-			wave_texture.SetPixels32(colors);
-			wave_texture.Apply();
+		}
+
+		// Display splitted audio clip
+		private void DisplayVadAudioClip(Color32 [] colors, AudioClip clip, int i, int count){
+			float [] buf = new float[clip.channels * clip.samples];
+			clip.GetData(buf, 0);
+
+			int w = wave_texture.width;
+			int div = count;
+			if (div < 3){
+				div = 3;
+			}
+			int h = (wave_texture.height - wave_texture.height/4) / div;
+			int steps = clip.samples / w;
+			if (steps < 1){
+				steps = 1;
+			}
+			int offset_y = 3 * wave_texture.height/4 - (i + 1) * h;
+			int buf_w = w * steps;
+
+			for (int x = 0; x < w ; x++){
+				int y2 = (int)(buf[x * steps] * h / 2 + h / 2);
+				if (y2 >= 0 && y2 < h){
+					colors[(offset_y + y2)*w+x] = new Color32(0,255,0,255);
+				}
+			}
 		}
 
 		// Use this for initialization
@@ -160,15 +194,36 @@ namespace ailiaSDK {
 
 			// VAD
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)frequency);
+			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)channels, (int)frequency);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 			if (label_text != null)
 			{
 				label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 			}
 
+			// Split
+			ailia_split.Split(vad_result);
+			if (ailia_split.GetAudioClipCount() > 0){
+				AudioClip clip = ailia_split.PopAudioClip();
+				vad_audio_clip.Add(clip);
+				vad_audio_clip_play_list.Add(clip);
+			}
+
+			// Play
+			if (!audio_source.isPlaying && vad_audio_clip_play_list.Count > 0){
+				AudioClip clip = vad_audio_clip_play_list[0];
+				vad_audio_clip_play_list.RemoveAt(0);
+				audio_source.PlayOneShot(clip);
+			}
+			
 			// Preview
-			DisplayPreviewPcm(vad_result.pcm, vad_result.conf, channels);
+			Color32 [] colors = wave_texture.GetPixels32();
+			DisplayPreviewPcm(colors, vad_result.pcm, vad_result.conf, channels);
+			for (int i = 0; i < vad_audio_clip.Count; i++){
+				DisplayVadAudioClip(colors, vad_audio_clip[i], i, vad_audio_clip.Count);
+			}
+			wave_texture.SetPixels32(colors);
+			wave_texture.Apply();
 		}
 
 		void SetUIProperties()

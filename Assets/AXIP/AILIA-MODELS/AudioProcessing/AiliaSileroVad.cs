@@ -15,24 +15,39 @@ namespace ailiaSDK
 {
 	public class AiliaSileroVad
 	{
+		// Model config
 		private const int NUM_INPUTS = 4;
 		private const int NUM_OUTPUTS = 3;
 
+		// Model input parameter
 		private const int batch = 1;
 		private const int sequence = 1536;
 
+		// Inference buffer
 		private float[] input;
 		private float[] sr;
 		private float[] h;
 		private float[] c;
 
+		// Audio queue
 		private float[] remain_pcm;
+
+		// Model
 		private AiliaModel ailia_model = new AiliaModel();
 
+		// Result
+		public class VadResult{
+			public float [] pcm;	// input pcm
+			public float [] conf;	// output confidence
+			public int sampleRate;	// input sampling rate (Hz)
+		};
+
+		// Constructer
 		public AiliaSileroVad(){
 			ResetState();
 		}
 
+		// Open model from onnx file
 		public bool OpenFile(string stream, string weight, bool gpu_mode){
 			Close();
 			if (gpu_mode)
@@ -42,14 +57,17 @@ namespace ailiaSDK
 			return ailia_model.OpenFile(stream, weight);
 		}
 
+		// Close model
 		public void Close(){
 			ailia_model.Close();
 		}
 
+		// Get backend environment name
 		public string EnvironmentName(){
 			return ailia_model.EnvironmentName();
 		}
 
+		// Reset internal state
 		public void ResetState(){
 			input = new float[batch * sequence];
 			sr = new float[1];
@@ -58,13 +76,14 @@ namespace ailiaSDK
 			remain_pcm = new float[0];
 		}
 
-		public class VadResult{
-			public float [] pcm;
-			public float [] conf;
-		};
-
-		public VadResult VAD(float [] add_pcm, int sampleRate)
+		// Feed pcm to VAD logic (channels must be 1, sampleRate is automatically resampled for VAD)
+		public VadResult VAD(float [] add_pcm, int channels, int sampleRate)
 		{
+			if (channels != 1){
+				Debug.Log("channel must be 1");
+				return null;
+			}
+
 			// New buffer
 			float [] pcm = new float [remain_pcm.Length + add_pcm.Length];
 			for (int i = 0; i < remain_pcm.Length; i++){
@@ -133,13 +152,16 @@ namespace ailiaSDK
 			VadResult buf = new VadResult();
 			buf.pcm = processed;
 			buf.conf = conf;
+			buf.sampleRate = sampleRate;
 
 			return buf;
 		}
 
+		// Infer one frame using ailia SDK
 		private bool Forward(List<float[]> inputs, List<float[]> outputs){
 			bool success;
 			
+			// Set input blob shape and set input blob data
 			uint[] input_blobs = ailia_model.GetInputBlobList();
 
 			for (int i = 0; i < NUM_INPUTS; i++){
@@ -180,12 +202,14 @@ namespace ailiaSDK
 				}
 			}
 
+			// Inference
 			success = ailia_model.Update();
 			if (success == false) {
 				Debug.Log("Update failed");
 				return false;
 			}
 
+			// Get outpu blob shape and get output blob data
 			uint[] output_blobs = ailia_model.GetOutputBlobList();
 
 			for (int i = 0; i < NUM_OUTPUTS; i++){
