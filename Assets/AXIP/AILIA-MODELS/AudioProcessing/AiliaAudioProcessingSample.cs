@@ -193,9 +193,9 @@ namespace ailiaSDK {
 			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
 			// VAD
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)channels, (int)frequency);
-			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (label_text != null)
 			{
 				label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
