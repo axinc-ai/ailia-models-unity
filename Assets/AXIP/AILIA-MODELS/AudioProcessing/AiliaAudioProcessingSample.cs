@@ -41,9 +41,10 @@ namespace ailiaSDK {
 		public AudioSource audio_source = null;
 
 		//Result
-		RawImage raw_image = null;
-		Text label_text = null;
-		Text mode_text = null;
+		private RawImage raw_image = null;
+		private Text label_text = null;
+		private Text mode_text = null;
+		private long rvc_time = 0;
 
 		//Preview
 		private Texture2D wave_texture = null;
@@ -80,16 +81,16 @@ namespace ailiaSDK {
 	
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "hubert_base.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "hubert_base.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx" });
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 						if (FileOpened == true){
-							FileOpened = ailia_rvc.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
+							FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", gpu_mode);
 						}
 					}));
 					break;
@@ -213,12 +214,16 @@ namespace ailiaSDK {
 			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
 			// VAD
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)channels, (int)frequency);
-			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (label_text != null)
 			{
-				label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
+				if (ailiaModelType == AudioProcessingModels.rvc){
+					label_text.text = "vad " + (end_time - start_time) + "ms\nrvc " + rvc_time + "ms\n" + ailia_vad.EnvironmentName();
+				}else{
+					label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
+				}
 			}
 
 			// Split
@@ -226,7 +231,10 @@ namespace ailiaSDK {
 			if (ailia_split.GetAudioClipCount() > 0){
 				AudioClip clip = ailia_split.PopAudioClip();
 				if (ailiaModelType == AudioProcessingModels.rvc){
+					long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 					clip = ailia_rvc.Process(clip);
+					long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+					rvc_time = end_time2 - start_time2;
 				}
 				vad_audio_clip.Add(clip);
 				vad_audio_clip_play_list.Add(clip);
