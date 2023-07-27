@@ -19,7 +19,9 @@ namespace ailiaSDK
 		private const int BATCH_SIZE = 1;
 		private const int FEAT_SIZE = 256;
 		private const int RND_SIZE = 192;
-
+		private const int T_PAD = 48000;
+		private const int T_PAD_TGT = 120000;
+		
 		// Model
 		private AiliaModel hubert_model = new AiliaModel();
 		private AiliaModel vc_model = new AiliaModel();
@@ -67,8 +69,6 @@ namespace ailiaSDK
 			float[] hubert_input = new float[GetSamples(clip)];
 			float[] hubert_padding_mask = new float[hubert_input.Length]; // zeros
 
-			float[] hubert_output = new float[BATCH_SIZE];
-
 			Resample(hubert_input, hubert_padding_mask, clip);
 
 			// Create Inference Buffer
@@ -76,15 +76,9 @@ namespace ailiaSDK
 			hubert_inputs.Add(hubert_input);
 			hubert_inputs.Add(hubert_padding_mask);
 			
-			List<float[]> hubert_outputs = new List<float[]>();
-			hubert_outputs.Add(hubert_output);
-
 			// Hubert Inference
-			bool status = Forward(hubert_model, hubert_inputs, hubert_outputs, true);
-			if (status == false){
-				Debug.Log("Forward failed");
-				return null;
-			}
+			List<float[]> hubert_outputs = Forward(hubert_model, hubert_inputs, true);
+			float [] hubert_output = hubert_outputs[0];
 
 			// Interpolate
 			float [] feats = Interpolate(hubert_output);
@@ -95,8 +89,6 @@ namespace ailiaSDK
 			float [] p_len = new float[1];
 			float [] sid = new float[1];
 			float [] rnd = new float[RND_SIZE * len];
-
-			float[] vc_output = new float[BATCH_SIZE];
 
 			p_len[0] = len;
 			sid[0] = 0;
@@ -109,32 +101,42 @@ namespace ailiaSDK
 			vc_inputs.Add(sid);
 			vc_inputs.Add(rnd);
 				
-			List<float[]> vc_outputs = new List<float[]>();
-			vc_outputs.Add(vc_output);
-
-			Forward(vc_model, vc_inputs, vc_outputs, false);
+			List<float[]> vc_outputs = Forward(vc_model, vc_inputs, false);
+			float [] vc_output = vc_outputs[0];
 
 			// Prevent overflow
 			Clip(vc_output);
 
+			// Trim
+			float[] trm = new float[vc_output.Length - T_PAD_TGT*2];
+			for (int i = 0; i < trm.Length; i++){
+				trm[i] = vc_output[i + T_PAD_TGT];
+			}
+
 			// Create new Audio Clip
-			AudioClip newClip = AudioClip.Create("Segment", vc_output.Length, 1, 40000, false);
-			newClip.SetData(vc_output, 0);
+			AudioClip newClip = AudioClip.Create("Segment", trm.Length, 1, 40000, false);
+			newClip.SetData(trm, 0);
 			return newClip;
 		}
 
 		// Resampler
 		private void Resample(float [] hubert_input, float [] hubert_padding_mask, AudioClip clip){
+			// Get PCM
 			float [] pcm = new float[clip.samples * clip.channels];
 			clip.GetData(pcm, 0);
 			int sampleRate = clip.frequency;
 			int targetSampleRate = 16000;
-			float [] conf = new float[pcm.Length];
 
 			// Resampling to targetSampleRate
 			for (int i = 0; i < hubert_input.Length; i++){
-				int i2 = i * sampleRate / targetSampleRate;
-				if (i2 < pcm.Length){
+				int i2 = i * sampleRate / targetSampleRate - T_PAD;
+				if (i2 < 0){
+					i2 = -i2;// reflection
+				}
+				if (i2 >= pcm.Length){
+					i2 = pcm.Length- (i2 - pcm.Length);
+				}
+				if (i2 >= 0 && i2 < pcm.Length){
 					hubert_input[i] = pcm[i2];
 				}else{
 					hubert_input[i] = 0;
@@ -146,7 +148,7 @@ namespace ailiaSDK
 		private int GetSamples(AudioClip clip){
 			int sampleRate = clip.frequency;
 			int targetSampleRate = 16000;
-			return clip.samples * targetSampleRate / sampleRate;
+			return clip.samples * targetSampleRate / sampleRate + T_PAD * 2;
 		}
 
 		// Interpolate
@@ -192,8 +194,9 @@ namespace ailiaSDK
 		}
 
 		// Infer one frame using ailia SDK
-		private bool Forward(AiliaModel ailia_model, List<float[]> inputs, List<float[]> outputs, bool hubert){
+		private List<float[]> Forward(AiliaModel ailia_model, List<float[]> inputs, bool hubert){
 			bool success;
+			List<float[]> outputs = new List<float[]>();
 			
 			// Set input blob shape and set input blob data
 			uint[] input_blobs = ailia_model.GetInputBlobList();
@@ -224,23 +227,25 @@ namespace ailiaSDK
 						sequence_shape.dim=1;
 					}
 					if ( i == 3){
-						sequence_shape.x=(uint)inputs[i].Length / FEAT_SIZE / (uint)BATCH_SIZE;
-						sequence_shape.y=FEAT_SIZE;
+						sequence_shape.x=(uint)inputs[i].Length / RND_SIZE / (uint)BATCH_SIZE;
+						sequence_shape.y=RND_SIZE;
 						sequence_shape.z=(uint)BATCH_SIZE;
 						sequence_shape.w=1;
 						sequence_shape.dim=3;
 					}
 				}
 
+				Debug.Log("Input "+i+" Shape "+sequence_shape.w+","+sequence_shape.z+","+sequence_shape.y+","+sequence_shape.x+" dim "+sequence_shape.dim);
+
 				success = ailia_model.SetInputBlobShape(sequence_shape, (int)input_blob_idx);
 				if (success == false){
 					Debug.Log("SetInputBlobShape failed");
-					return false;
+					return null;
 				}
 				success = ailia_model.SetInputBlobData(inputs[i], (int)input_blob_idx);
 				if (success == false){
 					Debug.Log("SetInputBlobData failed");
-					return false;
+					return null;
 				}
 			}
 
@@ -248,24 +253,29 @@ namespace ailiaSDK
 			success = ailia_model.Update();
 			if (success == false) {
 				Debug.Log("Update failed");
-				return false;
+				return null;
 			}
 
 			// Get outpu blob shape and get output blob data
 			uint[] output_blobs = ailia_model.GetOutputBlobList();
-
-			for (int i = 0; i < outputs.Count; i++){
+			for (int i = 0; i < output_blobs.Length; i++){
 				uint output_blob_idx = output_blobs[i];
 				
 				Ailia.AILIAShape output_blob_shape = ailia_model.GetBlobShape((int)output_blob_idx);
-				success = ailia_model.GetBlobData(outputs[i], (int)output_blob_idx);
+				Debug.Log("Output "+i+" Shape "+output_blob_shape.w+","+output_blob_shape.z+","+output_blob_shape.y+","+output_blob_shape.x+" dim "+output_blob_shape.dim);
+
+				float [] output = new float[output_blob_shape.x * output_blob_shape.y * output_blob_shape.z * output_blob_shape.w];
+
+				success = ailia_model.GetBlobData(output, (int)output_blob_idx);
 				if (success == false){
 					Debug.Log("GetBlobData failed");
-					return false;
+					return null;
 				}
+
+				outputs.Add(output);
 			}
 
-			return true;
+			return outputs;
 		}
 	}
 }
