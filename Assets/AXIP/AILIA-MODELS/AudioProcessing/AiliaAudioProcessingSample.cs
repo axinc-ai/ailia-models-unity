@@ -16,6 +16,7 @@ namespace ailiaSDK {
 		public enum AudioProcessingModels
 		{
 			silero_vad,
+			rvc,
 		}
 
 		[SerializeField]
@@ -49,6 +50,7 @@ namespace ailiaSDK {
 
 		//AILIA
 		private AiliaSileroVad ailia_vad = new AiliaSileroVad();
+		private AiliaRvc ailia_rvc = new AiliaRvc();
 		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
 		private AiliaSplitAudio ailia_split = new AiliaSplitAudio();
 
@@ -72,7 +74,24 @@ namespace ailiaSDK {
 					{
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 					}));
+					break;
+				case AudioProcessingModels.rvc:
+					mode_text.text = "silero_vad + rvc";
+	
+					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = ".onnx" });
 
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
+						if (FileOpened == true){
+							FileOpened = ailia_rvc.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
+						}
+					}));
 					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
@@ -83,6 +102,7 @@ namespace ailiaSDK {
 		private void DestroyAiliaNetwork()
 		{
 			ailia_vad.Close();
+			ailia_rvc.Close();
 		}		
 
 		// Display pcm and vad confidence value
@@ -205,6 +225,9 @@ namespace ailiaSDK {
 			ailia_split.Split(vad_result);
 			if (ailia_split.GetAudioClipCount() > 0){
 				AudioClip clip = ailia_split.PopAudioClip();
+				if (ailiaModelType == AudioProcessingModels.rvc){
+					clip = ailia_rvc.Process(clip);
+				}
 				vad_audio_clip.Add(clip);
 				vad_audio_clip_play_list.Add(clip);
 			}
