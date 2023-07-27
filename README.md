@@ -10,6 +10,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 # Supporting Models
 
+## Audio processing
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [silero_vad](/Assets/AXIP/AILIA-MODELS/AudioProcessing/) | [Silero VAD](https://github.com/snakers4/silero-vad) | Pytorch | 1.2.15 and later |
+
 ## Depth estimation
 
 | Name | Detail | Exported From | Supported Ailia Version |
