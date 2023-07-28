@@ -16,11 +16,11 @@ namespace ailiaSDK
 			float X = (float)random.NextDouble(); 
 			float Y = (float)random.NextDouble(); 
 			float Z1 =(float)(Math.Sqrt(-2.0 * Math.Log(X)) * Math.Cos(2.0 * Math.PI * Y)); 
-			float Z2 =(float)( Math.Sqrt(-2.0 * Math.Log(X)) * Math.Sin(2.0 * Math.PI * Y));
+			float Z2 =(float)(Math.Sqrt(-2.0 * Math.Log(X)) * Math.Sin(2.0 * Math.PI * Y));
 			return Z1;
 		}
 
-		private float [] alphas_cumprod = new float[
+		private double [] alphas_cumprod = {
 		9.9850e-01, 9.9699e-01, 9.9548e-01, 9.9396e-01, 9.9244e-01, 9.9091e-01,
 		9.8938e-01, 9.8784e-01, 9.8629e-01, 9.8474e-01, 9.8318e-01, 9.8162e-01,
 		9.8005e-01, 9.7847e-01, 9.7689e-01, 9.7531e-01, 9.7371e-01, 9.7212e-01,
@@ -187,53 +187,60 @@ namespace ailiaSDK
 		1.4877e-04, 1.4581e-04, 1.4290e-04, 1.4005e-04, 1.3725e-04, 1.3450e-04,
 		1.3180e-04, 1.2915e-04, 1.2656e-04, 1.2401e-04, 1.2151e-04, 1.1905e-04,
 		1.1664e-04, 1.1428e-04, 1.1196e-04, 1.0968e-04, 1.0745e-04, 1.0526e-04,
-		1.0311e-04, 1.0101e-04, 9.8939e-05, 9.6911e-05];
+		1.0311e-04, 1.0101e-04, 9.8939e-05, 9.6911e-05};
 
 		public class DdimParameters{
 			public List<int> ddim_timesteps;
 			public List<float> alphas;
-			public List<float> alpha_prev;
+			public List<float> alphas_prev;
 			public List<float> sigmas;
 			public List<float> ddim_sqrt_one_minus_alphas;
 		}
 
 		// ddim_steps = 50, ddim_eta = 0.0
-		public DdimParameters DdimParameters(int ddim_num_steps, float ddim_eta){
+		public DdimParameters MakeDdimParameters(int ddim_num_steps, float ddim_eta){
 			DdimParameters parameters = new DdimParameters();
 			int ddpm_num_timesteps = 1000;
 			int c = ddpm_num_timesteps / ddim_num_steps;
 			parameters.ddim_timesteps = new List<int>();
 			parameters.alphas = new List<float>();
-			parameters.alpha_prev = new List<float>();
-			sparameters.igmas = new List<float>();
-			float alpha_prev = alphas_cumprod[0];
+			parameters.alphas_prev = new List<float>();
+			parameters.sigmas = new List<float>();
+			float alpha_prev = (float)alphas_cumprod[0];
 			for (int i = 0; i < ddpm_num_timesteps; i+=c){
 				parameters.ddim_timesteps.Add(i + 1);
-				float alpha = alphas_cumprod[i + 1];
+				float alpha = (float)alphas_cumprod[i + 1];
 				parameters.alphas.Add(alpha);
-				parameters.alpha_prev.Add(alpha_prev);
-				float sigma = ddim_eta * Math.sqrt((1 - alpha_prev) / (1 - alpha) * (1 - alpha / alpha_prev));
+				parameters.alphas_prev.Add(alpha_prev);
+				float sigma = ddim_eta * (float)Math.Sqrt((1 - alpha_prev) / (1 - alpha) * (1 - alpha / alpha_prev));
 				parameters.sigmas.Add(sigma);
 				alpha_prev = alpha;
-				parameters.ddim_sqrt_one_minus_alphas.Add(Math.sqrt(1.0f - alpha))
+				parameters.ddim_sqrt_one_minus_alphas.Add((float)Math.Sqrt(1.0f - alpha));
 			}
 			return parameters;
 		}
 
 		public void DdimSampling(float [] diffusion_img, float [] diffusion_output, DdimParameters parameters, int index){
+			if (diffusion_img.Length != diffusion_output.Length){
+				Debug.Log("Image size mismatch on DdimSampling");
+				return;
+			}
+
 			float a_t = parameters.alphas[index];
 			float a_prev = parameters.alphas_prev[index];
 			float sigma_t = parameters.sigmas[index];
 			float sqrt_one_minus_at = parameters.ddim_sqrt_one_minus_alphas[index];
 			float temperature = 1.0f;
 
-			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
+			Debug.Log("DdimSampling index "+index+" a_t "+a_t+" a_prev "+a_prev+" sigma_t "+sigma_t+" sqrt_one_minus_at "+sqrt_one_minus_at+" temperature "+temperature);
+
+			for (int i = 0; i < diffusion_img.Length; i++){
 				float x = diffusion_img[i];
 				float e_t = diffusion_output[i];
-				float pred_x0 = (x - sqrt_one_minus_at * e_t) / Math.sqrt(a_t);
-				float dir_xt = Math.sqrt(1.0f - a_prev - Math.pow(sigma_t,2)) * e_t;
+				float pred_x0 = (x - sqrt_one_minus_at * e_t) / (float)Math.Sqrt(a_t);
+				float dir_xt = (float)Math.Sqrt(1.0f - a_prev - (float)Math.Pow(sigma_t,2)) * e_t;
 				float noise = sigma_t * randn() * temperature;
-				float x_prev = Math.sqrt(a_prev) * pred_x0 + dir_xt + noise;
+				float x_prev = (float)Math.Sqrt(a_prev) * pred_x0 + dir_xt + noise;
 				diffusion_img[i] = x_prev;
 			}
 		}
