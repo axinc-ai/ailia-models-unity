@@ -23,6 +23,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 |:-----------|------------:|:------------:|:------------:|
 | [midas](/Assets/AXIP/AILIA-MODELS/DepthEstimation/) | [Towards Robust Monocular Depth Estimation:<br/> Mixing Datasets for Zero-shot Cross-dataset Transfer](https://github.com/intel-isl/MiDaS) | Pytorch | 1.2.4 and later |
 
+## Diffusion
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [latent-diffusion-inpainting](/Assets/AXIP/AILIA-MODELS/Diffusion/) | [latent-diffusion-inpainting](/diffusion/latent-diffusion-inpainting/) | [Latent Diffusion - inpainting](https://github.com/CompVis/latent-diffusion) | Pytorch | 1.2.10 and later |
+
 ## Foundation
 
 | Name | Detail | Exported From | Supported Ailia Version |
