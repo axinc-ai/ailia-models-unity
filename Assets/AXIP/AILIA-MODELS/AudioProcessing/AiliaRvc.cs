@@ -136,7 +136,8 @@ namespace ailiaSDK
 
 			// Resampling to targetSampleRate
 			for (int i = 0; i < hubert_input.Length; i++){
-				int i2 = (i - T_PAD) * sampleRate / targetSampleRate;
+				float rate = 1.0f * sampleRate / targetSampleRate;
+				int i2 = (int)((i - T_PAD) * rate);
 				if (i2 < 0){
 					i2 = -i2;// reflection
 				}
@@ -155,7 +156,8 @@ namespace ailiaSDK
 		private int GetSamples(AudioClip clip){
 			int sampleRate = clip.frequency;
 			int targetSampleRate = 16000;
-			return clip.samples * targetSampleRate / sampleRate + T_PAD * 2;
+			float rate = 1.0f * targetSampleRate / sampleRate;
+			return (int)(clip.samples * rate) + T_PAD * 2;
 		}
 
 		// Interpolate
