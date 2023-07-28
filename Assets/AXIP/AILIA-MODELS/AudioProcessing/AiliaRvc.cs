@@ -26,6 +26,9 @@ namespace ailiaSDK
 		private AiliaModel hubert_model = new AiliaModel();
 		private AiliaModel vc_model = new AiliaModel();
 
+		// Debug
+		private bool debug = false;
+
 		// Constructer
 		public AiliaRvc(){
 		}
@@ -62,6 +65,10 @@ namespace ailiaSDK
 			// Get PCM
 			if (clip.channels != 1){
 				Debug.Log("channel must be 1");
+				return null;
+			}
+			if (clip.samples <= 0){
+				Debug.Log("samples must be greater than 1");
 				return null;
 			}
 
@@ -129,7 +136,7 @@ namespace ailiaSDK
 
 			// Resampling to targetSampleRate
 			for (int i = 0; i < hubert_input.Length; i++){
-				int i2 = i * sampleRate / targetSampleRate - T_PAD;
+				int i2 = (i - T_PAD) * sampleRate / targetSampleRate;
 				if (i2 < 0){
 					i2 = -i2;// reflection
 				}
@@ -235,7 +242,9 @@ namespace ailiaSDK
 					}
 				}
 
-				Debug.Log("Input "+i+" Shape "+sequence_shape.w+","+sequence_shape.z+","+sequence_shape.y+","+sequence_shape.x+" dim "+sequence_shape.dim);
+				if (debug){
+					Debug.Log("Input "+i+" Shape "+sequence_shape.w+","+sequence_shape.z+","+sequence_shape.y+","+sequence_shape.x+" dim "+sequence_shape.dim);
+				}
 
 				success = ailia_model.SetInputBlobShape(sequence_shape, (int)input_blob_idx);
 				if (success == false){
@@ -262,7 +271,9 @@ namespace ailiaSDK
 				uint output_blob_idx = output_blobs[i];
 				
 				Ailia.AILIAShape output_blob_shape = ailia_model.GetBlobShape((int)output_blob_idx);
-				Debug.Log("Output "+i+" Shape "+output_blob_shape.w+","+output_blob_shape.z+","+output_blob_shape.y+","+output_blob_shape.x+" dim "+output_blob_shape.dim);
+				if (debug){
+					Debug.Log("Output "+i+" Shape "+output_blob_shape.w+","+output_blob_shape.z+","+output_blob_shape.y+","+output_blob_shape.x+" dim "+output_blob_shape.dim);
+				}
 
 				float [] output = new float[output_blob_shape.x * output_blob_shape.y * output_blob_shape.z * output_blob_shape.w];
 
