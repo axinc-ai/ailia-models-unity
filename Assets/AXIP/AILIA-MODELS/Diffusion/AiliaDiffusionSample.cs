@@ -137,16 +137,19 @@ namespace ailiaSDK
 			bool result = condModel.Predict(cond_output, cond_input);
 			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
-			// Diffusion (noise 3dim + cond 3dim + resized mask 1dim)
-			float [] diffusion_img = new float[CondOutputWidth * CondOutputHeight * 7];
+			// Diffusion image
+			float [] diffusion_img = new float[CondOutputWidth * CondOutputHeight * 3];
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
 				diffusion_img[i] = ddim.randn();
 			}
+
+			// Diffusion context (noise 3dim + cond 3dim + resized mask 1dim)
+			float [] diffusion_ctx = new float[CondOutputWidth * CondOutputHeight * 7];
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
-				diffusion_img[CondOutputWidth * CondOutputHeight * 3 + i] = cond_output[i];
+				diffusion_ctx[CondOutputWidth * CondOutputHeight * 3 + i] = cond_output[i];
 			}
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight; i++){
-				diffusion_img[CondOutputWidth * CondOutputHeight * 6 + i] = cond_mask_resize[i];
+				diffusion_ctx[CondOutputWidth * CondOutputHeight * 6 + i] = cond_mask_resize[i];
 			}
 
 			// Diffusion Loop
@@ -158,7 +161,10 @@ namespace ailiaSDK
 				float [] t = new float[1];
 				t[0] = parameters.ddim_timesteps[index];
 				List<float []> inputs = new List<float []>();
-				inputs.Add(diffusion_img);
+				for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
+					diffusion_ctx[i] = diffusion_img[i];
+				}
+				inputs.Add(diffusion_ctx);
 				inputs.Add(t);
 				List<float []> results = Forward(diffusionModel, inputs);
 				float [] diffusion_output = results[0];
@@ -169,7 +175,7 @@ namespace ailiaSDK
 
 			// AutoEncoder
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			result = aeModel.Predict(ae_output, diffusion_img); // only use first 3 channels of diffusion_img
+			result = aeModel.Predict(ae_output, diffusion_img);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// convert result to image
@@ -430,7 +436,7 @@ namespace ailiaSDK
 
 		void OutputDataProcessing(DiffusionModels diffusionModels, float[] outputData, float[] imgData, float[] maskData, Color32[] pixelBuffer)
 		{
-			for (int i = 0; i < pixelBuffer.Length; i++)
+			for (int i = 0; i < outputData.Length; i++)
 			{
 				float mask = maskData[i];
 				float img = imgData[i];
