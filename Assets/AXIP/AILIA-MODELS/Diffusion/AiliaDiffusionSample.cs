@@ -32,9 +32,9 @@ namespace ailiaSDK
 		private AiliaModel condModel;
 
 		// Input source
-		AiliaImageSource AiliaImageSource = new AiliaImageSource();
-		AiliaImageSource AiliaImageSourceMask = new AiliaImageSource();
-		AiliaImageSource AiliaImageSourceMaskResize = new AiliaImageSource();
+		public AiliaImageSource AiliaImageSource;
+		public AiliaImageSource AiliaImageSourceMask;
+		public AiliaImageSource AiliaImageSourceMaskResize;
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
