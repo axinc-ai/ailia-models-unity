@@ -78,7 +78,7 @@ namespace ailiaSDK
 			// Create Ailia
 			CreateAiliaNet(diffusionModels, gpu_mode);
 			// Load sample image
-			LoadImage(diffusionModels, AiliaImageSource);
+			LoadImage(diffusionModels);
 		}
 
 		void UISetup()
@@ -139,7 +139,7 @@ namespace ailiaSDK
 
 			// Diffusion (noise 3dim + cond 3dim + resized mask 1dim)
 			float [] diffusion_img = new float[CondOutputWidth * CondOutputHeight * 7];
-			for (int i = 0; i < CondOutputWidth * CondInputHeight * 3; i++){
+			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
 				diffusion_img[i] = ddim.randn();
 			}
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
@@ -194,10 +194,13 @@ namespace ailiaSDK
 
 		void Update()
 		{
-			if (!AiliaImageSource.IsPrepared || !modelPrepared)
+			if (!AiliaImageSource.IsPrepared || !AiliaImageSourceMask.IsPrepared || !AiliaImageSourceMaskResize.IsPrepared || !modelPrepared)
 			{
+				Debug.Log("Waiting prepare "+AiliaImageSource.IsPrepared+","+AiliaImageSourceMask.IsPrepared+","+AiliaImageSourceMaskResize.IsPrepared+","+modelPrepared);
 				return;
 			}
+
+			Debug.Log("Prepare success");
 
 			if (cond_output == null)
 			{
@@ -354,13 +357,14 @@ namespace ailiaSDK
 			}
 		}
 
-		void LoadImage(DiffusionModels diffusionModels, AiliaImageSource ailiaImageSource)
+		void LoadImage(DiffusionModels diffusionModels)
 		{
 			switch (diffusionModels)
 			{
 				case DiffusionModels.Inpainting:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting.png");
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.jpg");
+					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting.png");
+					AiliaImageSourceMask.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
+					AiliaImageSourceMaskResize.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
 					break;
 			}
 		}

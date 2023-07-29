@@ -206,6 +206,7 @@ namespace ailiaSDK
 			parameters.alphas = new List<float>();
 			parameters.alphas_prev = new List<float>();
 			parameters.sigmas = new List<float>();
+			parameters.ddim_sqrt_one_minus_alphas = new List<float>();
 			float alpha_prev = (float)alphas_cumprod[0];
 			for (int i = 0; i < ddpm_num_timesteps; i+=c){
 				parameters.ddim_timesteps.Add(i + 1);
