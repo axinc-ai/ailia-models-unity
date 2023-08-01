@@ -199,7 +199,7 @@ namespace ailiaSDK
 			string text = "Step " + (step + 1) + "/" + (parameters.ddim_timesteps.Count) +"\n";
 			text += "Size " + CondInputWidth.ToString() + "x" + CondInputHeight.ToString() +"\n";
 			text += "Pre " + profile_pre.ToString() + " ms\n";
-			text += "Cond " + profile_cond.ToString() + "ms\n";
+			text += "Cond " + profile_cond.ToString() + " ms\n";
 			text += "Diffusion " + profile_diffusion.ToString() + " ms\n";
 			text += "AE " + profile_ae.ToString() + " ms\n";
 			text += "Post " + profile_post.ToString() + " ms\n";
@@ -234,6 +234,8 @@ namespace ailiaSDK
 			CondOutputWidth = (int)shape.x;
 			CondOutputHeight = (int)shape.y;
 			CondOutputChannel = (int)shape.z;
+
+			Debug.Log("cond output "+CondOutputWidth+"/"+CondOutputHeight+"/"+CondOutputChannel);
 
 			// Set input image shape
 			shape.x = (uint)CondOutputWidth;

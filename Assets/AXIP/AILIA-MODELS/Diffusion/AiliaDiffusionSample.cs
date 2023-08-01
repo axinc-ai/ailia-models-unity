@@ -59,6 +59,7 @@ namespace ailiaSDK
 
 			CreateAiliaNet(diffusionModels, gpu_mode);
 			LoadImage(diffusionModels);
+			AllocateBuffer();
 		}
 
 		void UISetup()
@@ -108,7 +109,6 @@ namespace ailiaSDK
 				Color32[] inputMaskResize = null;
 				inputImage = AiliaImageSource.GetPixels32(rect, true);
 				inputMask = AiliaImageSourceMask.GetPixels32(rect, true);
-				rect = new Rect(0, 0, CondInputWidth / 4, CondInputHeight / 4);
 				inputMaskResize = AiliaImageSourceMaskResize.GetPixels32(rect, true);
 
 				// Diffusion loop
