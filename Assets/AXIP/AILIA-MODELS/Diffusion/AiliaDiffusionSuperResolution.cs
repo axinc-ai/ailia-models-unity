@@ -165,7 +165,7 @@ namespace ailiaSDK
 			}
 
 			string text = "Step " + (step + 1) + "/" + (parameters.ddim_timesteps.Count) +"\n";
-			text += "Size " + CondInputWidth.ToString() + "x" + CondInputHeight.ToString() +"\n";
+			text += "Size " + AeOutputWidth.ToString() + "x" + AeOutputHeight.ToString() +"\n";
 			text += "Pre " + profile_pre.ToString() + " ms\n";
 			text += "Diffusion " + profile_diffusion.ToString() + " ms\n";
 			text += "AE " + profile_ae.ToString() + " ms\n";
