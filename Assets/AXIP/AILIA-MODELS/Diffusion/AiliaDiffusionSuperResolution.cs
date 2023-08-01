@@ -8,12 +8,11 @@ using UnityEngine.UI;
 
 namespace ailiaSDK
 {
-	public class AiliaDiffusionInpainting
+	public class AiliaDiffusionSuperResolution
 	{
 		//AILIA
 		private AiliaModel diffusionModel;
 		private AiliaModel aeModel;
-		private AiliaModel condModel;
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -33,49 +32,38 @@ namespace ailiaSDK
 		private int AeOutputChannel;
 
 		// Buffers
-		private float[] cond_output;
-		private float[] cond_input;
-		private float[] cond_mask;
-		private float[] cond_mask_resize;
 		private float[] ae_output;
 		private float [] diffusion_img;
 
 		// Profile
 		private float profile_pre;
-		private float profile_cond;
 		private float profile_diffusion;
 		private float profile_ae;
 		private float profile_post;
 		private string profile_text;
 
-		public bool Open(string diffusion_model_path, string diffusion_weight_path, string ae_model_path, string ae_weight_path, string cond_model_path, string cond_weight_path, bool gpu_mode)
+		public bool Open(string diffusion_model_path, string diffusion_weight_path, string ae_model_path, string ae_weight_path, bool gpu_mode)
 		{
 			string asset_path = Application.temporaryCachePath;
 
 			diffusionModel = new AiliaModel();
 			aeModel = new AiliaModel();
-			condModel = new AiliaModel();
 
 			if (gpu_mode)
 			{
 				// call before OpenFile
 				diffusionModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				aeModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-				condModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 			diffusionModel.SetMemoryMode(memory_mode);
 			aeModel.SetMemoryMode(memory_mode);
-			condModel.SetMemoryMode(memory_mode);
 
 			bool modelPrepared = false;
 			modelPrepared = diffusionModel.OpenFile(diffusion_model_path, diffusion_weight_path);
 			if (modelPrepared == true){
 				modelPrepared = aeModel.OpenFile(ae_model_path, ae_weight_path);
-				if (modelPrepared == true){
-					modelPrepared = condModel.OpenFile(cond_model_path, cond_weight_path);
-				}
 			}
 
 			return modelPrepared;
@@ -84,24 +72,17 @@ namespace ailiaSDK
 		public void Close(){
 			diffusionModel.Close();
 			aeModel.Close();
-			condModel.Close();
 		}
 
 		private void AllocateBuffer(){
-			cond_input = new float[CondInputWidth * CondInputHeight * CondInputChannel];
-			cond_mask = new float[CondInputWidth * CondInputHeight];
-			cond_output = new float[CondOutputWidth * CondOutputHeight * CondOutputChannel];
-
-			cond_mask_resize = new float[CondOutputWidth * CondOutputHeight];
- 
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
 		}
 
-		public Color32[] Predict(Color32[] inputImage, Color32[] inputMask, Color32[] inputMaskResize, int step, int ddim_num_steps)
+		public Color32[] Predict(Color32[] inputImage, int step, int ddim_num_steps)
 		{
 			// Initial diffusion image
 			if (step == 0){
-				SetShape(512, 512);
+				SetShape(128, 128);
 				AllocateBuffer();
 
 				diffusion_img = new float[CondOutputWidth * CondOutputHeight * 3];
@@ -110,7 +91,6 @@ namespace ailiaSDK
 				}
 
 				profile_pre = 0.0f;
-				profile_cond = 0.0f;
 				profile_diffusion = 0.0f;
 				profile_ae = 0.0f;
 				profile_post = 0.0f;
@@ -124,33 +104,26 @@ namespace ailiaSDK
 			// Make input data
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step == 0){
-				InputDataImage(inputImage, cond_input);
-				InputDataMask(inputMask, cond_mask);
-				InputDataMask(inputMaskResize, cond_mask_resize);
-				InputDataPreprocess(cond_input, cond_mask, cond_mask_resize);
+				//InputDataImage(inputImage, cond_input);
+				//InputDataPreprocess(cond_input);
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Condition
 			bool result = false;
-			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			if (step == 0){
-				result = condModel.Predict(cond_output, cond_input);
-			}
-			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Diffusion context (noise 3dim + cond 3dim + resized mask 1dim)
 			float [] diffusion_ctx = new float[CondOutputWidth * CondOutputHeight * 7];
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
-				diffusion_ctx[CondOutputWidth * CondOutputHeight * 3 + i] = cond_output[i];
+				diffusion_ctx[CondOutputWidth * CondOutputHeight * 3 + i] = 0;
 			}
 			for (int i = 0; i < CondOutputWidth * CondOutputHeight; i++){
-				diffusion_ctx[CondOutputWidth * CondOutputHeight * 6 + i] = cond_mask_resize[i];
+				diffusion_ctx[CondOutputWidth * CondOutputHeight * 6 + i] = 0;
 			}
 
 			// Diffusion Loop
 			float ddim_eta = 0.0f;
-			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta, AiliaDiffusionAlphasComprod.alphas_cumprod_inpainting);
+			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta, AiliaDiffusionAlphasComprod.alphas_cumprod_super_resolution);
 			if (ddim_num_steps != parameters.ddim_timesteps.Count){
 				return outputImage;
 			}
@@ -182,13 +155,12 @@ namespace ailiaSDK
 
 			// convert result to image
 			long start_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			OutputDataProcessing(ae_output, cond_input, cond_mask, outputImage);
+			OutputDataProcessing(ae_output, outputImage);
 			long end_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// profile
 			if (step == 0){
 				profile_pre += (end_time - start_time);
-				profile_cond += (end_time2 - start_time2);
 			}
 			profile_diffusion += (end_time3 - start_time3);
 			if (step == 0){
@@ -199,11 +171,10 @@ namespace ailiaSDK
 			string text = "Step " + (step + 1) + "/" + (parameters.ddim_timesteps.Count) +"\n";
 			text += "Size " + CondInputWidth.ToString() + "x" + CondInputHeight.ToString() +"\n";
 			text += "Pre " + profile_pre.ToString() + " ms\n";
-			text += "Cond " + profile_cond.ToString() + " ms\n";
 			text += "Diffusion " + profile_diffusion.ToString() + " ms\n";
 			text += "AE " + profile_ae.ToString() + " ms\n";
 			text += "Post " + profile_post.ToString() + " ms\n";
-			text += condModel.EnvironmentName();
+			text += aeModel.EnvironmentName();
 			profile_text = text;
 			
 			return outputImage;
@@ -217,36 +188,22 @@ namespace ailiaSDK
 		{
 			Ailia.AILIAShape shape = null;
 
-			// Set input image shape
-			shape = new Ailia.AILIAShape();
-			shape.x = (uint)image_width;
-			shape.y = (uint)image_height;
-			shape.z = 3;
-			shape.w = 1;
-			shape.dim = 4;
-			condModel.SetInputShape(shape);
 			CondInputWidth = image_width;
 			CondInputHeight = image_height;
 			CondInputChannel = 3;
 
-			// Get output image shape
-			shape = condModel.GetOutputShape();
-			CondOutputWidth = (int)shape.x;
-			CondOutputHeight = (int)shape.y;
-			CondOutputChannel = (int)shape.z;
-
-			Debug.Log("cond output "+CondOutputWidth+"/"+CondOutputHeight+"/"+CondOutputChannel);
+			// Set input image shape
+			shape = new Ailia.AILIAShape();
 
 			// Set input image shape
-			shape.x = (uint)CondOutputWidth;
-			shape.y = (uint)CondOutputHeight;
+			shape.x = (uint)CondInputWidth;
+			shape.y = (uint)CondInputHeight;
 			shape.z = 7; // noise + cond + mask
 			shape.w = 1;
 			shape.dim = 4;
 			diffusionModel.SetInputShape(shape);
 
 			// Get output image shape
-			shape = condModel.GetOutputShape();
 			DiffusionOutputWidth = (int)shape.x;
 			DiffusionOutputHeight = (int)shape.y;
 			DiffusionOutputChannel = (int)shape.z;
@@ -288,65 +245,18 @@ namespace ailiaSDK
 			}
 		}
 
-		void InputDataMask(Color32[] inputImage, float[] processedInputBuffer)
+		void InputDataPreprocess(float[] image)
 		{
-			float weight = 1f / 255f;
-			float bias = 0;
-
-			// Inpainting : Channel First, RGB, /255f
-
-			for (int i = 0; i < inputImage.Length; i++)
-			{
-				float v = (inputImage[i].g) * weight + bias;
-				if ( v < 0.5f ){
-					v = 0.0f;
-				}else{
-					v = 1.0f;
-				}
-				processedInputBuffer[i] = v;
-			}
-		}
-
-		void InputDataPreprocess(float[] image, float [] mask, float [] mask_resize)
-		{
-			for (int i = 0; i < image.Length/3; i++)
-			{
-				for (int rgb = 0; rgb < 3; rgb++){
-					image[i + image.Length/3 * rgb] = image[i + image.Length/3 * rgb] * (1.0f - mask[i]);
-				}
-			}
-
 			for (int i = 0; i < image.Length; i++)
 			{
 				image[i] = image[i] * 2 - 1;
 			}
-
-			for (int i = 0; i < mask.Length; i++)
-			{
-				mask[i] = mask[i] * 2 - 1;
-			}
-
-			for (int i = 0; i < mask_resize.Length; i++)
-			{
-				mask_resize[i] = mask_resize[i] * 2 - 1;
-			}
 		}
 
-		void OutputDataProcessing(float[] outputData, float[] imgData, float[] maskData, Color32[] pixelBuffer)
+		void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer)
 		{
 			Debug.Log("outputData" + outputData.Length);
-			Debug.Log("imgData" + imgData.Length);
-			Debug.Log("maskData" + maskData.Length);
 			Debug.Log("pixelBuffer" + pixelBuffer.Length);
-
-			for (int i = 0; i < outputData.Length; i++)
-			{
-				float mask = maskData[i % maskData.Length]; // one channel
-				float img = imgData[i];
-				float predicted_image = outputData[i];
-				float inpainted = (1 - mask) * img + mask * predicted_image;
-				outputData[i] = inpainted;
-			}
 
 			for (int i = 0; i < pixelBuffer.Length; i++)
 			{

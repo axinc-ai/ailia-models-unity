@@ -12,7 +12,8 @@ namespace ailiaSDK
 	{
 		public enum DiffusionModels
 		{
-			Inpainting
+			Inpainting,
+			SuperResolution
 		}
 
 		//Settings
@@ -27,6 +28,7 @@ namespace ailiaSDK
 
 		//AILIA
 		private AiliaDiffusionInpainting inpainting = new AiliaDiffusionInpainting();
+		private AiliaDiffusionSuperResolution super_resolution = new AiliaDiffusionSuperResolution();
 
 		// Input source
 		public AiliaImageSource AiliaImageSource;
@@ -34,8 +36,8 @@ namespace ailiaSDK
 		public AiliaImageSource AiliaImageSourceMaskResize;
 
 		// Image size
-		private const int CondInputWidth = 512;
-		private const int CondInputHeight = 512;
+		private int InputWidth = -1;
+		private int InputHeight = -1;
 
 		// Output image
 		Texture2D resultTexture2D;
@@ -79,11 +81,26 @@ namespace ailiaSDK
 			float ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
 			raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
 
-			resultTexture2D = new Texture2D(CondInputWidth, CondInputHeight, TextureFormat.RGBA32, false);
+			switch (diffusionModels)
+			{
+				case DiffusionModels.Inpainting:
+					InputWidth = 512;
+					InputHeight = 512;
 
-			AiliaImageSource.Resize(CondInputWidth, CondInputHeight);
-			AiliaImageSourceMask.Resize(CondInputWidth, CondInputHeight);
-			AiliaImageSourceMaskResize.Resize(CondInputWidth / 4, CondInputHeight / 4);
+					AiliaImageSource.Resize(InputWidth, InputHeight);
+					AiliaImageSourceMask.Resize(InputWidth, InputHeight);
+					AiliaImageSourceMaskResize.Resize(InputWidth / 4, InputHeight / 4);
+					break;
+				case DiffusionModels.SuperResolution:
+					InputWidth = 128;
+					InputHeight = 128;
+
+					AiliaImageSource.Resize(InputWidth, InputHeight);
+					break;
+			}
+
+			resultTexture2D = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
+
 		}
 
 		void Update()
@@ -103,31 +120,42 @@ namespace ailiaSDK
 
 			if (oneshot && sleep == 0.0f)
 			{
-				Rect rect = new Rect(0, 0, CondInputWidth, CondInputHeight);
+				Rect rect = new Rect(0, 0, InputWidth, InputHeight);
 				Color32[] inputImage = null;
 				Color32[] inputMask = null;
 				Color32[] inputMaskResize = null;
-				inputImage = AiliaImageSource.GetPixels32(rect, true);
-				inputMask = AiliaImageSourceMask.GetPixels32(rect, true);
-				inputMaskResize = AiliaImageSourceMaskResize.GetPixels32(rect, true);
 
 				// Diffusion loop
-				Color32[] outputImage = inpainting.Predict(inputImage, inputMask, inputMaskResize, step, ddim_num_steps);
+				Color32[] outputImage = null;
+				switch (diffusionModels)
+				{
+				case DiffusionModels.Inpainting:
+					inputImage = AiliaImageSource.GetPixels32(rect, true);
+					inputMask = AiliaImageSourceMask.GetPixels32(rect, true);
+					inputMaskResize = AiliaImageSourceMaskResize.GetPixels32(rect, true);
+					outputImage = inpainting.Predict(inputImage, inputMask, inputMaskResize, step, ddim_num_steps);
+					break;
+				case DiffusionModels.SuperResolution:
+					inputImage = AiliaImageSource.GetPixels32(rect, true);
+					outputImage = super_resolution.Predict(inputImage, step, ddim_num_steps);
+					break;
+				}
+
 				step++;
 				if (step >= ddim_num_steps){
 					oneshot = false;
 				}
 
 				// T2B (Model) to B2T (Unity)
-				VerticalFlip(CondInputWidth, CondInputHeight, inputImage);
-				VerticalFlip(CondInputWidth, CondInputHeight, outputImage);
+				VerticalFlip(InputWidth, InputHeight, inputImage);
+				VerticalFlip(InputWidth, InputHeight, outputImage);
 
 				// for viewer
-				originalTexture = new Texture2D(CondInputWidth, CondInputHeight, TextureFormat.RGBA32, false);
+				originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
 				originalTexture.SetPixels32(inputImage);
 				originalTexture.Apply();
 
-				resultTexture2D = new Texture2D(CondInputWidth, CondInputHeight, TextureFormat.RGBA32, false);
+				resultTexture2D = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
 				resultTexture2D.SetPixels32(outputImage);
 				resultTexture2D.Apply();
 
@@ -160,17 +188,25 @@ namespace ailiaSDK
 			string asset_path = Application.temporaryCachePath;
 
 			var urlList = new List<ModelDownloadURL>();
+			string serverFolderName = "";
 
 			switch (modelType)
 			{
 				case DiffusionModels.Inpainting:
-					string serverFolderName = "latent-diffusion-inpainting";
+					serverFolderName = "latent-diffusion-inpainting";
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "cond_stage_model.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "cond_stage_model.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_model.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_model.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx" });
+					break;
+				case DiffusionModels.SuperResolution:
+					serverFolderName = "latent-diffusion-superresolution";
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_model.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_model.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "first_stage_decode.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "first_stage_decode.onnx" });
 					break;
 			}
 
@@ -179,7 +215,15 @@ namespace ailiaSDK
 
 			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 			{
-				modelPrepared = inpainting.Open(asset_path + "/" + "diffusion_model.onnx.prototxt", asset_path + "/" + "diffusion_model.onnx",asset_path + "/" + "autoencoder.onnx.prototxt", asset_path + "/" + "autoencoder.onnx", asset_path + "/" + "cond_stage_model.onnx.prototxt", asset_path + "/" + "cond_stage_model.onnx", gpu_mode);
+				switch (modelType)
+				{
+					case DiffusionModels.Inpainting:
+						modelPrepared = inpainting.Open(asset_path + "/" + "diffusion_model.onnx.prototxt", asset_path + "/" + "diffusion_model.onnx",asset_path + "/" + "autoencoder.onnx.prototxt", asset_path + "/" + "autoencoder.onnx", asset_path + "/" + "cond_stage_model.onnx.prototxt", asset_path + "/" + "cond_stage_model.onnx", gpu_mode);
+						break;
+					case DiffusionModels.SuperResolution:
+						modelPrepared = super_resolution.Open(asset_path + "/" + "diffusion_model.onnx.prototxt", asset_path + "/" + "diffusion_model.onnx", asset_path + "/" + "first_stage_decode.onnx.prototxt", asset_path + "/" + "first_stage_decode.onnx", gpu_mode);
+						break;
+				}
 			}));
 		}
 
@@ -191,6 +235,9 @@ namespace ailiaSDK
 					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting.png");
 					AiliaImageSourceMask.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
 					AiliaImageSourceMaskResize.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
+					break;
+				case DiffusionModels.SuperResolution:
+					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/super_resolution.jpg");
 					break;
 			}
 		}
@@ -208,11 +255,13 @@ namespace ailiaSDK
 		void OnApplicationQuit()
 		{
 			inpainting.Close();
+			super_resolution.Close();
 		}
 
 		void OnDestroy()
 		{
 			inpainting.Close();
+			super_resolution.Close();
 		}
 	}
 }
