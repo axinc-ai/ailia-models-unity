@@ -114,11 +114,11 @@ namespace ailiaSDK
 			// Diffusion context (noise 3dim + cond 3dim)
 			float [] diffusion_ctx = new float[CondInputWidth * CondInputHeight * 6];
 			for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
-				diffusion_ctx[CondInputWidth * CondInputHeight * 3 + i] = 0;
+				diffusion_ctx[CondInputWidth * CondInputHeight * 3 + i] = cond_input[i];
 			}
 
 			// Diffusion Loop
-			float ddim_eta = 0.0f;
+			float ddim_eta = 1.0f;
 			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta, AiliaDiffusionAlphasComprod.alphas_cumprod_super_resolution);
 			if (ddim_num_steps != parameters.ddim_timesteps.Count){
 				return outputImage;

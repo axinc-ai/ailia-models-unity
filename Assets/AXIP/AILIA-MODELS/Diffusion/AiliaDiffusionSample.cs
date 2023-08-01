@@ -183,7 +183,15 @@ namespace ailiaSDK
 
 				if (label_text != null)
 				{
-					label_text.text = inpainting.GetProfile();
+					switch (diffusionModels)
+					{
+					case DiffusionModels.Inpainting:
+						label_text.text = inpainting.GetProfile();
+						break;
+					case DiffusionModels.SuperResolution:
+						label_text.text = super_resolution.GetProfile();
+						break;
+					}
 				}
 			}
 
