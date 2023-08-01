@@ -87,6 +87,7 @@ namespace ailiaSDK
 		}
 		private const int ContentLineCount = 7;
 
+		/*
 		public void DownloadModelFromUrl(string folder_path, string file_name)
 		{
 			string toPath = Application.temporaryCachePath + "/" + file_name;
@@ -119,7 +120,7 @@ namespace ailiaSDK
 			}
 			File.WriteAllBytes(toPath, www.downloadHandler.data);
 		}
-
+		*/
 
 		//Download to memory for Android
 		public byte[] DownloadModel(string file_name)
@@ -169,7 +170,7 @@ namespace ailiaSDK
 
 			foreach (var downloadUrl in urlList)
 			{
-				string toPath = (savePath == null ? Application.temporaryCachePath + "/" : savePath) + downloadUrl.file_name;
+				string toPath = (savePath == null ? Application.temporaryCachePath + "/" : savePath) + (downloadUrl.local_name == null ? downloadUrl.file_name : downloadUrl.local_name);
 
 				if (System.IO.File.Exists(toPath) == true)
 				{
@@ -260,6 +261,7 @@ namespace ailiaSDK
 	{
 		public string folder_path;
 		public string file_name;
+		public string local_name = null; // rename for same model name
 	}
 
 }

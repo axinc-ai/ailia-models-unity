@@ -21,9 +21,6 @@ namespace ailiaSDK
 		private int CondInputWidth;
 		private int CondInputHeight;
 		private int CondInputChannel;
-		private int CondOutputWidth;
-		private int CondOutputHeight;
-		private int CondOutputChannel;
 		private int DiffusionOutputWidth;
 		private int DiffusionOutputHeight;
 		private int DiffusionOutputChannel;
@@ -32,6 +29,7 @@ namespace ailiaSDK
 		private int AeOutputChannel;
 
 		// Buffers
+		private float[] cond_input;
 		private float[] ae_output;
 		private float [] diffusion_img;
 
@@ -75,6 +73,7 @@ namespace ailiaSDK
 		}
 
 		private void AllocateBuffer(){
+			cond_input = new float[CondInputWidth * CondInputHeight * CondInputChannel];
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
 		}
 
@@ -85,8 +84,8 @@ namespace ailiaSDK
 				SetShape(128, 128);
 				AllocateBuffer();
 
-				diffusion_img = new float[CondOutputWidth * CondOutputHeight * 3];
-				for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
+				diffusion_img = new float[CondInputWidth * CondInputHeight * 3];
+				for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
 					diffusion_img[i] = ddim.randn();
 				}
 
@@ -104,21 +103,18 @@ namespace ailiaSDK
 			// Make input data
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step == 0){
-				//InputDataImage(inputImage, cond_input);
-				//InputDataPreprocess(cond_input);
+				InputDataImage(inputImage, cond_input);
+				InputDataPreprocess(cond_input);
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Condition
 			bool result = false;
 
-			// Diffusion context (noise 3dim + cond 3dim + resized mask 1dim)
-			float [] diffusion_ctx = new float[CondOutputWidth * CondOutputHeight * 7];
-			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
-				diffusion_ctx[CondOutputWidth * CondOutputHeight * 3 + i] = 0;
-			}
-			for (int i = 0; i < CondOutputWidth * CondOutputHeight; i++){
-				diffusion_ctx[CondOutputWidth * CondOutputHeight * 6 + i] = 0;
+			// Diffusion context (noise 3dim + cond 3dim)
+			float [] diffusion_ctx = new float[CondInputWidth * CondInputHeight * 6];
+			for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
+				diffusion_ctx[CondInputWidth * CondInputHeight * 3 + i] = 0;
 			}
 
 			// Diffusion Loop
@@ -134,7 +130,7 @@ namespace ailiaSDK
 				float [] t = new float[1];
 				t[0] = parameters.ddim_timesteps[index];
 				List<float []> inputs = new List<float []>();
-				for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
+				for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
 					diffusion_ctx[i] = diffusion_img[i];
 				}
 				inputs.Add(diffusion_ctx);
@@ -188,6 +184,7 @@ namespace ailiaSDK
 		{
 			Ailia.AILIAShape shape = null;
 
+			// Condition
 			CondInputWidth = image_width;
 			CondInputHeight = image_height;
 			CondInputChannel = 3;
@@ -198,15 +195,19 @@ namespace ailiaSDK
 			// Set input image shape
 			shape.x = (uint)CondInputWidth;
 			shape.y = (uint)CondInputHeight;
-			shape.z = 7; // noise + cond + mask
+			shape.z = 6; // noise + cond
 			shape.w = 1;
 			shape.dim = 4;
 			diffusionModel.SetInputShape(shape);
 
+			// This model does not have a fixed shape until it is inferred
+			// So manually set image shape
+
 			// Get output image shape
+			//shape = diffusionModel.GetOutputShape();
 			DiffusionOutputWidth = (int)shape.x;
 			DiffusionOutputHeight = (int)shape.y;
-			DiffusionOutputChannel = (int)shape.z;
+			DiffusionOutputChannel = 3;
 
 			Debug.Log("diffusion output "+DiffusionOutputWidth+"/"+DiffusionOutputHeight+"/"+DiffusionOutputChannel);
 

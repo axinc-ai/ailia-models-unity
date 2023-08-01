@@ -457,10 +457,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdcf233a339d0481c85504327388a8ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  diffusionModels: 0
+  diffusionModels: 1
   gpu_mode: 0
   UICanvas: {fileID: 1813464803}
-  oneshot: 1
   AiliaImageSource: {fileID: 572209406}
   AiliaImageSourceMask: {fileID: 2010145409}
   AiliaImageSourceMaskResize: {fileID: 1963998715}
