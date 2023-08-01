@@ -90,7 +90,7 @@ namespace ailiaSDK
 			raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
 			raw_image.gameObject.SetActive(false);
 
-			mode_text.text = "ailia Super Resolution\nSpace key down to original image";
+			mode_text.text = "ailia Diffusion\nSpace key down to original image";
 		}
 
 		private void AllocateBuffer(){
@@ -116,32 +116,29 @@ namespace ailiaSDK
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
 		}
 
-		Color32[] Predict(Color32[] inputImage, Color32[] inputMask, Color32[] inputMaskResize)
+		Color32[] Predict(Color32[] inputImage, Color32[] inputMask, Color32[] inputMaskResize, float [] diffusion_img, int step)
 		{
+			// Make output image
 			Color32[] outputImage;
 			outputImage = new Color32[AeOutputWidth * AeOutputHeight];
 
 			// Make input data
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-			InputDataImage(diffusionModels, inputImage, cond_input);
-			InputDataMask(diffusionModels, inputMask, cond_mask);
-			InputDataMask(diffusionModels, inputMaskResize, cond_mask_resize);
-
-			InputDataPreprocess(cond_input, cond_mask, cond_mask_resize);
-
+			if (step == 0){
+				InputDataImage(diffusionModels, inputImage, cond_input);
+				InputDataMask(diffusionModels, inputMask, cond_mask);
+				InputDataMask(diffusionModels, inputMaskResize, cond_mask_resize);
+				InputDataPreprocess(cond_input, cond_mask, cond_mask_resize);
+			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Condition
+			bool result = false;
 			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			bool result = condModel.Predict(cond_output, cond_input);
-			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-			// Diffusion image
-			float [] diffusion_img = new float[CondOutputWidth * CondOutputHeight * 3];
-			for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
-				diffusion_img[i] = ddim.randn();
+			if (step == 0){
+				result = condModel.Predict(cond_output, cond_input);
 			}
+			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Diffusion context (noise 3dim + cond 3dim + resized mask 1dim)
 			float [] diffusion_ctx = new float[CondOutputWidth * CondOutputHeight * 7];
@@ -153,11 +150,15 @@ namespace ailiaSDK
 			}
 
 			// Diffusion Loop
-			int ddim_num_steps = 1;
 			float ddim_eta = 0.0f;
 			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta);
+			if (ddim_num_steps != parameters.ddim_timesteps.Count){
+				return outputImage;
+			}
 			long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			for (int index = 0; index < parameters.ddim_timesteps.Count; index++){
+			if (step < ddim_num_steps){
+				int index = ddim_num_steps - 1 - step;
+
 				float [] t = new float[1];
 				t[0] = parameters.ddim_timesteps[index];
 				List<float []> inputs = new List<float []>();
@@ -175,7 +176,9 @@ namespace ailiaSDK
 
 			// AutoEncoder
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			result = aeModel.Predict(ae_output, diffusion_img);
+			aeModel.SetInputBlobData(diffusion_img , (int)aeModel.GetInputBlobList()[0]);
+			result = aeModel.Update();
+			aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// convert result to image
@@ -185,7 +188,8 @@ namespace ailiaSDK
 
 			if (label_text != null)
 			{
-				string text = "Size " + CondOutputWidth.ToString() + "x" + CondOutputHeight.ToString() +"\n";
+				string text = "Step " + (step + 1) + "/" + (parameters.ddim_timesteps.Count) +"\n";
+				text += "Size " + CondOutputWidth.ToString() + "x" + CondOutputHeight.ToString() +"\n";
 				text += "Pre " + (end_time - start_time).ToString() + " ms\n";
 				text += "Cond " + (end_time2 - start_time2).ToString() + "ms\n";
 				text += "Diffusion " + (end_time3 - start_time3).ToString() + " ms\n";
@@ -197,6 +201,12 @@ namespace ailiaSDK
 
 			return outputImage;
 		}
+
+		private int ddim_num_steps = 5;
+		private int step = 0;
+		private float [] diffusion_img;
+		private const float SLEEP_TIME = 1.0f;
+		private float sleep = SLEEP_TIME;
 
 		void Update()
 		{
@@ -213,10 +223,15 @@ namespace ailiaSDK
 				AllocateBuffer();
 			}
 
-			if (oneshot)
-			{
-				oneshot = false;
+			if (sleep > 0){
+				sleep = sleep - Time.deltaTime;
+				if (sleep < 0.0f){
+					sleep = 0.0f;
+				}
+			}
 
+			if (oneshot && sleep == 0.0f)
+			{
 				Rect rect = new Rect(0, 0, CondInputWidth, CondInputHeight);
 				Color32[] inputImage = null;
 				Color32[] inputMask = null;
@@ -225,7 +240,20 @@ namespace ailiaSDK
 				inputMask = AiliaImageSourceMask.GetPixels32(rect, true);
 				inputMaskResize = AiliaImageSourceMaskResize.GetPixels32(rect, true);
 
-				Color32[] outputImage = Predict(inputImage, inputMask, inputMaskResize);
+				// Initial diffusion image
+				if (step == 0){
+					diffusion_img = new float[CondOutputWidth * CondOutputHeight * 3];
+					for (int i = 0; i < CondOutputWidth * CondOutputHeight * 3; i++){
+						diffusion_img[i] = ddim.randn();
+					}
+				}
+
+				// Diffusion loop
+				Color32[] outputImage = Predict(inputImage, inputMask, inputMaskResize, diffusion_img, step);
+				step++;
+				if (step >= ddim_num_steps){
+					oneshot = false;
+				}
 
 				// T2B (Model) to B2T (Unity)
 				VerticalFlip(CondInputWidth, CondInputHeight, inputImage);
@@ -242,6 +270,9 @@ namespace ailiaSDK
 
 				raw_image.texture = resultTexture2D;
 				raw_image.gameObject.SetActive(true);
+
+				// sleep
+				sleep = SLEEP_TIME;
 			}
 
 			// When space key down, draw original image
@@ -346,6 +377,8 @@ namespace ailiaSDK
 					DiffusionOutputHeight = (int)shape.y;
 					DiffusionOutputChannel = (int)shape.z;
 
+					Debug.Log("diffusion output "+DiffusionOutputWidth+"/"+DiffusionOutputHeight+"/"+DiffusionOutputChannel);
+
 					// Set input image shape
 					shape.x = (uint)DiffusionOutputWidth;
 					shape.y = (uint)DiffusionOutputHeight;
@@ -354,11 +387,16 @@ namespace ailiaSDK
 					shape.dim = 4;
 					aeModel.SetInputShape(shape);
 
+					// This model does not have a fixed shape until it is inferred
+					// So manually set image shape
+
 					// Get output image shape
-					shape = condModel.GetOutputShape();
-					AeOutputWidth = (int)shape.x;
-					AeOutputHeight = (int)shape.y;
+					//shape = aeModel.GetOutputShape();
+					AeOutputWidth = (int)shape.x * 4;
+					AeOutputHeight = (int)shape.y * 4;
 					AeOutputChannel = (int)shape.z;
+
+					Debug.Log("ae_model output "+AeOutputWidth+"/"+AeOutputHeight+"/"+AeOutputChannel);
 					break;
 			}
 		}
@@ -436,14 +474,20 @@ namespace ailiaSDK
 
 		void OutputDataProcessing(DiffusionModels diffusionModels, float[] outputData, float[] imgData, float[] maskData, Color32[] pixelBuffer)
 		{
+			Debug.Log("outputData" + outputData.Length);
+			Debug.Log("imgData" + imgData.Length);
+			Debug.Log("maskData" + maskData.Length);
+			Debug.Log("pixelBuffer" + pixelBuffer.Length);
+
 			for (int i = 0; i < outputData.Length; i++)
 			{
-				float mask = maskData[i];
+				float mask = maskData[i % maskData.Length]; // one channel
 				float img = imgData[i];
 				float predicted_image = outputData[i];
 				float inpainted = (1 - mask) * img + mask * predicted_image;
 				outputData[i] = inpainted;
 			}
+
 			for (int i = 0; i < pixelBuffer.Length; i++)
 			{
 				pixelBuffer[i].r = (byte)Mathf.Clamp((outputData[i + 0 * pixelBuffer.Length] + 1.0f) / 2.0f * 255, 0, 255);
