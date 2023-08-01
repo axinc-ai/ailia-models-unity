@@ -341,7 +341,7 @@ namespace ailiaSDK
 
 			for (int i = 0; i < outputData.Length; i++)
 			{
-				float mask = maskData[i % maskData.Length]; // one channel
+				float mask = (maskData[i % maskData.Length] + 1.0f ) / 2.0f; // one channel
 				float img = imgData[i];
 				float predicted_image = outputData[i];
 				float inpainted = (1 - mask) * img + mask * predicted_image;
