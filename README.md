@@ -28,6 +28,7 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 | [latent-diffusion-inpainting](/Assets/AXIP/AILIA-MODELS/Diffusion/) | [Latent Diffusion - inpainting](https://github.com/CompVis/latent-diffusion) | Pytorch | 1.2.10 and later |
+| [latent-diffusion-superresolution](/Assets/AXIP/AILIA-MODELS/Diffusion/) | [Latent Diffusion - Super-resolution](https://github.com/CompVis/latent-diffusion) | Pytorch | 1.2.10 and later |
 | [stable-diffusion-txt2img](/Assets/AXIP/AILIA-MODELS/Diffusion//) | [Stable Diffusion](https://github.com/CompVis/stable-diffusion) | Pytorch | 1.2.14 and later |
 
 ## Foundation
