@@ -13,7 +13,8 @@ namespace ailiaSDK
 		public enum DiffusionModels
 		{
 			Inpainting,
-			SuperResolution
+			SuperResolution,
+			StableDiffusion
 		}
 
 		//Settings
@@ -29,6 +30,7 @@ namespace ailiaSDK
 		//AILIA
 		private AiliaDiffusionInpainting inpainting = new AiliaDiffusionInpainting();
 		private AiliaDiffusionSuperResolution super_resolution = new AiliaDiffusionSuperResolution();
+		private AiliaDiffusionStableDiffusion stable_diffusion = new AiliaDiffusionStableDiffusion();
 
 		// Input source
 		public AiliaImageSource AiliaImageSource;
@@ -99,6 +101,10 @@ namespace ailiaSDK
 
 					AiliaImageSource.Resize(InputWidth, InputHeight);
 					break;
+				case DiffusionModels.StableDiffusion:
+					InputWidth = 512;
+					InputHeight = 512;
+					break;
 			}
 
 			OutputWidth = 512;
@@ -118,6 +124,9 @@ namespace ailiaSDK
 					break;
 				case DiffusionModels.SuperResolution:
 					imagePrepared = !AiliaImageSource.IsPrepared;
+					break;
+				case DiffusionModels.StableDiffusion:
+					imagePrepared = true;
 					break;
 			}
 
@@ -154,6 +163,9 @@ namespace ailiaSDK
 				case DiffusionModels.SuperResolution:
 					inputImage = AiliaImageSource.GetPixels32(rect, true);
 					outputImage = super_resolution.Predict(inputImage, step, ddim_num_steps);
+					break;
+				case DiffusionModels.StableDiffusion:
+					outputImage = stable_diffusion.Predict(step, ddim_num_steps);
 					break;
 				}
 
@@ -232,6 +244,17 @@ namespace ailiaSDK
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "first_stage_decode.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "first_stage_decode.onnx" });
 					break;
+				case DiffusionModels.StableDiffusion:
+					serverFolderName = "stable-diffusion-txt2img";
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx"});
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx"});
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx"});
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx.prototxt", local_name =  "autoencoder_sd.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx", local_name =  "autoencoder_sd.onnx" });
+					break;
 			}
 
 			AiliaDownload ailia_download = new AiliaDownload();
@@ -246,6 +269,13 @@ namespace ailiaSDK
 						break;
 					case DiffusionModels.SuperResolution:
 						modelPrepared = super_resolution.Open(asset_path + "/" + "diffusion_model_sr.onnx.prototxt", asset_path + "/" + "diffusion_model_sr.onnx", asset_path + "/" + "first_stage_decode.onnx.prototxt", asset_path + "/" + "first_stage_decode.onnx", gpu_mode);
+						break;
+					case DiffusionModels.StableDiffusion:
+						modelPrepared = stable_diffusion.Open(
+							asset_path + "/" + "diffusion_emb.onnx.prototxt", asset_path + "/" + "diffusion_emb.onnx",
+							asset_path + "/" + "diffusion_mid.onnx.prototxt", asset_path + "/" + "diffusion_mid.onnx",
+							asset_path + "/" + "diffusion_out.onnx.prototxt", asset_path + "/" + "diffusion_out.onnx",
+							asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx", gpu_mode);
 						break;
 				}
 			}));
@@ -262,6 +292,8 @@ namespace ailiaSDK
 					break;
 				case DiffusionModels.SuperResolution:
 					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/super_resolution.jpg");
+					break;
+				case DiffusionModels.StableDiffusion:
 					break;
 			}
 		}
