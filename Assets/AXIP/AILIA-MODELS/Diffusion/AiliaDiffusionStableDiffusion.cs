@@ -179,8 +179,8 @@ namespace ailiaSDK
 				AllocateBuffer();
 				SetInputShape();
 
-				diffusion_img = new float[CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel];
-				for (int i = 0; i < CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel; i++){
+				diffusion_img = new float[1 * CondInputWidth * CondInputHeight * CondInputChannel];
+				for (int i = 0; i < 1 * CondInputWidth * CondInputHeight * CondInputChannel; i++){
 					diffusion_img[i] = ddim.randn();
 				}
 
@@ -269,17 +269,23 @@ namespace ailiaSDK
 		}
 
 		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int step){
-			// diffusion emb
+			// 1channel -> 2channel copy
+			float [] x = new float[CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel];
+			for (int i = 0; i < CondInputWidth * CondInputHeight * CondInputChannel; i++){
+				x[i] = diffusion_img[i];
+				x[i + CondInputWidth * CondInputHeight * CondInputChannel] = diffusion_img[i];
+			}
+
 			float [] timestamp = new float[CondInputBatch];
-
-			Dictionary<string,AiliaTensor> input_tensors = new Dictionary<string,AiliaTensor>();
-			AiliaTensor x_tensor = new AiliaTensor((uint)CondInputWidth, (uint)CondInputHeight, (uint)CondInputChannel, (uint)CondInputBatch, 4, diffusion_img);
-			AiliaTensor timestamps_tensor = new AiliaTensor((uint)CondInputBatch, 1, 1, 1, 1, timestamp);
-			AiliaTensor context_tensor = new AiliaTensor((uint)SequenceWidth, (uint)SequenceHeight, (uint)CondInputBatch, 1, 3, context);
-
 			for (int i = 0; i < CondInputBatch; i++){
 				timestamp[i] = step;
 			}
+
+			// diffusion emb
+			Dictionary<string,AiliaTensor> input_tensors = new Dictionary<string,AiliaTensor>();
+			AiliaTensor x_tensor = new AiliaTensor((uint)CondInputWidth, (uint)CondInputHeight, (uint)CondInputChannel, (uint)CondInputBatch, 4, x);
+			AiliaTensor timestamps_tensor = new AiliaTensor((uint)CondInputBatch, 1, 1, 1, 1, timestamp);
+			AiliaTensor context_tensor = new AiliaTensor((uint)SequenceWidth, (uint)SequenceHeight, (uint)CondInputBatch, 1, 3, context);
 
 			input_tensors.Add("x", x_tensor);
 			input_tensors.Add("timesteps", timestamps_tensor);
@@ -314,19 +320,18 @@ namespace ailiaSDK
 			input_tensors.Add("h5", output_tensors_emb[7]);
 
 			List<AiliaTensor> output_tensors_out = Infer(diffusionOutModel, input_tensors);
-
 			float[] diffusion_output = output_tensors_out[0].data;
 
+			float[] z = new float[CondInputWidth * CondInputHeight * CondInputChannel];
 			float unconditional_guidance_scale = 7.5f;
 			for (int i = 0; i < CondInputWidth * CondInputHeight * CondInputChannel; i++){
 				float e_t = diffusion_output[i];
 				float e_t_uncond = diffusion_output[CondInputWidth * CondInputHeight * CondInputChannel + i];
 				e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond);
-				diffusion_output[i] = e_t;
-				diffusion_output[CondInputWidth * CondInputHeight * CondInputChannel + i] = e_t;
+				z[i] = e_t;
 			}
 
-			return diffusion_output;
+			return z;
 		}
 
 		public string GetProfile(){
