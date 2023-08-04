@@ -254,6 +254,9 @@ namespace ailiaSDK
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx"});
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx.prototxt", local_name =  "autoencoder_sd.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx", local_name =  "autoencoder_sd.onnx" });
+					serverFolderName = "clip";
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "ViT-L14-encode_text.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "ViT-L14-encode_text.onnx"});
 					break;
 			}
 
@@ -275,7 +278,9 @@ namespace ailiaSDK
 							asset_path + "/" + "diffusion_emb.onnx.prototxt", asset_path + "/" + "diffusion_emb.onnx",
 							asset_path + "/" + "diffusion_mid.onnx.prototxt", asset_path + "/" + "diffusion_mid.onnx",
 							asset_path + "/" + "diffusion_out.onnx.prototxt", asset_path + "/" + "diffusion_out.onnx",
-							asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx", gpu_mode);
+							asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx",
+							asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
+							gpu_mode);
 						break;
 				}
 			}));

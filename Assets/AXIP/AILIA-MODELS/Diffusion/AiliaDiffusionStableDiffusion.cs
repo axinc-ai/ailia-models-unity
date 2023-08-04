@@ -15,6 +15,7 @@ namespace ailiaSDK
 		private AiliaModel diffusionMidModel;
 		private AiliaModel diffusionOutModel;
 		private AiliaModel aeModel;
+		private AiliaModel clipModel;
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -25,7 +26,7 @@ namespace ailiaSDK
 		private int CondInputHeight;
 		private int CondInputChannel;
 		private int SequenceWidth;
-		private int SequenzeHeight;
+		private int SequenceHeight;
 		private int DiffusionOutputWidth;
 		private int DiffusionOutputHeight;
 		private int DiffusionOutputChannel;
@@ -34,9 +35,9 @@ namespace ailiaSDK
 		private int AeOutputChannel;
 
 		// Buffers
-		private float[] cond_input;
 		private float[] ae_output;
 		private float [] diffusion_img;
+		private float [] context;
 
 		// Profile
 		private float profile_pre;
@@ -45,11 +46,34 @@ namespace ailiaSDK
 		private float profile_post;
 		private string profile_text;
 
+		// Tokens
+		private static float [] empty_tokens = {
+				49406, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+
+		private static float [] prompt_tokens = {
+				49406,   320,  8853,   539,   550, 18376,  6765,   320,  4558, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
+				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+
 		public bool Open(
 			string diffusion_emb_model_path, string diffusion_emb_weight_path,
 			string diffusion_mid_model_path, string diffusion_mid_weight_path,
 			string diffusion_out_model_path, string diffusion_out_weight_path,
-			string ae_model_path, string ae_weight_path, bool gpu_mode)
+			string ae_model_path, string ae_weight_path,
+			string clip_model_path, string clip_weight_path,		
+			bool gpu_mode)
 		{
 			string asset_path = Application.temporaryCachePath;
 
@@ -65,6 +89,7 @@ namespace ailiaSDK
 				diffusionMidModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				diffusionOutModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				aeModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				clipModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
@@ -72,6 +97,7 @@ namespace ailiaSDK
 			diffusionMidModel.SetMemoryMode(memory_mode);
 			diffusionOutModel.SetMemoryMode(memory_mode);
 			aeModel.SetMemoryMode(memory_mode);
+			// clip requres internal state
 
 			bool modelPrepared = false;
 			modelPrepared = diffusionEmbModel.OpenFile(diffusion_emb_model_path, diffusion_emb_weight_path);
@@ -81,6 +107,9 @@ namespace ailiaSDK
 					modelPrepared = diffusionOutModel.OpenFile(diffusion_out_model_path, diffusion_out_weight_path);
 					if (modelPrepared == true){
 						modelPrepared = aeModel.OpenFile(ae_model_path, ae_weight_path);
+						if (modelPrepared == true){
+							modelPrepared = clipModel.OpenFile(clip_model_path, clip_weight_path);
+						}
 					}
 				}
 			}
@@ -93,23 +122,47 @@ namespace ailiaSDK
 			diffusionMidModel.Close();
 			diffusionOutModel.Close();
 			aeModel.Close();
+			clipModel.Close();
 		}
 
 		private void AllocateBuffer(){
-			CondInputBatch = 2;
+			CondInputBatch = 2; // cond and non cond
 			CondInputWidth = 64;
 			CondInputHeight = 64;
 			CondInputChannel = 4;
 
 			SequenceWidth = 768;
-			SequenzeHeight = 77;
+			SequenceHeight = 77;
 
 			AeOutputWidth = 512;
 			AeOutputHeight = 512;
 			AeOutputChannel = 3;
-			
-			cond_input = new float[CondInputWidth * CondInputHeight * CondInputChannel];
+
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
+		}
+
+		private float [] Tokenize(float [] tokens){
+			const int CLIP_SEQUENCE_SIZE = 77;
+			const int CLIP_CONTEXT_SIZE = 768;
+
+			Ailia.AILIAShape shape=new Ailia.AILIAShape();
+			shape.x = CLIP_SEQUENCE_SIZE;
+			shape.y = 1;
+			shape.z = 1;
+			shape.w = 1;
+			shape.dim = 2;
+
+			float [] z = new float [CLIP_SEQUENCE_SIZE * CLIP_CONTEXT_SIZE];
+
+			clipModel.SetInputBlobShape(shape, (int)clipModel.GetInputBlobList()[0]);
+			clipModel.SetInputBlobData(diffusion_img , (int)clipModel.GetInputBlobList()[0]);
+			bool result = clipModel.Update();
+			if (result == false){
+				Debug.Log("CLIP failed.");
+			}
+			clipModel.GetBlobData(z , (int)clipModel.FindBlobIndexByName("/ln_final/Add_1_output_0"));
+
+			return z;
 		}
 
 		public Color32[] Predict(int step, int ddim_num_steps)
@@ -133,25 +186,22 @@ namespace ailiaSDK
 			// Condition
 			bool result = false;
 
+			// Clip Embedding
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			if (step == 0){
+				float [] uc = Tokenize(empty_tokens);
+				float [] c = Tokenize(prompt_tokens);
+				context = new float [SequenceWidth * SequenceHeight * CondInputBatch];
+				for (int i = 0; i < SequenceWidth * SequenceHeight; i++){
+					context[0 * SequenceWidth * SequenceHeight + i] = c[i];
+					context[1 * SequenceWidth * SequenceHeight + i] = uc[i];
+				}
+			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-			// diffusion mid
-
-			// diffusion out
-
-			// autoencoder
 
 			// Make output image
 			Color32[] outputImage;
 			outputImage = new Color32[AeOutputWidth * AeOutputHeight];
-
-
-			// Diffusion context (noise 3dim + cond 3dim)
-			float [] diffusion_ctx = new float[CondInputWidth * CondInputHeight * 6];
-			for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
-				diffusion_ctx[CondInputWidth * CondInputHeight * 3 + i] = cond_input[i];
-			}
 
 			// Diffusion Loop
 			float ddim_eta = 1.0f;
@@ -162,49 +212,15 @@ namespace ailiaSDK
 			long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step < ddim_num_steps){
 				int index = ddim_num_steps - 1 - step;
-
-				// diffusion emb
-				float [] timestamp = new float[CondInputBatch];
-				float [] context = new float [SequenceWidth * SequenzeHeight * CondInputBatch]; // clip embedding
-
-				Dictionary<string,AiliaTensor> input_tensors = new Dictionary<string,AiliaTensor>();
-				AiliaTensor x_tensor = new AiliaTensor((uint)CondInputWidth, (uint)CondInputHeight, (uint)CondInputChannel, (uint)CondInputBatch, 4, diffusion_img);
-				AiliaTensor timestamps_tensor = new AiliaTensor((uint)CondInputBatch, 1, 1, 1, 1, timestamp);
-				AiliaTensor context_tensor = new AiliaTensor((uint)SequenceWidth, (uint)SequenzeHeight, (uint)CondInputBatch, 1, 3, context);
-				input_tensors.Add("x", x_tensor);
-				input_tensors.Add("timestamps", timestamps_tensor);
-				input_tensors.Add("context", context_tensor);
-
-				List<AiliaTensor> output_tensors = Infer(diffusionEmbModel, input_tensors);
-				AiliaTensor feature_tensor = output_tensors[0];
-				
-				// diffusion mid
-				input_tensors = new Dictionary<string,AiliaTensor>();
-				//input_tensors.Add("x", output_tensors[0]);
-
-				// diffusin out
-
-				/*
-				float [] t = new float[1];
-				t[0] = parameters.ddim_timesteps[index];
-				List<float []> inputs = new List<float []>();
-				for (int i = 0; i < CondInputWidth * CondInputHeight * 3; i++){
-					diffusion_ctx[i] = diffusion_img[i];
-				}
-				inputs.Add(diffusion_ctx);
-				inputs.Add(t);
-				List<float []> results = Forward(diffusionModel, inputs);
-				float [] diffusion_output = results[0];
+				float[] diffusion_output = DiffusionInfer(diffusion_img, step);
 				ddim.DdimSampling(diffusion_img, diffusion_output, parameters, index);
-				*/
 			}
-
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// AutoEncoder
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			aeModel.SetInputBlobData(diffusion_img , (int)aeModel.GetInputBlobList()[0]);
-			//result = aeModel.Update();
+			result = aeModel.Update();
 			aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
@@ -235,11 +251,72 @@ namespace ailiaSDK
 			return outputImage;
 		}
 
+		private float [] DiffusionInfer(float [] diffusion_img, int step){
+			// diffusion emb
+			float [] timestamp = new float[CondInputBatch];
+
+			Dictionary<string,AiliaTensor> input_tensors = new Dictionary<string,AiliaTensor>();
+			AiliaTensor x_tensor = new AiliaTensor((uint)CondInputWidth, (uint)CondInputHeight, (uint)CondInputChannel, (uint)CondInputBatch, 4, diffusion_img);
+			AiliaTensor timestamps_tensor = new AiliaTensor((uint)CondInputBatch, 1, 1, 1, 1, timestamp);
+			AiliaTensor context_tensor = new AiliaTensor((uint)SequenceWidth, (uint)SequenceHeight, (uint)CondInputBatch, 1, 3, context);
+
+			for (int i = 0; i < CondInputBatch; i++){
+				timestamp[i] = step;
+			}
+
+			input_tensors.Add("x", x_tensor);
+			input_tensors.Add("timestamps", timestamps_tensor);
+			input_tensors.Add("context", context_tensor);
+
+			List<AiliaTensor> output_tensors = Infer(diffusionEmbModel, input_tensors);
+			
+			// diffusion mid
+			input_tensors = new Dictionary<string,AiliaTensor>();
+			input_tensors.Add("h", output_tensors[0]);
+			input_tensors.Add("emb", output_tensors[1]);
+			input_tensors.Add("context", context_tensor);
+			input_tensors.Add("h6", output_tensors[8]);
+			input_tensors.Add("h7", output_tensors[9]);
+			input_tensors.Add("h8", output_tensors[10]);
+			input_tensors.Add("h9", output_tensors[11]);
+			input_tensors.Add("h10", output_tensors[12]);
+			input_tensors.Add("h11", output_tensors[13]);
+
+			List<AiliaTensor> output_tensors_mid = Infer(diffusionMidModel, input_tensors);
+
+			// diffusin out
+			input_tensors = new Dictionary<string,AiliaTensor>();
+			input_tensors.Add("h", output_tensors_mid[0]);
+			input_tensors.Add("emb", output_tensors[1]);
+			input_tensors.Add("context", context_tensor);
+			input_tensors.Add("h0", output_tensors[2]);
+			input_tensors.Add("h1", output_tensors[3]);
+			input_tensors.Add("h2", output_tensors[4]);
+			input_tensors.Add("h3", output_tensors[5]);
+			input_tensors.Add("h4", output_tensors[6]);
+			input_tensors.Add("h5", output_tensors[7]);
+
+			List<AiliaTensor> output_tensors_out = Infer(diffusionOutModel, input_tensors);
+
+			float[] diffusion_output = output_tensors_out[0].data;
+
+			float unconditional_guidance_scale = 7.5f;
+			for (int i = 0; i < CondInputWidth * CondInputHeight * CondInputChannel; i++){
+				float e_t = diffusion_output[i];
+				float e_t_uncond = diffusion_output[CondInputWidth * CondInputHeight * CondInputChannel + i];
+				e_t = e_t_uncond + unconditional_guidance_scale * (e_t - e_t_uncond);
+				diffusion_output[i] = e_t;
+				diffusion_output[CondInputWidth * CondInputHeight * CondInputChannel + i] = e_t;
+			}
+
+			return diffusion_output;
+		}
+
 		public string GetProfile(){
 			return profile_text;
 		}
 
-		void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer)
+		private void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer)
 		{
 			Debug.Log("outputData" + outputData.Length);
 			Debug.Log("pixelBuffer" + pixelBuffer.Length);
@@ -275,7 +352,7 @@ namespace ailiaSDK
 		};
 
 		// Infer
-		List<AiliaTensor> Infer(AiliaModel model, Dictionary<string,AiliaTensor> input_tensors){
+		private List<AiliaTensor> Infer(AiliaModel model, Dictionary<string,AiliaTensor> input_tensors){
 			// Set input
 			foreach(KeyValuePair<string, AiliaTensor> dicItem in input_tensors) {
 				Debug.Log("Input "+dicItem.Key+" Shape "+dicItem.Value.shape.w+" "+dicItem.Value.shape.z+" "+dicItem.Value.shape.y+" "+dicItem.Value.shape.x+" dim "+dicItem.Value.shape.dim);
