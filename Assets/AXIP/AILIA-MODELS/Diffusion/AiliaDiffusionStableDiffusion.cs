@@ -81,6 +81,7 @@ namespace ailiaSDK
 			diffusionMidModel = new AiliaModel();
 			diffusionOutModel = new AiliaModel();
 			aeModel = new AiliaModel();
+			clipModel = new AiliaModel();
 
 			if (gpu_mode)
 			{
@@ -162,7 +163,19 @@ namespace ailiaSDK
 			}
 			clipModel.GetBlobData(z , (int)clipModel.FindBlobIndexByName("/ln_final/Add_1_output_0"));
 
+			Debug.Log("Clip embedding "+z[0]+" "+z[1]);
+
 			return z;
+		}
+
+		private void SetInputShape(){
+			Ailia.AILIAShape shape=new Ailia.AILIAShape();
+			shape.x = (uint)CondInputWidth;
+			shape.y = (uint)CondInputHeight;
+			shape.z = (uint)CondInputChannel;
+			shape.w = 1;
+			shape.dim = 4;
+			aeModel.SetInputBlobShape(shape, (int)clipModel.GetInputBlobList()[0]);
 		}
 
 		public Color32[] Predict(int step, int ddim_num_steps)
@@ -170,6 +183,7 @@ namespace ailiaSDK
 			// Initial diffusion image
 			if (step == 0){
 				AllocateBuffer();
+				SetInputShape();
 
 				diffusion_img = new float[CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel];
 				for (int i = 0; i < CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel; i++){
@@ -265,7 +279,7 @@ namespace ailiaSDK
 			}
 
 			input_tensors.Add("x", x_tensor);
-			input_tensors.Add("timestamps", timestamps_tensor);
+			input_tensors.Add("timesteps", timestamps_tensor);
 			input_tensors.Add("context", context_tensor);
 
 			List<AiliaTensor> output_tensors = Infer(diffusionEmbModel, input_tensors);

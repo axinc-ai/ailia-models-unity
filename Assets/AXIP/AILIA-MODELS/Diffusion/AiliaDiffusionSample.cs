@@ -120,17 +120,17 @@ namespace ailiaSDK
 			switch (diffusionModels)
 			{
 				case DiffusionModels.Inpainting:
-					imagePrepared = !AiliaImageSource.IsPrepared || !AiliaImageSourceMask.IsPrepared || !AiliaImageSourceMaskResize.IsPrepared;
+					imagePrepared = AiliaImageSource.IsPrepared && AiliaImageSourceMask.IsPrepared && AiliaImageSourceMaskResize.IsPrepared;
 					break;
 				case DiffusionModels.SuperResolution:
-					imagePrepared = !AiliaImageSource.IsPrepared;
+					imagePrepared = AiliaImageSource.IsPrepared;
 					break;
 				case DiffusionModels.StableDiffusion:
 					imagePrepared = true;
 					break;
 			}
 
-			if (imagePrepared || !modelPrepared)
+			if (!imagePrepared || !modelPrepared)
 			{
 				Debug.Log("Waiting prepare "+AiliaImageSource.IsPrepared+","+AiliaImageSourceMask.IsPrepared+","+AiliaImageSourceMaskResize.IsPrepared+","+modelPrepared);
 				return;
@@ -175,13 +175,17 @@ namespace ailiaSDK
 				}
 
 				// T2B (Model) to B2T (Unity)
-				VerticalFlip(InputWidth, InputHeight, inputImage);
+				if (inputImage != null){
+					VerticalFlip(InputWidth, InputHeight, inputImage);
+				}
 				VerticalFlip(OutputWidth, OutputHeight, outputImage);
 
 				// for viewer
 				originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
-				originalTexture.SetPixels32(inputImage);
-				originalTexture.Apply();
+				if (inputImage != null){
+					originalTexture.SetPixels32(inputImage);
+					originalTexture.Apply();
+				}
 
 				resultTexture2D = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
 				resultTexture2D.SetPixels32(outputImage);
@@ -202,6 +206,9 @@ namespace ailiaSDK
 						break;
 					case DiffusionModels.SuperResolution:
 						label_text.text = super_resolution.GetProfile();
+						break;
+					case DiffusionModels.StableDiffusion:
+						label_text.text = stable_diffusion.GetProfile();
 						break;
 					}
 				}
