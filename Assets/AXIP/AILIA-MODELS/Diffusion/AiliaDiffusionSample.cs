@@ -82,7 +82,10 @@ namespace ailiaSDK
 
 		private void AllocateBuffer(){
 			float rawImageRatio = rawImageSize.x / rawImageSize.y;
-			float ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
+			float ratio = 1.0f;
+			if (diffusionModels != DiffusionModels.StableDiffusion){
+				ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
+			}
 			raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
 
 			switch (diffusionModels)
@@ -324,12 +327,14 @@ namespace ailiaSDK
 		{
 			inpainting.Close();
 			super_resolution.Close();
+			stable_diffusion.Close();
 		}
 
 		void OnDestroy()
 		{
 			inpainting.Close();
 			super_resolution.Close();
+			stable_diffusion.Close();
 		}
 	}
 }

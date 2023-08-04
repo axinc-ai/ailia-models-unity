@@ -11,11 +11,11 @@ namespace ailiaSDK
 	public class AiliaDiffusionStableDiffusion
 	{
 		//AILIA
-		private AiliaModel diffusionEmbModel;
-		private AiliaModel diffusionMidModel;
-		private AiliaModel diffusionOutModel;
-		private AiliaModel aeModel;
-		private AiliaModel clipModel;
+		private AiliaModel diffusionEmbModel = new AiliaModel();
+		private AiliaModel diffusionMidModel = new AiliaModel();
+		private AiliaModel diffusionOutModel = new AiliaModel();
+		private AiliaModel aeModel = new AiliaModel();
+		private AiliaModel clipModel = new AiliaModel();
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -76,12 +76,6 @@ namespace ailiaSDK
 			bool gpu_mode)
 		{
 			string asset_path = Application.temporaryCachePath;
-
-			diffusionEmbModel = new AiliaModel();
-			diffusionMidModel = new AiliaModel();
-			diffusionOutModel = new AiliaModel();
-			aeModel = new AiliaModel();
-			clipModel = new AiliaModel();
 
 			if (gpu_mode)
 			{
