@@ -226,7 +226,7 @@ namespace ailiaSDK
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// AutoEncoder
-			float [] ae_input = new float[CondInputBatch * CondInputWidth * CondInputHeight];
+			float [] ae_input = new float[CondInputChannel * CondInputWidth * CondInputHeight];
 			for (int i = 0; i < ae_input.Length;i++){
 				float scale_factor = 0.18215f;
 				ae_input[i] = diffusion_img[i] / scale_factor;
@@ -234,7 +234,11 @@ namespace ailiaSDK
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			aeModel.SetInputBlobData(ae_input , (int)aeModel.GetInputBlobList()[0]);
 			result = aeModel.Update();
-			aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
+			if (!result){
+				Debug.Log("ae failed");
+				return outputImage;
+			}
+			aeModel.GetBlobData(ae_output, (int)aeModel.GetOutputBlobList()[0]);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// convert result to image
