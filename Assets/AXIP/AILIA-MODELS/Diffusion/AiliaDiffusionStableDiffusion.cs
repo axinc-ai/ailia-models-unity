@@ -212,22 +212,27 @@ namespace ailiaSDK
 			outputImage = new Color32[AeOutputWidth * AeOutputHeight];
 
 			// Diffusion Loop
-			float ddim_eta = 1.0f;
-			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta, AiliaDiffusionAlphasComprod.alphas_cumprod_super_resolution);
+			float ddim_eta = 0.0f;
+			AiliaDiffusionDdim.DdimParameters parameters = ddim.MakeDdimParameters(ddim_num_steps, ddim_eta, AiliaDiffusionAlphasComprod.alphas_cumprod_stable_diffusion);
 			if (ddim_num_steps != parameters.ddim_timesteps.Count){
 				return outputImage;
 			}
 			long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step < ddim_num_steps){
 				int index = ddim_num_steps - 1 - step;
-				float[] diffusion_output = DiffusionInfer(diffusion_img, step);
+				float[] diffusion_output = DiffusionInfer(diffusion_img, context, step);
 				ddim.DdimSampling(diffusion_img, diffusion_output, parameters, index);
 			}
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// AutoEncoder
+			float [] ae_input = new float[CondInputBatch * CondInputWidth * CondInputHeight];
+			for (int i = 0; i < ae_input.Length;i++){
+				float scale_factor = 0.18215f;
+				ae_input[i] = diffusion_img[i] / scale_factor;
+			}
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			aeModel.SetInputBlobData(diffusion_img , (int)aeModel.GetInputBlobList()[0]);
+			aeModel.SetInputBlobData(ae_input , (int)aeModel.GetInputBlobList()[0]);
 			result = aeModel.Update();
 			aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -259,7 +264,7 @@ namespace ailiaSDK
 			return outputImage;
 		}
 
-		private float [] DiffusionInfer(float [] diffusion_img, int step){
+		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int step){
 			// diffusion emb
 			float [] timestamp = new float[CondInputBatch];
 
@@ -276,33 +281,33 @@ namespace ailiaSDK
 			input_tensors.Add("timesteps", timestamps_tensor);
 			input_tensors.Add("context", context_tensor);
 
-			List<AiliaTensor> output_tensors = Infer(diffusionEmbModel, input_tensors);
+			List<AiliaTensor> output_tensors_emb = Infer(diffusionEmbModel, input_tensors);
 			
 			// diffusion mid
 			input_tensors = new Dictionary<string,AiliaTensor>();
-			input_tensors.Add("h", output_tensors[0]);
-			input_tensors.Add("emb", output_tensors[1]);
+			input_tensors.Add("h", output_tensors_emb[0]);
+			input_tensors.Add("emb", output_tensors_emb[1]);
 			input_tensors.Add("context", context_tensor);
-			input_tensors.Add("h6", output_tensors[8]);
-			input_tensors.Add("h7", output_tensors[9]);
-			input_tensors.Add("h8", output_tensors[10]);
-			input_tensors.Add("h9", output_tensors[11]);
-			input_tensors.Add("h10", output_tensors[12]);
-			input_tensors.Add("h11", output_tensors[13]);
+			input_tensors.Add("h6", output_tensors_emb[8]);
+			input_tensors.Add("h7", output_tensors_emb[9]);
+			input_tensors.Add("h8", output_tensors_emb[10]);
+			input_tensors.Add("h9", output_tensors_emb[11]);
+			input_tensors.Add("h10", output_tensors_emb[12]);
+			input_tensors.Add("h11", output_tensors_emb[13]);
 
 			List<AiliaTensor> output_tensors_mid = Infer(diffusionMidModel, input_tensors);
 
 			// diffusin out
 			input_tensors = new Dictionary<string,AiliaTensor>();
 			input_tensors.Add("h", output_tensors_mid[0]);
-			input_tensors.Add("emb", output_tensors[1]);
+			input_tensors.Add("emb", output_tensors_emb[1]);
 			input_tensors.Add("context", context_tensor);
-			input_tensors.Add("h0", output_tensors[2]);
-			input_tensors.Add("h1", output_tensors[3]);
-			input_tensors.Add("h2", output_tensors[4]);
-			input_tensors.Add("h3", output_tensors[5]);
-			input_tensors.Add("h4", output_tensors[6]);
-			input_tensors.Add("h5", output_tensors[7]);
+			input_tensors.Add("h0", output_tensors_emb[2]);
+			input_tensors.Add("h1", output_tensors_emb[3]);
+			input_tensors.Add("h2", output_tensors_emb[4]);
+			input_tensors.Add("h3", output_tensors_emb[5]);
+			input_tensors.Add("h4", output_tensors_emb[6]);
+			input_tensors.Add("h5", output_tensors_emb[7]);
 
 			List<AiliaTensor> output_tensors_out = Infer(diffusionOutModel, input_tensors);
 
