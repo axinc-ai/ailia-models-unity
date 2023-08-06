@@ -224,7 +224,7 @@ namespace ailiaSDK
 			long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step < ddim_num_steps){
 				int index = ddim_num_steps - 1 - step;
-				float[] diffusion_output = DiffusionInfer(diffusion_img, context, step);
+				float[] diffusion_output = DiffusionInfer(diffusion_img, context, parameters.ddim_timesteps[index]);
 				ddim.DdimSampling(diffusion_img, diffusion_output, parameters, index);
 			}
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -272,7 +272,7 @@ namespace ailiaSDK
 			return outputImage;
 		}
 
-		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int step){
+		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int t){
 			// 1channel -> 2channel copy
 			float [] x = new float[CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel];
 			for (int i = 0; i < CondInputWidth * CondInputHeight * CondInputChannel; i++){
@@ -282,8 +282,10 @@ namespace ailiaSDK
 
 			float [] timestamp = new float[CondInputBatch];
 			for (int i = 0; i < CondInputBatch; i++){
-				timestamp[i] = step;
+				timestamp[i] = t;
 			}
+
+			Debug.Log("timestamp "+t);
 
 			// diffusion emb
 			Dictionary<string,AiliaTensor> input_tensors = new Dictionary<string,AiliaTensor>();
