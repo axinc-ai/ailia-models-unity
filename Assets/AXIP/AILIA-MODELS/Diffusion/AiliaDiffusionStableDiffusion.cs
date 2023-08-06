@@ -150,14 +150,18 @@ namespace ailiaSDK
 			float [] z = new float [CLIP_SEQUENCE_SIZE * CLIP_CONTEXT_SIZE];
 
 			clipModel.SetInputBlobShape(shape, (int)clipModel.GetInputBlobList()[0]);
-			clipModel.SetInputBlobData(diffusion_img , (int)clipModel.GetInputBlobList()[0]);
+			clipModel.SetInputBlobData(tokens , (int)clipModel.GetInputBlobList()[0]);
 			bool result = clipModel.Update();
 			if (result == false){
 				Debug.Log("CLIP failed.");
 			}
-			clipModel.GetBlobData(z , (int)clipModel.FindBlobIndexByName("/ln_final/Add_1_output_0"));
 
-			Debug.Log("Clip embedding "+z[0]+" "+z[1]);
+			string feature_name = "/ln_final/Add_1_output_0";
+			shape = clipModel.GetBlobShape((int)clipModel.FindBlobIndexByName(feature_name));
+			Debug.Log("Clip Output Shape "+shape.w+" "+shape.z+" "+shape.y+" "+shape.x+" dim "+shape.dim);
+			clipModel.GetBlobData(z , (int)clipModel.FindBlobIndexByName(feature_name));
+
+			Debug.Log("Clip embedding "+z[0]+" "+z[1]+" ... "+z[768]+" ... "+z[z.Length - 1]);
 
 			return z;
 		}
@@ -169,7 +173,7 @@ namespace ailiaSDK
 			shape.z = (uint)CondInputChannel;
 			shape.w = 1;
 			shape.dim = 4;
-			aeModel.SetInputBlobShape(shape, (int)clipModel.GetInputBlobList()[0]);
+			aeModel.SetInputBlobShape(shape, (int)aeModel.GetInputBlobList()[0]);
 		}
 
 		public Color32[] Predict(int step, int ddim_num_steps)
@@ -380,6 +384,10 @@ namespace ailiaSDK
 				Debug.Log("Input "+dicItem.Key+" Shape "+dicItem.Value.shape.w+" "+dicItem.Value.shape.z+" "+dicItem.Value.shape.y+" "+dicItem.Value.shape.x+" dim "+dicItem.Value.shape.dim);
 				model.SetInputBlobShape(dicItem.Value.shape,model.FindBlobIndexByName(dicItem.Key));
 				model.SetInputBlobData(dicItem.Value.data,model.FindBlobIndexByName(dicItem.Key));
+				if (dicItem.Value.shape.w * dicItem.Value.shape.z * dicItem.Value.shape.y * dicItem.Value.shape.x != dicItem.Value.data.Length){
+					Debug.Log("Input data size mismatch");
+					return null;
+				}
 			}
 
 			// Infer
