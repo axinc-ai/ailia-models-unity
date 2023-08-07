@@ -166,11 +166,17 @@ namespace ailiaSDK
 			return z;
 		}
 
-		private void SetInputShape(){
+		private void SetInputShape(bool preview){
 			Ailia.AILIAShape shape=new Ailia.AILIAShape();
-			shape.x = (uint)CondInputWidth;
-			shape.y = (uint)CondInputHeight;
-			shape.z = (uint)CondInputChannel;
+			if (preview){
+				shape.x = (uint)CondInputWidth / 4;
+				shape.y = (uint)CondInputHeight / 4;
+				shape.z = (uint)CondInputChannel;
+			}else{
+				shape.x = (uint)CondInputWidth;
+				shape.y = (uint)CondInputHeight;
+				shape.z = (uint)CondInputChannel;
+			}
 			shape.w = 1;
 			shape.dim = 4;
 			aeModel.SetInputBlobShape(shape, (int)aeModel.GetInputBlobList()[0]);
@@ -181,7 +187,6 @@ namespace ailiaSDK
 			// Initial diffusion image
 			if (step == 0){
 				AllocateBuffer();
-				SetInputShape();
 
 				diffusion_img = new float[1 * CondInputWidth * CondInputHeight * CondInputChannel];
 				for (int i = 0; i < 1 * CondInputWidth * CondInputHeight * CondInputChannel; i++){
@@ -224,18 +229,30 @@ namespace ailiaSDK
 			long start_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			if (step < ddim_num_steps){
 				int index = ddim_num_steps - 1 - step;
-				float[] diffusion_output = DiffusionInfer(diffusion_img, context, parameters.ddim_timesteps[index]);
+				bool update_context = (step == 0);
+				float[] diffusion_output = DiffusionInfer(diffusion_img, context, parameters.ddim_timesteps[index], update_context);
 				ddim.DdimSampling(diffusion_img, diffusion_output, parameters, index);
 			}
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// AutoEncoder
+			bool preview = false;//(step < ddim_num_steps - 1);
 			float [] ae_input = new float[CondInputChannel * CondInputWidth * CondInputHeight];
-			for (int i = 0; i < ae_input.Length;i++){
-				float scale_factor = 0.18215f;
-				ae_input[i] = diffusion_img[i] / scale_factor;
+			for (int c = 0; c < CondInputChannel; c++){
+				for (int y = 0; y < CondInputHeight; y++){
+					for (int x = 0; x < CondInputWidth; x++){
+						int i = y * CondInputWidth + x + c * CondInputWidth * CondInputHeight;
+						int j = i;
+						if (preview){
+							j = (y / 4) * (CondInputWidth / 4) + (x / 4) + c * (CondInputWidth / 4) * (CondInputHeight / 4);
+						}
+						float scale_factor = 0.18215f;
+						ae_input[j] = diffusion_img[i] / scale_factor;
+					}
+				}
 			}
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			SetInputShape(preview);
 			aeModel.SetInputBlobData(ae_input , (int)aeModel.GetInputBlobList()[0]);
 			result = aeModel.Update();
 			if (!result){
@@ -247,7 +264,7 @@ namespace ailiaSDK
 
 			// convert result to image
 			long start_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			OutputDataProcessing(ae_output, outputImage);
+			OutputDataProcessing(ae_output, outputImage, preview);
 			long end_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// profile
@@ -272,7 +289,7 @@ namespace ailiaSDK
 			return outputImage;
 		}
 
-		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int t){
+		private float [] DiffusionInfer(float [] diffusion_img, float [] context, int t, bool update_context){
 			// 1channel -> 2channel copy
 			float [] x = new float[CondInputBatch * CondInputWidth * CondInputHeight * CondInputChannel];
 			for (int i = 0; i < CondInputWidth * CondInputHeight * CondInputChannel; i++){
@@ -295,7 +312,9 @@ namespace ailiaSDK
 
 			input_tensors.Add("x", x_tensor);
 			input_tensors.Add("timesteps", timestamps_tensor);
-			input_tensors.Add("context", context_tensor);
+			if (update_context){
+				input_tensors.Add("context", context_tensor);
+			}
 
 			List<AiliaTensor> output_tensors_emb = Infer(diffusionEmbModel, input_tensors);
 			
@@ -303,7 +322,9 @@ namespace ailiaSDK
 			input_tensors = new Dictionary<string,AiliaTensor>();
 			input_tensors.Add("h", output_tensors_emb[0]);
 			input_tensors.Add("emb", output_tensors_emb[1]);
-			input_tensors.Add("context", context_tensor);
+			if (update_context){
+				input_tensors.Add("context", context_tensor);
+			}
 			input_tensors.Add("h6", output_tensors_emb[8]);
 			input_tensors.Add("h7", output_tensors_emb[9]);
 			input_tensors.Add("h8", output_tensors_emb[10]);
@@ -317,7 +338,9 @@ namespace ailiaSDK
 			input_tensors = new Dictionary<string,AiliaTensor>();
 			input_tensors.Add("h", output_tensors_mid[0]);
 			input_tensors.Add("emb", output_tensors_emb[1]);
-			input_tensors.Add("context", context_tensor);
+			if (update_context){
+				input_tensors.Add("context", context_tensor);
+			}
 			input_tensors.Add("h0", output_tensors_emb[2]);
 			input_tensors.Add("h1", output_tensors_emb[3]);
 			input_tensors.Add("h2", output_tensors_emb[4]);
@@ -344,17 +367,26 @@ namespace ailiaSDK
 			return profile_text;
 		}
 
-		private void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer)
+		private void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer, bool preview)
 		{
 			Debug.Log("outputData" + outputData.Length);
 			Debug.Log("pixelBuffer" + pixelBuffer.Length);
 
-			for (int i = 0; i < pixelBuffer.Length; i++)
+			for (int y = 0; y < AeOutputHeight; y++)
 			{
-				pixelBuffer[i].r = (byte)Mathf.Clamp((outputData[i + 0 * pixelBuffer.Length] + 1.0f) / 2.0f * 255, 0, 255);
-				pixelBuffer[i].g = (byte)Mathf.Clamp((outputData[i + 1 * pixelBuffer.Length] + 1.0f) / 2.0f * 255, 0, 255);
-				pixelBuffer[i].b = (byte)Mathf.Clamp((outputData[i + 2 * pixelBuffer.Length] + 1.0f) / 2.0f * 255, 0, 255);
-				pixelBuffer[i].a = 255;
+				for (int x = 0; x < AeOutputWidth; x++){
+					int i = y * AeOutputWidth + x;
+					int j = i;
+					int stride = AeOutputWidth * AeOutputHeight;
+					if (preview){
+						i = (y / 4) * (AeOutputWidth / 4) + (x / 4);
+						stride = (AeOutputWidth / 4) * (AeOutputHeight / 4);
+					}
+					pixelBuffer[j].r = (byte)Mathf.Clamp((outputData[i + 0 * stride] + 1.0f) / 2.0f * 255, 0, 255);
+					pixelBuffer[j].g = (byte)Mathf.Clamp((outputData[i + 1 * stride] + 1.0f) / 2.0f * 255, 0, 255);
+					pixelBuffer[j].b = (byte)Mathf.Clamp((outputData[i + 2 * stride] + 1.0f) / 2.0f * 255, 0, 255);
+					pixelBuffer[j].a = 255;
+				}
 			}
 		}
 
