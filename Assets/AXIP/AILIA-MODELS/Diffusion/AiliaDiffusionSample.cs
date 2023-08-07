@@ -49,7 +49,7 @@ namespace ailiaSDK
 		Vector2 rawImageSize;
 
 		// Diffusion steps
-		private int ddim_num_steps = 5;
+		private int ddim_num_steps = 0;
 		private int step = 0;
 		private const float SLEEP_TIME = 1.0f;
 		private float sleep = SLEEP_TIME;
@@ -66,6 +66,19 @@ namespace ailiaSDK
 			CreateAiliaNet(diffusionModels, gpu_mode);
 			LoadImage(diffusionModels);
 			AllocateBuffer();
+
+			switch (diffusionModels)
+			{
+				case DiffusionModels.Inpainting:
+					ddim_num_steps = 5;
+					break;
+				case DiffusionModels.SuperResolution:
+					ddim_num_steps = 5;
+					break;
+				case DiffusionModels.StableDiffusion:
+					ddim_num_steps = 10;
+					break;
+			}
 		}
 
 		void UISetup()
