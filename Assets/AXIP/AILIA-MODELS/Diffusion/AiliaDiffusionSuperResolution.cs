@@ -11,8 +11,8 @@ namespace ailiaSDK
 	public class AiliaDiffusionSuperResolution
 	{
 		//AILIA
-		private AiliaModel diffusionModel;
-		private AiliaModel aeModel;
+		private AiliaModel diffusionModel = new AiliaModel();
+		private AiliaModel aeModel = new AiliaModel();
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -43,9 +43,6 @@ namespace ailiaSDK
 		public bool Open(string diffusion_model_path, string diffusion_weight_path, string ae_model_path, string ae_weight_path, bool gpu_mode)
 		{
 			string asset_path = Application.temporaryCachePath;
-
-			diffusionModel = new AiliaModel();
-			aeModel = new AiliaModel();
 
 			if (gpu_mode)
 			{
