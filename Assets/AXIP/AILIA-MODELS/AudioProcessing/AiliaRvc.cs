@@ -25,16 +25,20 @@ namespace ailiaSDK
 		// Model
 		private AiliaModel hubert_model = new AiliaModel();
 		private AiliaModel vc_model = new AiliaModel();
+		private AiliaModel f0_model = new AiliaModel();
 
 		// Debug
 		private bool debug = false;
+
+		// Mode
+		private bool f0_mode = false;
 
 		// Constructer
 		public AiliaRvc(){
 		}
 
 		// Open model from onnx file
-		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, bool gpu_mode){
+		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, string f0_stream, string f0_weight, bool gpu_mode){
 			Close();
 			if (gpu_mode)
 			{
@@ -45,18 +49,63 @@ namespace ailiaSDK
 			if (!status){
 				return status;
 			}
-			return vc_model.OpenFile(vc_stream, vc_weight);
+			status = vc_model.OpenFile(vc_stream, vc_weight);
+			if (!status){
+				return status;
+			}
+			if (f0_stream != null || f0_weight != null){
+				status = f0_model.OpenFile(f0_stream, f0_weight);
+				f0_mode = true;
+			}else{
+				f0_mode = false;
+			}
+			return status;
 		}
 
 		// Close model
 		public void Close(){
 			hubert_model.Close();
 			vc_model.Close();
+			f0_model.Close();
 		}
 
 		// Get backend environment name
 		public string EnvironmentName(){
 			return hubert_model.EnvironmentName();
+		}
+
+		// Pitch Detection : pcm is 16khz
+		public void GetF0(float [] f0_coarse, float [] f0bak, float [] pcm, int f0_up_key){
+			float [] f0 = new float[f0_coarse.Length];
+			
+			// Infer
+
+			// Pitch shift
+			float f0_min = 50;
+			float f0_max = 1100;
+			float f0_mel_min = 1127 * Mathf.Log(1 + f0_min / 700);
+			float f0_mel_max = 1127 * Mathf.Log(1 + f0_max / 700);
+
+			for (int i = 0; i < f0.Length; i++){
+				f0[i] = f0[i] * Mathf.Pow(2, f0_up_key / 12.0f);
+				f0bak[i] = f0[i];
+			}
+
+			// Calc quantized pitch
+			for (int i = 0; i < f0.Length; i++){
+				float f0_mel = 1127 * Mathf.Log(1 + f0[i] / 700);
+				if (f0_mel > 0){
+					f0_mel = (f0_mel - f0_mel_min) * 254 / (f0_mel_max - f0_mel_min) + 1;
+					f0_mel = Mathf.Round(f0_mel);
+				}
+				if (f0_mel <= 1){
+					f0_mel = 1;
+				}
+				if (f0_mel > 255){
+					f0_mel = 255;
+				}
+				f0_coarse[i] = f0_mel;
+			}
 		}
 
 		// Voice convert
@@ -101,10 +150,20 @@ namespace ailiaSDK
 			sid[0] = 0;
 			Randn(rnd);
 
+			// Pitch
+			float [] pitch = new float[len];
+			float [] pitch_f = new float[len];
+			int f0_up_key = 0;
+			GetF0(pitch, pitch_f, hubert_input, f0_up_key);
+
 			// VC Inference
 			List<float[]> vc_inputs = new List<float[]>();
 			vc_inputs.Add(feats);
 			vc_inputs.Add(p_len);
+			if (f0_mode){
+				vc_inputs.Add(pitch);
+				vc_inputs.Add(pitch_f);
+			}
 			vc_inputs.Add(sid);
 			vc_inputs.Add(rnd);
 				
