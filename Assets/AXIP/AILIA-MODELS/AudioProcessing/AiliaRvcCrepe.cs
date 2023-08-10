@@ -15,6 +15,7 @@ namespace ailiaSDK
 {
 	public class AiliaRvcCrepe
 	{
+		private bool unit_test = false;
 		AiliaModel f0_model = new AiliaModel();
 
 		// Constructer
@@ -30,6 +31,9 @@ namespace ailiaSDK
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 			f0_model.SetMemoryMode(memory_mode);
 			bool status = f0_model.OpenFile(f0_stream, f0_weight);
+			if (unit_test){
+				UnitTest();
+			}
 			return status;
 		}
 
@@ -186,6 +190,13 @@ namespace ailiaSDK
 				}
 				f0_coarse[i] = f0_mel;
 			}
+		}
+
+		// UnitTest
+		public void UnitTest(){
+			float [] pcm = new float[2048];
+			int len = 128;
+			float [] f0 = Crepe(pcm, len);
 		}
 	}
 }
