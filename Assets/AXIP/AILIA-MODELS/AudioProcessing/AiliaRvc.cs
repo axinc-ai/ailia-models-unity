@@ -277,14 +277,14 @@ namespace ailiaSDK
 							sequence_shape.dim=2;
 						}
 					}
-					if ( (!f0_mode && i == 2) || (f0_mode && i == 4)){
+					if ((!f0_mode && i == 2) || (f0_mode && i == 4)){
 						sequence_shape.x=1;
 						sequence_shape.y=1;
 						sequence_shape.z=1;
 						sequence_shape.w=1;
 						sequence_shape.dim=1;
 					}
-					if ( (!f0_mode && i == 3) || (f0_mode && i == 5)){
+					if ((!f0_mode && i == 3) || (f0_mode && i == 5)){
 						sequence_shape.x=(uint)inputs[i].Length / RND_SIZE / (uint)BATCH_SIZE;
 						sequence_shape.y=RND_SIZE;
 						sequence_shape.z=(uint)BATCH_SIZE;
