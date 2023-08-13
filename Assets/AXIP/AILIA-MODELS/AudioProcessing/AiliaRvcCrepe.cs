@@ -88,63 +88,84 @@ namespace ailiaSDK
 			float [] pd = new float[f0_len];
 
 			int sample_rate = 16000;
-			int hop_length = sample_rate / 100;
+			int hop_length = sample_rate / 100; // 10ms
 			int WINDOW_SIZE = 1024;
 			int total_frames = 1 + x.Length / hop_length;
-			
-			for (int i = 0; i < total_frames; i++){
-				// create frame
-				int pad = WINDOW_SIZE / 2;
-				int start = i * hop_length - pad;
-				float [] input = new float[WINDOW_SIZE];
-				float sum = 0;
-				for (int j = 0; j < WINDOW_SIZE; j++){
-					int k = start + j;
-					float v = 0;
-					if (k >= 0 && k < x.Length){
-						v = x[k];
-					}
-					input[j] = v;
-					sum+=v;
-				}
+			int batch_size = 100;
 
-				// mean center and scale
-				float mean = sum / WINDOW_SIZE;
-				float norm = 0;
-				for (int j = 0; j < WINDOW_SIZE; j++){
-					input[j] = input[j] - mean;
-					norm += input[j] * input[j];
+			float [] input_batch = new float[batch_size * WINDOW_SIZE];
+			for (int b = 0; b < total_frames; b += batch_size){
+				int current_barth_size = total_frames - b;
+				if (current_barth_size > batch_size){
+					current_barth_size = batch_size;
 				}
-				norm = Mathf.Sqrt(norm);
-				if (norm < (float)(1e-10)){
-					norm = (float)(1e-10);
-				}
-				for (int j = 0; j < WINDOW_SIZE; j++){
-					input[j] = input[j] / norm;
+				for (int i = b; i < b + current_barth_size; i++){
+					// create frame
+					float [] input = new float[WINDOW_SIZE];
+					int pad = WINDOW_SIZE / 2;
+					int start = i * hop_length - pad;
+					float sum = 0;
+					for (int j = 0; j < WINDOW_SIZE; j++){
+						int k = start + j;
+						float v = 0;
+						if (k >= 0 && k < x.Length){
+							v = x[k];
+						}
+						input[j] = v;
+						sum+=v;
+					}
+
+					// mean center and scale
+					float mean = sum / WINDOW_SIZE;
+					float norm = 0;
+					for (int j = 0; j < WINDOW_SIZE; j++){
+						input[j] = input[j] - mean;
+						norm += input[j] * input[j];
+					}
+					norm = Mathf.Sqrt(norm);
+					if (norm < (float)(1e-10)){
+						norm = (float)(1e-10);
+					}
+					for (int j = 0; j < WINDOW_SIZE; j++){
+						input[j] = input[j] / norm;
+					}
+					for (int j = 0; j < WINDOW_SIZE; j++){
+						input_batch[j + (i - b) * WINDOW_SIZE] = input[j];
+					}
 				}
 
 				// infer
+				// input is 1024 sample, output is 1 frequency
+				// finally, calc f0 value per 10ms
 				Ailia.AILIAShape sequence_shape = new Ailia.AILIAShape();
 				sequence_shape.x=(uint)WINDOW_SIZE;
-				sequence_shape.y=1;
+				sequence_shape.y=(uint)current_barth_size;
 				sequence_shape.z=1;
 				sequence_shape.w=1;
 				sequence_shape.dim=2;
 				uint[] input_blobs = f0_model.GetInputBlobList();
-				f0_model.SetInputBlobShape(sequence_shape, (int)input_blobs[0]);
+				bool status = f0_model.SetInputBlobShape(sequence_shape, (int)input_blobs[0]);
+				if (!status){
+					Debug.Log("SetInputBlobShape failed\n");
+					return f0;
+				}
 				uint[] output_blobs = f0_model.GetOutputBlobList();
 				Ailia.AILIAShape output_blob_shape = f0_model.GetBlobShape((int)output_blobs[0]);
+				Debug.Log("Output blob shape " + output_blob_shape.x + " " + output_blob_shape.y + " " + output_blob_shape.z + " " + output_blob_shape.w);
 				float [] probabilities = new float[output_blob_shape.x * output_blob_shape.y * output_blob_shape.z * output_blob_shape.w];
-				f0_model.Predict(probabilities, input);
+				status = f0_model.Predict(probabilities, input_batch);
+				if (!status){
+					Debug.Log("f0_model.Predict failed\n");
+					return f0;
+				}
 
 				//Convert probabilities to F0 and periodicity
 				for (int t = 0; t < output_blob_shape.y; t++){
 					float frequency = ConbertToFrequency(probabilities, t);
-					if (t + i * hop_length < f0.Length){
-						f0[t + i * hop_length] = frequency;
+					if (b + t < f0.Length){
+						f0[b + t] = frequency;
 					}
 				}
-
 			}
 
 			// filter

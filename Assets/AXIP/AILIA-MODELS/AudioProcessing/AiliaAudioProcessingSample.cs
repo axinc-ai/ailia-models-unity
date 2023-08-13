@@ -59,6 +59,9 @@ namespace ailiaSDK {
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
 
+		// RVC mode
+		bool if_f0 = true; // Test f0 model (Please put rvc onnx to streaming assets folder)
+
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
@@ -86,7 +89,6 @@ namespace ailiaSDK {
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx" });
 
-					bool if_f0 = false; // Test f0 model
 					if (if_f0){
 						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx.prototxt" });
 						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx" });
