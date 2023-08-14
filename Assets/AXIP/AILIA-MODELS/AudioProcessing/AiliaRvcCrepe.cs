@@ -15,7 +15,7 @@ namespace ailiaSDK
 {
 	public class AiliaRvcCrepe
 	{
-		private bool unit_test = true;
+		private bool unit_test = false;
 		AiliaModel f0_model = new AiliaModel();
 
 		// Model parameter
@@ -101,6 +101,19 @@ namespace ailiaSDK
 			probabilities[:, maxidx:] = -float('inf')
 			*/
 
+			// Remove frequencies outside of allowable range
+			const int minidx = 39; // 50hz
+			const int maxidx = 308; // 2006hz
+
+			for (int t = 0; t < output_blob_shape_y; t++){
+				for (int i = 0; i < PITCH_BINS; i++){
+					if (i < minidx || i >= maxidx){
+						probabilities[t * PITCH_BINS + i] = Mathf.NegativeInfinity;
+					}
+				}
+			}
+
+
 			//DecodeArgMax(probabilities, f0, pd, output_blob_shape_y, b);
 			DecodeViterbi(probabilities, f0, pd, output_blob_shape_y, b);
 		}
@@ -131,14 +144,14 @@ namespace ailiaSDK
 			return bins;
 		}
 
-		private void Softmax(float [] data, int bins, int n_steps){
+		private void Softmax(float [,] data, int bins, int n_steps){
 			for (int t = 0; t < n_steps; t++){
 				float sum=0;
 				for(int i = 0; i < bins; i++){
-					sum += Mathf.Exp(data[i + t * bins]);
+					sum += Mathf.Exp(data[t, i]);
 				}
 				for(int i = 0; i < bins; i++){
-					data[i + t * bins] = Mathf.Exp(data[i + t * bins]) / sum;
+					data[t, i] = Mathf.Exp(data[t, i]) / sum;
 				}
 			}
 		}
@@ -163,10 +176,12 @@ namespace ailiaSDK
 		}
 
 		private void DecodeViterbi(float [] probabilities, float [] f0, float [] pd, int n_steps, int b){
+			const int n_states = PITCH_BINS;
+
 			// Apply Softmax
-			float [] log_prob = new float [probabilities.Length];
+			float [,] log_prob = new float [n_steps, n_states];
 			for (int i = 0; i < probabilities.Length; i++){
-				log_prob[i] = probabilities[i];
+				log_prob[i/n_states, i%n_states] = probabilities[i];
 			}
 			Softmax(log_prob, PITCH_BINS, n_steps);
 
@@ -174,32 +189,38 @@ namespace ailiaSDK
 			float [,] log_trans = Transition();
 
 			// Create state
-			const int n_states = PITCH_BINS;
 			float [,] value = new float[n_steps, n_states];
 			int [,] ptr = new int[n_steps, n_states];
 			float [] log_p_init = new float[n_states];
 
+			if (unit_test){
+				DumpTensor2D("Prob", log_prob, n_steps, n_states);
+				DumpTensor2D("Trans", log_trans, n_states, n_states);
+			}
+
 			// Apply log
 			for (int i = 0; i < n_states; i++){
-				log_p_init[i] = Mathf.Log(1.0f / n_states);
+				log_p_init[i] = Mathf.Log(1.0f / n_states + float.Epsilon);
 			}
-			for (int i = 0; i < log_prob.Length; i++){
-				log_prob[i] = Mathf.Log(log_prob[i]);
+			for (int y = 0; y < n_steps; y++){
+				for (int x = 0; x < n_states; x++){
+					log_prob[y, x] = Mathf.Log(log_prob[y, x] + float.Epsilon);
+				}
 			}
 			for (int y = 0; y < n_states; y++){
 				for (int x = 0; x < n_states; x++){
-					log_trans[y, x] = Mathf.Log(log_trans[y, x]);
+					log_trans[y, x] = Mathf.Log(log_trans[y, x] + float.Epsilon);
 				}
 			}
 			if (unit_test){
-				DumpTensor("LogProb", log_prob);
+				DumpTensor2D("LogProb", log_prob, n_steps, n_states);
 				DumpTensor("LogProbInit", log_p_init);
 				DumpTensor2D("LogTrans", log_trans, n_states, n_states);
 			}
 
 			// Viterbi algorithm
 			for (int i = 0; i < n_states; i++){
-				value[0, i] = log_prob[0 * n_states + i] + log_p_init[i];
+				value[0, i] = log_prob[0, i] + log_p_init[i];
 			}
 
 			for (int t = 1; t < n_steps; t++){		
@@ -221,7 +242,11 @@ namespace ailiaSDK
 						}
 					}
 					ptr[t, j] = max_i;
-					value[t, j] = log_prob[t * n_states + j] + trans_out[j, ptr[t, j]];
+					value[t, j] = log_prob[t, j] + trans_out[j, ptr[t, j]];
+				}
+				if (unit_test){
+					DumpTensor2D("Value"+t, value, n_steps, n_states, t);
+					DumpTensor2D("Ptr"+t, ptr, n_steps, n_states, t);
 				}
 			}
 
@@ -234,7 +259,9 @@ namespace ailiaSDK
 					max_i2 = k;
 				}
 			}
-			Debug.Log("MaxI " + max_i2 + " MaxProb2 " + max_prob2);
+			if (unit_test){
+				Debug.Log("MaxI " + max_i2 + " MaxProb2 " + max_prob2);
+			}
 
 			int [] state = new int[n_steps];
 			state[n_steps - 1] = max_i2;
@@ -420,12 +447,18 @@ namespace ailiaSDK
 		private void DumpTensor2D(string label, float [,] value, int height, int width){
 			string result = "";
 			for (int y = 0; y < height; y++){
-				if (y > 10){
+				if (y >= 3 && y < height - 3){
+					if (y == 3){
+						result+="...\n";
+					}
 					continue;
 				}
-				result+="line."+y+"\n";
+				//result+="line."+y+"\n";
 				for (int x = 0; x < width; x++){
-					if (x > 10){
+					if (x >= 3 && x < width - 3){
+						if (x == 3){
+							result+="...";
+						}
 						continue;
 					}
 					result+=value[y, x] + " , ";
@@ -433,6 +466,24 @@ namespace ailiaSDK
 				result+="\n";
 			}
 			Debug.Log(label + " values :\n" + result);
+		}
+
+		private void DumpTensor2D(string label, float [,] value, int height, int width, int t){
+			string result = "";
+			int y = t;
+			for (int x = 0; x < width; x++){
+				result+=value[y, x] + " , ";
+			}
+			Debug.Log(label + " " + result);
+		}
+
+		private void DumpTensor2D(string label, int [,] value, int height, int width, int t){
+			string result = "";
+			int y = t;
+			for (int x = 0; x < width; x++){
+				result+=value[y, x] + " , ";
+			}
+			Debug.Log(label + " " + result);
 		}
 
 		// Pitch Detection : pcm is 16khz
