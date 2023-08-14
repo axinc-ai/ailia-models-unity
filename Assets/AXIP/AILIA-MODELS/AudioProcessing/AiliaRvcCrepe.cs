@@ -90,8 +90,35 @@ namespace ailiaSDK
 			return median_list;
 		}
 
-		private int DecodeBin(float [] probabilities, int t){
-			// decoder.argmax
+		private void Decode(float [] probabilities, float [] f0, float [] pd, int output_blob_shape_y, int b){
+			/*
+			# Convert frequency range to pitch bin range
+			minidx = frequency_to_bins(np.array(fmin))
+			maxidx = frequency_to_bins(np.array(fmax), np.ceil)
+
+			# Remove frequencies outside of allowable range
+			probabilities[:, :minidx] = -float('inf')
+			probabilities[:, maxidx:] = -float('inf')
+			*/
+
+			DecodeArgMax(probabilities, f0, pd, output_blob_shape_y, b);
+			//DecodeViterbi(probabilities, f0, pd, output_blob_shape_y, b);
+		}
+
+		private void DecodeArgMax(float [] probabilities, float [] f0, float [] pd, int output_blob_shape_y, int b){
+			//Convert probabilities to F0 and periodicity
+			for (int t = 0; t < output_blob_shape_y; t++){
+				int bins = DecodeArgMaxBin(probabilities, t);
+				float periodicity = Periodicity(probabilities, t, bins);
+				float frequency = ConbertToFrequency(bins);
+				if (b + t < f0.Length){
+					f0[b + t] = frequency;
+					pd[b + t] = periodicity;
+				}
+			}
+		}
+
+		private int DecodeArgMaxBin(float [] probabilities, int t){
 			float max_prob = 0.0f;
 			int max_i = 0;
 			for (int i = 0; i < PITCH_BINS; i++){
@@ -102,6 +129,122 @@ namespace ailiaSDK
 			}
 			int bins = max_i;
 			return bins;
+		}
+
+		private void Softmax(float [] data, int bins, int n_steps){
+			for (int t = 0; t < n_steps; t++){
+				float sum=0;
+				for(int i = 0; i < bins; i++){
+					sum += Mathf.Exp(data[i + t * bins]);
+				}
+				for(int i = 0; i < bins; i++){
+					data[i + t * bins] = Mathf.Exp(data[i + t * bins]) / sum;
+				}
+			}
+		}
+
+		private float [,] Transition(){
+			float [,] transition = new float [PITCH_BINS, PITCH_BINS];
+			for (int y = 0; y < PITCH_BINS; y++){
+				float sum = 0;
+				for (int x = 0; x < PITCH_BINS; x++){
+					int v = 12 - Math.Abs(x - y);
+					if (v < 0){
+						v = 0;
+					}
+					transition[y, x] = v;
+					sum += v;
+				}
+				for (int x = 0; x < PITCH_BINS; x++){
+					transition[y, x] = transition[y, x] / sum;
+				}
+			}
+			return transition;
+		}
+
+		private void DecodeViterbi(float [] probabilities, float [] f0, float [] pd, int n_steps, int b){
+			// Apply Softmax
+			float [] log_prob = new float [probabilities.Length];
+			for (int i = 0; i < probabilities.Length; i++){
+				log_prob[i] = probabilities[i];
+			}
+			Softmax(log_prob, PITCH_BINS, n_steps);
+
+			// Create cost function
+			float [,] log_trans = Transition();
+
+			// Create state
+			const int n_states = PITCH_BINS;
+			float [,] value = new float[n_steps, n_states];
+			int [,] ptr = new int[n_steps, n_states];
+			float [] log_p_init = new float[n_states];
+
+			// Apply log
+			for (int i = 0; i < n_states; i++){
+				log_p_init[i] = Mathf.Log(1.0f / n_states);
+			}
+			for (int i = 0; i < log_prob.Length; i++){
+				log_prob[i] = Mathf.Log(log_prob[i]);
+			}
+			for (int y = 0; y < n_states; y++){
+				for (int x = 0; x < n_states; x++){
+					log_trans[y, x] = Mathf.Log(log_trans[y, x]);
+				}
+			}
+
+			// Viterbi algorithm
+			for (int i = 0; i < n_states; i++){
+				value[0, i] = log_prob[0 * n_states + i] + log_p_init[i];
+			}
+
+			for (int t = 1; t < n_steps; t++){		
+				float [,] trans_out = new float [n_states, n_states];
+				for (int y = 0; y < n_states; y++){
+					for (int x = 0; x < n_states; x++){
+						trans_out[y, x] = value[t - 1, x] + log_trans[y, x];
+					}
+				}
+				for (int j = 0; j < n_states; j++){
+					// argmax
+					int max_i = 0;
+					float max_prob = 0.0f;
+					for (int k = 0; k < n_states; k++){
+						if (max_prob < trans_out[j, k]){
+							max_prob = trans_out[j, k];
+							max_i = k;
+						}
+					}
+					ptr[t, j] = max_i;
+					value[t, j] = log_prob[t * n_states + j] + trans_out[j, ptr[t, j]];
+				}
+			}
+
+			// Backward final state
+			int max_i2 = 0;
+			float max_prob2 = 0.0f;
+			for (int k = 0; k < n_states; k++){
+				if (max_prob2 < value[n_steps - 1, k]){
+					max_prob2 = value[n_steps - 1, k];
+					max_i2 = k;
+				}
+			}
+
+			int [] state = new int[n_steps];
+			state[n_steps - 1] = max_i2;
+			for (int t = n_steps - 2 ; t >= 0; t--){
+				state[t] = ptr[t + 1, state[t + 1]];
+			}
+
+			// Convert to f0 value
+			for (int t = 0; t < n_steps; t++){
+				int bins = state[t];
+				float periodicity = Periodicity(probabilities, t, bins);
+				float frequency = ConbertToFrequency(bins);
+				if (b + t < f0.Length){
+					f0[b + t] = frequency;
+					pd[b + t] = periodicity;
+				}
+			}
 		}
 
 		private float Periodicity(float [] probablities, int t, int bins){
@@ -228,16 +371,7 @@ namespace ailiaSDK
 					DumpTensor("probabilities", probabilities);
 				}
 
-				//Convert probabilities to F0 and periodicity
-				for (int t = 0; t < output_blob_shape.y; t++){
-					int bins = DecodeBin(probabilities, t);
-					float periodicity = Periodicity(probabilities, t, bins);
-					float frequency = ConbertToFrequency(bins);
-					if (b + t < f0.Length){
-						f0[b + t] = frequency;
-						pd[b + t] = periodicity;
-					}
-				}
+				Decode(probabilities, f0, pd, (int)output_blob_shape.y, b);
 			}
 
 			// filter
