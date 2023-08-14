@@ -15,8 +15,14 @@ namespace ailiaSDK
 {
 	public class AiliaRvcCrepe
 	{
-		private bool unit_test = false;
+		private bool unit_test = true;
 		AiliaModel f0_model = new AiliaModel();
+
+		// Model parameter
+		const int SAMPLE_RATE = 16000;
+		const int WINDOW_SIZE = 1024;
+		const int PITCH_BINS = 360;
+		const int HOP_LENGTH = SAMPLE_RATE / 100; // 10ms
 
 		// Constructer
 		public AiliaRvcCrepe(){
@@ -66,7 +72,6 @@ namespace ailiaSDK
 
 		private float ConbertToFrequency(float [] probabilities, int t){
 			// decoder.argmax
-			int PITCH_BINS = 360;
 			float max_prob = 0.0f;
 			int max_i = 0;
 			for (int i = 0; i < PITCH_BINS; i++){
@@ -81,7 +86,34 @@ namespace ailiaSDK
 			float cents = CENTS_PER_BIN * bins + 1997.3794084376191f;
 			//cents = dither(cents); // add noise
 			float frequency = Mathf.Pow(10 * 2, (cents / 1200));
+
+			if (unit_test){
+				Debug.Log("max_prob "+max_prob+" max_i "+max_i+" cents "+cents+" frequency "+frequency);
+			}
+
 			return frequency;
+		}
+
+		// Normalize
+		private void Normalize(float [] input){
+			// mean center and scale
+			float sum = 0;
+			for (int j = 0; j < input.Length; j++){
+				sum += input[j];
+			 }
+			float mean = sum / input.Length;
+			float norm = 0;
+			for (int j = 0; j < input.Length; j++){
+				input[j] = input[j] - mean;
+				norm += input[j] * input[j];
+			}
+			norm = Mathf.Sqrt(norm);
+			if (norm < (float)(1e-10)){
+				norm = (float)(1e-10);
+			}
+			for (int j = 0; j < input.Length; j++){
+				input[j] = input[j] / norm;
+			}
 		}
 
 		// Crepe Pitch Detection
@@ -89,11 +121,12 @@ namespace ailiaSDK
 			float [] f0 = new float[f0_len];
 			float [] pd = new float[f0_len];
 
-			int sample_rate = 16000;
-			int hop_length = sample_rate / 100; // 10ms
-			int WINDOW_SIZE = 1024;
-			int total_frames = 1 + x.Length / hop_length;
-			int batch_size = 100;
+			if (unit_test){
+				DumpTensor("x", x);
+			}
+
+			int total_frames = 1 + x.Length / HOP_LENGTH;
+			int batch_size = 512;
 
 			float [] input_batch = new float[batch_size * WINDOW_SIZE];
 			for (int b = 0; b < total_frames; b += batch_size){
@@ -105,35 +138,38 @@ namespace ailiaSDK
 					// create frame
 					float [] input = new float[WINDOW_SIZE];
 					int pad = WINDOW_SIZE / 2;
-					int start = i * hop_length - pad;
-					float sum = 0;
+					int start = i * HOP_LENGTH - pad;
 					for (int j = 0; j < WINDOW_SIZE; j++){
 						int k = start + j;
 						float v = 0;
+						if (k < 0){ // reflection
+							k = -k;
+						}
+						if (k >= x.Length){ // reflection
+							k = x.Length - 1 - (x.Length - k);
+						}
 						if (k >= 0 && k < x.Length){
 							v = x[k];
 						}
 						input[j] = v;
-						sum+=v;
 					}
 
-					// mean center and scale
-					float mean = sum / WINDOW_SIZE;
-					float norm = 0;
-					for (int j = 0; j < WINDOW_SIZE; j++){
-						input[j] = input[j] - mean;
-						norm += input[j] * input[j];
+					if (unit_test){
+						DumpTensor("input", input);
 					}
-					norm = Mathf.Sqrt(norm);
-					if (norm < (float)(1e-10)){
-						norm = (float)(1e-10);
+
+					Normalize(input);
+
+					if (unit_test){
+						DumpTensor("normalized input", input);
 					}
-					for (int j = 0; j < WINDOW_SIZE; j++){
-						input[j] = input[j] / norm;
-					}
+
 					for (int j = 0; j < WINDOW_SIZE; j++){
 						input_batch[j + (i - b) * WINDOW_SIZE] = input[j];
 					}
+				}
+				if (unit_test){
+					DumpTensor("input_batch", input_batch);
 				}
 
 				// infer
@@ -160,6 +196,9 @@ namespace ailiaSDK
 					Debug.Log("f0_model.Predict failed\n");
 					return f0;
 				}
+				if (unit_test){
+					DumpTensor("probabilities", probabilities);
+				}
 
 				//Convert probabilities to F0 and periodicity
 				for (int t = 0; t < output_blob_shape.y; t++){
@@ -180,6 +219,19 @@ namespace ailiaSDK
 			//}
 
 			return f0;
+		}
+
+		// Dump tensor
+		private void DumpTensor(string label, float [] value){
+			string result = "";
+			int len = value.Length;
+			if (len > 512){
+				len = 512;
+			}
+			for (int i = 0; i < len; i++){
+				result+=value[i] + " , ";
+			}
+			Debug.Log(label + " value : " + result);
 		}
 
 		// Pitch Detection : pcm is 16khz
@@ -217,9 +269,22 @@ namespace ailiaSDK
 
 		// UnitTest
 		public void UnitTest(){
-			float [] pcm = new float[2048];
-			int len = 128;
-			float [] f0 = Crepe(pcm, len);
+			float [] pcm = new float[WINDOW_SIZE * 2];
+			for (int i = 0; i < pcm.Length; i++){
+				float hz = 1000;
+				pcm[i] = Mathf.Sin(Mathf.PI * 2 * hz * i / SAMPLE_RATE);
+			}
+			int f0_len = 1 + pcm.Length / HOP_LENGTH;
+			float [] f0 = Crepe(pcm, f0_len);
+			string result = "";
+			for (int i = 0; i < f0_len; i++){
+				result+=(int)(f0[i]*1000)+" , ";
+			}
+			Debug.Log("Estimated f0 frequency : " + result);
+#if UNITY_EDITOR
+			Debug.Log("Finish unit test");
+			UnityEditor.EditorApplication.isPlaying = false;
+#endif
 		}
 	}
 }
