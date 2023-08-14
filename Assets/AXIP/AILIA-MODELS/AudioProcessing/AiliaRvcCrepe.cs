@@ -85,7 +85,7 @@ namespace ailiaSDK
 			int bins = max_i;
 			float cents = CENTS_PER_BIN * bins + 1997.3794084376191f;
 			//cents = dither(cents); // add noise
-			float frequency = Mathf.Pow(10 * 2, (cents / 1200));
+			float frequency = 10 * Mathf.Pow(2, (cents / 1200));
 
 			if (unit_test){
 				Debug.Log("max_prob "+max_prob+" max_i "+max_i+" cents "+cents+" frequency "+frequency);
@@ -102,17 +102,18 @@ namespace ailiaSDK
 				sum += input[j];
 			 }
 			float mean = sum / input.Length;
-			float norm = 0;
+			float std_value = 0;
 			for (int j = 0; j < input.Length; j++){
 				input[j] = input[j] - mean;
-				norm += input[j] * input[j];
+				std_value += input[j] * input[j];
 			}
-			norm = Mathf.Sqrt(norm);
-			if (norm < (float)(1e-10)){
-				norm = (float)(1e-10);
+			std_value = std_value / input.Length;
+			std_value = Mathf.Sqrt(std_value);
+			if (std_value < (float)(1e-10)){
+				std_value = (float)(1e-10);
 			}
 			for (int j = 0; j < input.Length; j++){
-				input[j] = input[j] / norm;
+				input[j] = input[j] / std_value;
 			}
 		}
 
@@ -276,11 +277,7 @@ namespace ailiaSDK
 			}
 			int f0_len = 1 + pcm.Length / HOP_LENGTH;
 			float [] f0 = Crepe(pcm, f0_len);
-			string result = "";
-			for (int i = 0; i < f0_len; i++){
-				result+=(int)(f0[i]*1000)+" , ";
-			}
-			Debug.Log("Estimated f0 frequency : " + result);
+			DumpTensor("f0", f0);
 #if UNITY_EDITOR
 			Debug.Log("Finish unit test");
 			UnityEditor.EditorApplication.isPlaying = false;
