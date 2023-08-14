@@ -101,8 +101,8 @@ namespace ailiaSDK
 			probabilities[:, maxidx:] = -float('inf')
 			*/
 
-			DecodeArgMax(probabilities, f0, pd, output_blob_shape_y, b);
-			//DecodeViterbi(probabilities, f0, pd, output_blob_shape_y, b);
+			//DecodeArgMax(probabilities, f0, pd, output_blob_shape_y, b);
+			DecodeViterbi(probabilities, f0, pd, output_blob_shape_y, b);
 		}
 
 		private void DecodeArgMax(float [] probabilities, float [] f0, float [] pd, int output_blob_shape_y, int b){
@@ -191,6 +191,11 @@ namespace ailiaSDK
 					log_trans[y, x] = Mathf.Log(log_trans[y, x]);
 				}
 			}
+			if (unit_test){
+				DumpTensor("LogProb", log_prob);
+				DumpTensor("LogProbInit", log_p_init);
+				DumpTensor2D("LogTrans", log_trans, n_states, n_states);
+			}
 
 			// Viterbi algorithm
 			for (int i = 0; i < n_states; i++){
@@ -198,16 +203,17 @@ namespace ailiaSDK
 			}
 
 			for (int t = 1; t < n_steps; t++){		
+				// Tout[k, j] = V[t-1, k] * A[k, j] (mul to add by log plane)
 				float [,] trans_out = new float [n_states, n_states];
 				for (int y = 0; y < n_states; y++){
 					for (int x = 0; x < n_states; x++){
-						trans_out[y, x] = value[t - 1, x] + log_trans[y, x];
+						trans_out[y, x] = value[t - 1, x] + log_trans[x, y]; // Transposed matrix
 					}
 				}
 				for (int j = 0; j < n_states; j++){
 					// argmax
 					int max_i = 0;
-					float max_prob = 0.0f;
+					float max_prob = Mathf.NegativeInfinity;
 					for (int k = 0; k < n_states; k++){
 						if (max_prob < trans_out[j, k]){
 							max_prob = trans_out[j, k];
@@ -221,13 +227,14 @@ namespace ailiaSDK
 
 			// Backward final state
 			int max_i2 = 0;
-			float max_prob2 = 0.0f;
+			float max_prob2 = Mathf.NegativeInfinity;
 			for (int k = 0; k < n_states; k++){
 				if (max_prob2 < value[n_steps - 1, k]){
 					max_prob2 = value[n_steps - 1, k];
 					max_i2 = k;
 				}
 			}
+			Debug.Log("MaxI " + max_i2 + " MaxProb2 " + max_prob2);
 
 			int [] state = new int[n_steps];
 			state[n_steps - 1] = max_i2;
@@ -408,6 +415,24 @@ namespace ailiaSDK
 				result+=value[i] + " , ";
 			}
 			Debug.Log(label + " value : " + result);
+		}
+
+		private void DumpTensor2D(string label, float [,] value, int height, int width){
+			string result = "";
+			for (int y = 0; y < height; y++){
+				if (y > 10){
+					continue;
+				}
+				result+="line."+y+"\n";
+				for (int x = 0; x < width; x++){
+					if (x > 10){
+						continue;
+					}
+					result+=value[y, x] + " , ";
+				}
+				result+="\n";
+			}
+			Debug.Log(label + " values :\n" + result);
 		}
 
 		// Pitch Detection : pcm is 16khz
