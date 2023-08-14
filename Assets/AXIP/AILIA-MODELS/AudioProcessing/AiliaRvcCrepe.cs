@@ -27,6 +27,8 @@ namespace ailiaSDK
 			Close();
 			if (gpu_mode){
 				f0_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+			}else{
+				Debug.LogWarning("With ailia SDK 1.2.15 crepe is very slow when run on cpu. Highly recommend to use your gpu. It will be improved in ailia SDK 1.2.16.");
 			}
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 			f0_model.SetMemoryMode(memory_mode);

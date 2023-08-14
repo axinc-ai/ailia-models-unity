@@ -28,6 +28,8 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool gpu_mode = false;
 		[SerializeField]
+		private bool f0_mode = false; // Test f0 model (Please put rvc onnx to streaming assets folder)
+		[SerializeField]
 		private bool mic_mode = false;
 
 		//Input Audio Clip
@@ -59,9 +61,6 @@ namespace ailiaSDK {
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
 
-		// RVC mode
-		bool if_f0 = true; // Test f0 model (Please put rvc onnx to streaming assets folder)
-
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
@@ -89,7 +88,7 @@ namespace ailiaSDK {
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx" });
 
-					if (if_f0){
+					if (f0_mode){
 						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx.prototxt" });
 						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx" });
 					}
@@ -98,7 +97,7 @@ namespace ailiaSDK {
 					{
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 						if (FileOpened == true){
-							if (if_f0){
+							if (f0_mode){
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", gpu_mode);
 							}else{
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", null, null, gpu_mode);
