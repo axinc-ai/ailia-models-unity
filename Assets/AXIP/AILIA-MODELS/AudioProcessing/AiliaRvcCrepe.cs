@@ -70,7 +70,27 @@ namespace ailiaSDK
 			return mean;
 		}
 
-		private float ConbertToFrequency(float [] probabilities, int t){
+		private float [] Median(float [] f0, int window_size){
+			float [] median_list = new float[f0.Length];
+			for (int i = 0; i < f0.Length; i++){
+				float [] median = new float[window_size];
+				for (int j = 0; j < window_size; j++){
+					int k = i + j - window_size/2;
+					if (k < 0){
+						k = 0;
+					}
+					if (k > f0.Length - 1){
+						k = f0.Length - 1;
+					}
+					median[j] = f0[k];
+				}
+				Array.Sort(median);
+				median_list[i] = median[window_size / 2];
+			}
+			return median_list;
+		}
+
+		private int DecodeBin(float [] probabilities, int t){
 			// decoder.argmax
 			float max_prob = 0.0f;
 			int max_i = 0;
@@ -80,15 +100,22 @@ namespace ailiaSDK
 					max_i = i;
 				}
 			}
-
-			float CENTS_PER_BIN = 20;
 			int bins = max_i;
+			return bins;
+		}
+
+		private float Periodicity(float [] probablities, int t, int bins){
+			return probablities[t * PITCH_BINS + bins];
+		}
+
+		private float ConbertToFrequency(int bins){
+			float CENTS_PER_BIN = 20;
 			float cents = CENTS_PER_BIN * bins + 1997.3794084376191f;
 			//cents = dither(cents); // add noise
 			float frequency = 10 * Mathf.Pow(2, (cents / 1200));
 
 			if (unit_test){
-				Debug.Log("max_prob "+max_prob+" max_i "+max_i+" cents "+cents+" frequency "+frequency);
+				Debug.Log("bins "+bins+" cents "+cents+" frequency "+frequency);
 			}
 
 			return frequency;
@@ -203,21 +230,35 @@ namespace ailiaSDK
 
 				//Convert probabilities to F0 and periodicity
 				for (int t = 0; t < output_blob_shape.y; t++){
-					float frequency = ConbertToFrequency(probabilities, t);
+					int bins = DecodeBin(probabilities, t);
+					float periodicity = Periodicity(probabilities, t, bins);
+					float frequency = ConbertToFrequency(bins);
 					if (b + t < f0.Length){
 						f0[b + t] = frequency;
+						pd[b + t] = periodicity;
 					}
 				}
 			}
 
 			// filter
-			//pd = torchcrepe.filter.median(pd, 3)
+			if (unit_test){
+				DumpTensor("pd", pd);
+				DumpTensor("f0", f0);
+			}
+
+			pd = Median(pd, 3);
 			f0 = Mean(f0, 3);
-			//for (int i = 0; i < f0.Length; i++){
-			//	if (pd[i] < 0.1);
-			//		f0[i] = 0:
-			//	}
-			//}
+
+			if (unit_test){
+				DumpTensor("median_pd", pd);
+				DumpTensor("mean_f0", f0);
+			}
+
+			for (int i = 0; i < f0.Length; i++){
+				if (pd[i] < 0.1){
+					f0[i] = 0;
+				}
+			}
 
 			return f0;
 		}
