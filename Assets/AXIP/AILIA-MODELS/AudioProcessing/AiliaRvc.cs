@@ -188,6 +188,7 @@ namespace ailiaSDK
 		public AudioClip AsyncGetResult(){
 			AudioClip newClip = AudioClip.Create("Segment", async_state.output.Length, 1, OUTPUT_SAMPLE_RATE, false);
 			newClip.SetData(async_state.output, 0);
+			async_processing_state = STATE_EMPTY;
 			return newClip;
 		}
 
