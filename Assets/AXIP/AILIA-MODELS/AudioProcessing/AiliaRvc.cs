@@ -74,7 +74,7 @@ namespace ailiaSDK
 		}
 
 		// Open model from onnx file
-		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, string f0_stream, string f0_weight, bool gpu_mode){
+		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, bool gpu_mode){
 			Close();
 			if (gpu_mode)
 			{
@@ -94,12 +94,13 @@ namespace ailiaSDK
 			if (!status){
 				return status;
 			}
-			if (f0_stream != null || f0_weight != null){
-				status = f0_model.OpenFile(f0_stream, f0_weight, gpu_mode);
-				f0_mode = true;
-			}else{
-				f0_mode = false;
-			}
+			f0_mode = false;
+			return status;
+		}
+
+		public bool OpenFileF0(string f0_stream, string f0_weight, bool f0_gpu_mode){
+			bool status = f0_model.OpenFile(f0_stream, f0_weight, f0_gpu_mode);
+			f0_mode = true;
 			return status;
 		}
 
@@ -118,6 +119,9 @@ namespace ailiaSDK
 
 		// Get backend environment name
 		public string EnvironmentName(){
+			if (f0_mode){
+				return "RVC:"+hubert_model.EnvironmentName()+"\nF0:"+f0_model.EnvironmentName();
+			}
 			return hubert_model.EnvironmentName();
 		}
 

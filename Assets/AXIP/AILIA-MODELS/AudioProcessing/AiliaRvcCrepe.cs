@@ -511,6 +511,11 @@ namespace ailiaSDK
 			}
 		}
 
+		// Get backend environment name
+		public string EnvironmentName(){
+			return f0_model.EnvironmentName();
+		}
+
 		// UnitTest
 		public void UnitTest(){
 			float [] pcm = new float[WINDOW_SIZE * 2];

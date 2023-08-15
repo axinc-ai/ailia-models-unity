@@ -28,6 +28,8 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool gpu_mode = false;
 		[SerializeField]
+		private bool f0_gpu_mode = false;
+		[SerializeField]
 		private bool f0_mode = false; // Test f0 model (Please put rvc onnx to streaming assets folder)
 		[SerializeField]
 		private int f0_up_key = 0;	// Upkeys for f0 model
@@ -102,10 +104,11 @@ namespace ailiaSDK {
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 						if (FileOpened == true){
 							if (f0_mode){
-								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", gpu_mode);
+								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", gpu_mode);
+								FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
 								ailia_rvc.SetF0UpKeys(f0_up_key);
 							}else{
-								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", null, null, gpu_mode);
+								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", gpu_mode);
 							}
 						}
 					}));
@@ -236,7 +239,7 @@ namespace ailiaSDK {
 			if (label_text != null)
 			{
 				if (ailiaModelType == AudioProcessingModels.rvc){
-					label_text.text = "vad " + (end_time - start_time) + "ms\nrvc " + rvc_time + "ms\n" + ailia_vad.EnvironmentName();
+					label_text.text = "vad " + (end_time - start_time) + "ms\nrvc " + rvc_time + "ms\n" + ailia_rvc.EnvironmentName();
 				}else{
 					label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 				}
