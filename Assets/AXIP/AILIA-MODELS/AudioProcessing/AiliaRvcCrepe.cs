@@ -91,16 +91,6 @@ namespace ailiaSDK
 		}
 
 		private void Decode(float [] probabilities, float [] f0, float [] pd, int output_blob_shape_y, int b){
-			/*
-			# Convert frequency range to pitch bin range
-			minidx = frequency_to_bins(np.array(fmin))
-			maxidx = frequency_to_bins(np.array(fmax), np.ceil)
-
-			# Remove frequencies outside of allowable range
-			probabilities[:, :minidx] = -float('inf')
-			probabilities[:, maxidx:] = -float('inf')
-			*/
-
 			// Remove frequencies outside of allowable range
 			const int minidx = 39; // 50hz
 			const int maxidx = 308; // 2006hz
@@ -394,7 +384,9 @@ namespace ailiaSDK
 				}
 				uint[] output_blobs = f0_model.GetOutputBlobList();
 				Ailia.AILIAShape output_blob_shape = f0_model.GetBlobShape((int)output_blobs[0]);
-				Debug.Log("Output blob shape " + output_blob_shape.x + " " + output_blob_shape.y + " " + output_blob_shape.z + " " + output_blob_shape.w);
+				if (unit_test){
+					Debug.Log("Output blob shape " + output_blob_shape.x + " " + output_blob_shape.y + " " + output_blob_shape.z + " " + output_blob_shape.w);
+				}
 				float [] probabilities = new float[output_blob_shape.x * output_blob_shape.y * output_blob_shape.z * output_blob_shape.w];
 				status = f0_model.Predict(probabilities, input_batch);
 				if (!status){

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,7 +22,8 @@ namespace ailiaSDK
 		private const int RND_SIZE = 192;
 		private const int T_PAD = 48000;
 		private const int T_PAD_TGT = 120000;
-		
+		private const int OUTPUT_SAMPLE_RATE = 40000;
+
 		// Model
 		private AiliaModel hubert_model = new AiliaModel();
 		private AiliaModel vc_model = new AiliaModel();
@@ -32,6 +34,40 @@ namespace ailiaSDK
 
 		// Mode
 		private bool f0_mode = false;
+		private int f0_up_key = 0;
+
+		// State
+		private class RvcState{
+		public float[] hubert_input;
+		public float[] hubert_padding_mask;
+		public float[] output;
+		};
+
+		private RvcState async_state = null;
+		private long rvc_time = 0;
+		private Task async_task = null;
+
+		private int async_processing_state = STATE_EMPTY;
+		private const int STATE_EMPTY = 0;
+		private const int STATE_PROCESSING = 1;
+		private const int STATE_FINISH = 2;
+
+		private RvcState GetRvcState(AudioClip clip){
+			// Source
+			if (!_validate(clip)){
+				return null;
+			}
+			RvcState state = new RvcState();
+			float [] pcm = new float[clip.samples * clip.channels];
+			clip.GetData(pcm, 0);
+
+			// Pre Process
+			state.hubert_input = new float[GetSamples(clip)];
+			state.hubert_padding_mask = new float[state.hubert_input.Length]; // zeros
+			Resample(state.hubert_input, state.hubert_padding_mask, clip.samples, clip.channels, clip.frequency, pcm);
+
+			return state;
+		}
 
 		// Constructer
 		public AiliaRvc(){
@@ -69,9 +105,15 @@ namespace ailiaSDK
 
 		// Close model
 		public void Close(){
+			AsyncDestroy();
 			hubert_model.Close();
 			vc_model.Close();
 			f0_model.Close();
+		}
+
+		// Set f0
+		public void SetF0UpKeys(int up_key){
+			f0_up_key = up_key;
 		}
 
 		// Get backend environment name
@@ -79,29 +121,77 @@ namespace ailiaSDK
 			return hubert_model.EnvironmentName();
 		}
 
-		// Voice convert
-		public AudioClip Process(AudioClip clip)
-		{
-			// Get PCM
+		private bool _validate(AudioClip clip){
 			if (clip.channels != 1){
 				Debug.Log("channel must be 1");
-				return null;
+				return false;
 			}
 			if (clip.samples <= 0){
 				Debug.Log("samples must be greater than 1");
+				return false;
+			}
+			return true;
+		}
+
+		// Voice convert (sync API)
+		public AudioClip Process(AudioClip clip)
+		{
+			RvcState state = GetRvcState(clip);
+			if (state == null){
 				return null;
 			}
+			ProcessCore(state);
+			AudioClip newClip = AudioClip.Create("Segment", state.output.Length, 1, OUTPUT_SAMPLE_RATE, false);
+			newClip.SetData(state.output, 0);
+			return newClip;
+		}
 
-			// Hubert
-			float[] hubert_input = new float[GetSamples(clip)];
-			float[] hubert_padding_mask = new float[hubert_input.Length]; // zeros
+		// Voice convert (async API)
 
-			Resample(hubert_input, hubert_padding_mask, clip);
+		public void AsyncProcess(AudioClip clip){
+			if (async_processing_state == STATE_PROCESSING){
+				return;
+			}
+			async_state = GetRvcState(clip);
+			async_processing_state = STATE_PROCESSING;
+			async_task = Task.Run(
+				() => {
+					ProcessCore(async_state);
+					async_processing_state = STATE_FINISH;
+				}
+			);
+		}
+
+		public bool AsyncProcessing(){
+			return (async_processing_state == STATE_PROCESSING);
+		}
+
+		public bool AsyncResultExist(){
+			return (async_processing_state == STATE_FINISH);
+		}
+
+		public AudioClip AsyncGetResult(){
+			AudioClip newClip = AudioClip.Create("Segment", async_state.output.Length, 1, OUTPUT_SAMPLE_RATE, false);
+			newClip.SetData(async_state.output, 0);
+			return newClip;
+		}
+
+		private void AsyncDestroy(){
+			if (async_task == null){
+				return;
+			}
+			async_task.Wait();
+		}
+
+		// RVC core
+		private void ProcessCore(RvcState state)
+		{
+			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Create Inference Buffer
 			List<float[]> hubert_inputs = new List<float[]>();
-			hubert_inputs.Add(hubert_input);
-			hubert_inputs.Add(hubert_padding_mask);
+			hubert_inputs.Add(state.hubert_input);
+			hubert_inputs.Add(state.hubert_padding_mask);
 			
 			// Hubert Inference
 			List<float[]> hubert_outputs = Forward(hubert_model, hubert_inputs, true);
@@ -124,9 +214,8 @@ namespace ailiaSDK
 			// Pitch
 			float [] pitch = new float[len];
 			float [] pitch_f = new float[len];
-			int f0_up_key = 0;
 			if (f0_mode){
-				f0_model.GetF0(pitch, pitch_f, hubert_input, f0_up_key);
+				f0_model.GetF0(pitch, pitch_f, state.hubert_input, f0_up_key);
 			}
 
 			// VC Inference
@@ -151,19 +240,20 @@ namespace ailiaSDK
 			for (int i = 0; i < trm.Length; i++){
 				trm[i] = vc_output[i + T_PAD_TGT];
 			}
+			state.output = trm;
 
-			// Create new Audio Clip
-			AudioClip newClip = AudioClip.Create("Segment", trm.Length, 1, 40000, false);
-			newClip.SetData(trm, 0);
-			return newClip;
+			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			rvc_time = end_time2 - start_time2;
+		}
+
+		public long GetProfile(){
+			return rvc_time;
 		}
 
 		// Resampler
-		private void Resample(float [] hubert_input, float [] hubert_padding_mask, AudioClip clip){
+		private void Resample(float [] hubert_input, float [] hubert_padding_mask, int samples, int channels, int frequency, float [] pcm){
 			// Get PCM
-			float [] pcm = new float[clip.samples * clip.channels];
-			clip.GetData(pcm, 0);
-			int sampleRate = clip.frequency;
+			int sampleRate = frequency;
 			int targetSampleRate = 16000;
 
 			// Resampling to targetSampleRate

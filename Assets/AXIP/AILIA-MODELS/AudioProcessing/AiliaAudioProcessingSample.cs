@@ -30,7 +30,11 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool f0_mode = false; // Test f0 model (Please put rvc onnx to streaming assets folder)
 		[SerializeField]
+		private int f0_up_key = 0;	// Upkeys for f0 model
+		[SerializeField]
 		private bool mic_mode = false;
+		[SerializeField]
+		private bool async_mode = false;	// Async Processing
 
 		//Input Audio Clip
 		public AudioClip audio_clip = null;
@@ -57,7 +61,7 @@ namespace ailiaSDK {
 		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
 		private AiliaSplitAudio ailia_split = new AiliaSplitAudio();
 
-		// AILIA open file
+		//AILIA open file
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
 
@@ -99,6 +103,7 @@ namespace ailiaSDK {
 						if (FileOpened == true){
 							if (f0_mode){
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", gpu_mode);
+								ailia_rvc.SetF0UpKeys(f0_up_key);
 							}else{
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", null, null, gpu_mode);
 							}
@@ -235,20 +240,26 @@ namespace ailiaSDK {
 				}else{
 					label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 				}
+				if (async_mode && ailia_rvc.AsyncProcessing()){
+					label_text.text += "\nasync processing\n";
+				}
 			}
 
 			// Split
 			ailia_split.Split(vad_result);
-			if (ailia_split.GetAudioClipCount() > 0){
-				AudioClip clip = ailia_split.PopAudioClip();
-				if (ailiaModelType == AudioProcessingModels.rvc){
-					long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-					clip = ailia_rvc.Process(clip);
-					long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-					rvc_time = end_time2 - start_time2;
+			if (async_mode){
+				GetResultAsync();
+				if (ailia_split.GetAudioClipCount() > 0){
+					if (!ailia_rvc.AsyncProcessing()){
+						AudioClip clip = ailia_split.PopAudioClip();
+						PushSplitAudioAsync(clip);
+					}
 				}
-				vad_audio_clip.Add(clip);
-				vad_audio_clip_play_list.Add(clip);
+			}else{
+				if (ailia_split.GetAudioClipCount() > 0){
+					AudioClip clip = ailia_split.PopAudioClip();
+					PushSplitAudio(clip);
+				}
 			}
 
 			// Play
@@ -266,6 +277,35 @@ namespace ailiaSDK {
 			}
 			wave_texture.SetPixels32(colors);
 			wave_texture.Apply();
+		}
+
+		private void PushSplitAudio(AudioClip clip)
+		{
+			if (ailiaModelType == AudioProcessingModels.rvc){
+				clip = ailia_rvc.Process(clip);
+				rvc_time = ailia_rvc.GetProfile();
+			}
+			vad_audio_clip.Add(clip);
+			vad_audio_clip_play_list.Add(clip);
+		}
+
+		private void PushSplitAudioAsync(AudioClip clip)
+		{
+			if (ailiaModelType == AudioProcessingModels.rvc){
+				ailia_rvc.AsyncProcess(clip);
+			}else{
+				vad_audio_clip.Add(clip);
+				vad_audio_clip_play_list.Add(clip);
+			}
+		}
+
+		private void GetResultAsync(){
+			if (ailia_rvc.AsyncResultExist()){
+				AudioClip clip = ailia_rvc.AsyncGetResult();
+				vad_audio_clip.Add(clip);
+				vad_audio_clip_play_list.Add(clip);
+				rvc_time = ailia_rvc.GetProfile();
+			}
 		}
 
 		void SetUIProperties()
