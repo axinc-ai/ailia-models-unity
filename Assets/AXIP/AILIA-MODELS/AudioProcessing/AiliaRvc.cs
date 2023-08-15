@@ -20,9 +20,12 @@ namespace ailiaSDK
 		private const int BATCH_SIZE = 1;
 		private const int FEAT_SIZE = 256;
 		private const int RND_SIZE = 192;
-		private const int T_PAD = 48000;
-		private const int T_PAD_TGT = 120000;
-		private const int OUTPUT_SAMPLE_RATE = 40000;
+		private const int T_PAD = 48000; // 16khz domain samples
+		private const int HUBERT_SAMPLE_RATE = 16000;
+
+		// Target sampling rate
+		private int OUTPUT_SAMPLE_RATE = 40000;
+		private int T_PAD_TGT = 120000; // T_PAD * (40000hz / 16000hz)
 
 		// Model
 		private AiliaModel hubert_model = new AiliaModel();
@@ -45,6 +48,7 @@ namespace ailiaSDK
 
 		private RvcState async_state = null;
 		private long rvc_time = 0;
+		private long f0_time = 0;
 		private Task async_task = null;
 
 		private int async_processing_state = STATE_EMPTY;
@@ -117,10 +121,17 @@ namespace ailiaSDK
 			f0_up_key = up_key;
 		}
 
+		// Set target sampling rate
+		public void SetTargetSmaplingRate(int hz){
+			OUTPUT_SAMPLE_RATE = hz;
+			T_PAD_TGT = (int)((long)T_PAD * hz / HUBERT_SAMPLE_RATE);
+			Debug.Log("Output Sample Rate " + hz+" T_PAD_TGT " + T_PAD_TGT);
+		}
+
 		// Get backend environment name
 		public string EnvironmentName(){
 			if (f0_mode){
-				return "RVC:"+hubert_model.EnvironmentName()+"\nF0:"+f0_model.EnvironmentName();
+				return "rvc env : "+hubert_model.EnvironmentName()+"\nf0 env : "+f0_model.EnvironmentName();
 			}
 			return hubert_model.EnvironmentName();
 		}
@@ -190,7 +201,7 @@ namespace ailiaSDK
 		// RVC core
 		private void ProcessCore(RvcState state)
 		{
-			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Create Inference Buffer
 			List<float[]> hubert_inputs = new List<float[]>();
@@ -219,7 +230,12 @@ namespace ailiaSDK
 			float [] pitch = new float[len];
 			float [] pitch_f = new float[len];
 			if (f0_mode){
+				long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				f0_model.GetF0(pitch, pitch_f, state.hubert_input, f0_up_key);
+				long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				f0_time = end_time2 - start_time2;
+			}else{
+				f0_time = 0;
 			}
 
 			// VC Inference
@@ -240,25 +256,32 @@ namespace ailiaSDK
 			Clip(vc_output);
 
 			// Trim
+			if (vc_output.Length <= T_PAD_TGT *2){
+				Debug.LogError("model output is too small (" + vc_output.Length + ")");
+			}
 			float[] trm = new float[vc_output.Length - T_PAD_TGT*2];
 			for (int i = 0; i < trm.Length; i++){
 				trm[i] = vc_output[i + T_PAD_TGT];
 			}
 			state.output = trm;
 
-			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			rvc_time = end_time2 - start_time2;
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			rvc_time = end_time - start_time;
 		}
 
 		public long GetProfile(){
-			return rvc_time;
+			return rvc_time - f0_time;
+		}
+
+		public long GetProfileF0(){
+			return f0_time;
 		}
 
 		// Resampler
 		private void Resample(float [] hubert_input, float [] hubert_padding_mask, int samples, int channels, int frequency, float [] pcm){
 			// Get PCM
 			int sampleRate = frequency;
-			int targetSampleRate = 16000;
+			int targetSampleRate = HUBERT_SAMPLE_RATE;
 
 			// Resampling to targetSampleRate
 			for (int i = 0; i < hubert_input.Length; i++){
@@ -281,7 +304,7 @@ namespace ailiaSDK
 
 		private int GetSamples(AudioClip clip){
 			int sampleRate = clip.frequency;
-			int targetSampleRate = 16000;
+			int targetSampleRate = HUBERT_SAMPLE_RATE;
 			float rate = 1.0f * targetSampleRate / sampleRate;
 			return (int)(clip.samples * rate) + T_PAD * 2;
 		}

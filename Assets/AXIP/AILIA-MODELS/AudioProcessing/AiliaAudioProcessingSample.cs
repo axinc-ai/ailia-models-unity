@@ -53,6 +53,7 @@ namespace ailiaSDK {
 		private Text label_text = null;
 		private Text mode_text = null;
 		private long rvc_time = 0;
+		private long f0_time = 0;
 
 		//Preview
 		private Texture2D wave_texture = null;
@@ -85,8 +86,12 @@ namespace ailiaSDK {
 					}));
 					break;
 				case AudioProcessingModels.rvc:
-					mode_text.text = "silero_vad + rvc";
-	
+					if (f0_mode){
+						mode_text.text = "silero_vad + rvc + f0";
+					}else{
+						mode_text.text = "silero_vad + rvc";
+					}
+
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "hubert_base.onnx.prototxt" });
@@ -107,6 +112,7 @@ namespace ailiaSDK {
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", gpu_mode);
 								FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
 								ailia_rvc.SetF0UpKeys(f0_up_key);
+								ailia_rvc.SetTargetSmaplingRate(48000);
 							}else{
 								FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", asset_path + "/AISO-HOWATTO.onnx.prototxt", asset_path + "/AISO-HOWATTO.onnx", gpu_mode);
 							}
@@ -239,12 +245,16 @@ namespace ailiaSDK {
 			if (label_text != null)
 			{
 				if (ailiaModelType == AudioProcessingModels.rvc){
-					label_text.text = "vad " + (end_time - start_time) + "ms\nrvc " + rvc_time + "ms\n" + ailia_rvc.EnvironmentName();
+					if (f0_mode){
+						label_text.text = "vad time : " + (end_time - start_time) + "ms\nrvc time : " + rvc_time + "ms\nf0 time : " + f0_time + "\n" + ailia_rvc.EnvironmentName();
+					}else{
+						label_text.text = "vad time : " + (end_time - start_time) + "ms\nrvc time : " + rvc_time + "ms\n" + ailia_rvc.EnvironmentName();
+					}
 				}else{
-					label_text.text = (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
+					label_text.text = "vad time : " + (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 				}
 				if (async_mode && ailia_rvc.AsyncProcessing()){
-					label_text.text += "\nasync processing\n";
+					label_text.text += "\nrvc async processing\n";
 				}
 			}
 
@@ -308,6 +318,7 @@ namespace ailiaSDK {
 				vad_audio_clip.Add(clip);
 				vad_audio_clip_play_list.Add(clip);
 				rvc_time = ailia_rvc.GetProfile();
+				f0_time = ailia_rvc.GetProfileF0();
 			}
 		}
 
