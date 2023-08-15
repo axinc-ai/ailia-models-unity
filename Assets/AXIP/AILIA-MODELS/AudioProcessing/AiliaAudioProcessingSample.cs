@@ -246,7 +246,7 @@ namespace ailiaSDK {
 			{
 				if (ailiaModelType == AudioProcessingModels.rvc){
 					if (f0_mode){
-						label_text.text = "vad time : " + (end_time - start_time) + "ms\nrvc time : " + rvc_time + "ms\nf0 time : " + f0_time + "\n" + ailia_rvc.EnvironmentName();
+						label_text.text = "vad time : " + (end_time - start_time) + "ms\nrvc time : " + rvc_time + "ms\nf0 time : " + f0_time + "ms\n" + ailia_rvc.EnvironmentName();
 					}else{
 						label_text.text = "vad time : " + (end_time - start_time) + "ms\nrvc time : " + rvc_time + "ms\n" + ailia_rvc.EnvironmentName();
 					}

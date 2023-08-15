@@ -23,6 +23,7 @@ namespace ailiaSDK
 		const int WINDOW_SIZE = 1024;
 		const int PITCH_BINS = 360;
 		const int HOP_LENGTH = SAMPLE_RATE / 100; // 10ms
+		const int BATCH_SIZE = 512;
 
 		// Constructer
 		public AiliaRvcCrepe(){
@@ -321,13 +322,12 @@ namespace ailiaSDK
 			}
 
 			int total_frames = 1 + x.Length / HOP_LENGTH;
-			int batch_size = 512;
 
-			float [] input_batch = new float[batch_size * WINDOW_SIZE];
-			for (int b = 0; b < total_frames; b += batch_size){
+			float [] input_batch = new float[BATCH_SIZE * WINDOW_SIZE];
+			for (int b = 0; b < total_frames; b += BATCH_SIZE){
 				int current_barth_size = total_frames - b;
-				if (current_barth_size > batch_size){
-					current_barth_size = batch_size;
+				if (current_barth_size > BATCH_SIZE){
+					current_barth_size = BATCH_SIZE;
 				}
 				for (int i = b; i < b + current_barth_size; i++){
 					// create frame
