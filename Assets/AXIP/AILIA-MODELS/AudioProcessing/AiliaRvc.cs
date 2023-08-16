@@ -125,7 +125,7 @@ namespace ailiaSDK
 		public void SetTargetSmaplingRate(int hz){
 			OUTPUT_SAMPLE_RATE = hz;
 			T_PAD_TGT = (int)((long)T_PAD * hz / HUBERT_SAMPLE_RATE);
-			Debug.Log("Output Sample Rate " + hz+" T_PAD_TGT " + T_PAD_TGT);
+			//Debug.Log("Output Sample Rate " + hz+" T_PAD_TGT " + T_PAD_TGT);
 		}
 
 		// Get backend environment name

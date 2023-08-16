@@ -117,7 +117,11 @@ namespace ailiaSDK {
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 						if (FileOpened == true){
 							FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", gpu_mode);
-							FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+							if (FileOpened == true){
+								FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+							}else{
+								Debug.LogError("Please put rvc_f0.onnx and rvc_f0.onnx.prototxt to streaming assets path.");
+							}
 							ailia_rvc.SetF0UpKeys(11);
 							ailia_rvc.SetTargetSmaplingRate(48000);
 						}
