@@ -171,7 +171,7 @@ namespace ailiaSDK
 
 			// Apply Softmax
 			float [,] log_prob = new float [n_steps, n_states];
-			for (int i = 0; i < probabilities.Length; i++){
+			for (int i = 0; i < log_prob.Length; i++){
 				log_prob[i/n_states, i%n_states] = probabilities[i];
 			}
 			Softmax(log_prob, PITCH_BINS, n_steps);
@@ -325,11 +325,11 @@ namespace ailiaSDK
 
 			float [] input_batch = new float[BATCH_SIZE * WINDOW_SIZE];
 			for (int b = 0; b < total_frames; b += BATCH_SIZE){
-				int current_barth_size = total_frames - b;
-				if (current_barth_size > BATCH_SIZE){
-					current_barth_size = BATCH_SIZE;
+				int current_batch_size = total_frames - b;
+				if (current_batch_size > BATCH_SIZE){
+					current_batch_size = BATCH_SIZE;
 				}
-				for (int i = b; i < b + current_barth_size; i++){
+				for (int i = b; i < b + current_batch_size; i++){
 					// create frame
 					float [] input = new float[WINDOW_SIZE];
 					int pad = WINDOW_SIZE / 2;
@@ -372,7 +372,7 @@ namespace ailiaSDK
 				// finally, calc f0 value per 10ms
 				Ailia.AILIAShape sequence_shape = new Ailia.AILIAShape();
 				sequence_shape.x=(uint)WINDOW_SIZE;
-				sequence_shape.y=(uint)current_barth_size;
+				sequence_shape.y=(uint)BATCH_SIZE; // fix batch size
 				sequence_shape.z=1;
 				sequence_shape.w=1;
 				sequence_shape.dim=2;
@@ -397,7 +397,7 @@ namespace ailiaSDK
 					DumpTensor("probabilities", probabilities);
 				}
 
-				Decode(probabilities, f0, pd, (int)output_blob_shape.y, b);
+				Decode(probabilities, f0, pd, current_batch_size, b); // use only current_batch_size
 			}
 
 			// filter
