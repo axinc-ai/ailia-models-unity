@@ -65,6 +65,9 @@ namespace ailiaSDK {
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
 
+		//Crepe
+		private bool crepe_tiny = true;
+
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
@@ -109,8 +112,13 @@ namespace ailiaSDK {
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "hubert_base.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "AISO-HOWATTO.onnx" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx" });
+					if (crepe_tiny){
+						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe_tiny.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe_tiny.onnx" });
+					}else{
+						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = "rvc", file_name = "crepe.onnx" });
+					}
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
@@ -118,7 +126,11 @@ namespace ailiaSDK {
 						if (FileOpened == true){
 							FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", gpu_mode);
 							if (FileOpened == true){
-								FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+								if (crepe_tiny){
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe_tiny.onnx.prototxt", asset_path + "/crepe_tiny.onnx", f0_gpu_mode);
+								}else{
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+								}
 							}else{
 								Debug.LogError("Please put rvc_f0.onnx and rvc_f0.onnx.prototxt to streaming assets path.");
 							}
