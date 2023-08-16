@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,15 +20,58 @@ namespace ailiaSDK
 		private const int BATCH_SIZE = 1;
 		private const int FEAT_SIZE = 256;
 		private const int RND_SIZE = 192;
-		private const int T_PAD = 48000;
-		private const int T_PAD_TGT = 120000;
-		
+		private const int T_PAD = 48000; // 16khz domain samples
+		private const int HUBERT_SAMPLE_RATE = 16000;
+
+		// Target sampling rate
+		private int OUTPUT_SAMPLE_RATE = 40000;
+		private int T_PAD_TGT = 120000; // T_PAD * (40000hz / 16000hz)
+
 		// Model
 		private AiliaModel hubert_model = new AiliaModel();
 		private AiliaModel vc_model = new AiliaModel();
+		private AiliaRvcCrepe f0_model = new AiliaRvcCrepe();
 
 		// Debug
 		private bool debug = false;
+
+		// Mode
+		private bool f0_mode = false;
+		private int f0_up_key = 0;
+
+		// State
+		private class RvcState{
+		public float[] hubert_input;
+		public float[] hubert_padding_mask;
+		public float[] output;
+		};
+
+		private RvcState async_state = null;
+		private long rvc_time = 0;
+		private long f0_time = 0;
+		private Task async_task = null;
+
+		private int async_processing_state = STATE_EMPTY;
+		private const int STATE_EMPTY = 0;
+		private const int STATE_PROCESSING = 1;
+		private const int STATE_FINISH = 2;
+
+		private RvcState GetRvcState(AudioClip clip){
+			// Source
+			if (!_validate(clip)){
+				return null;
+			}
+			RvcState state = new RvcState();
+			float [] pcm = new float[clip.samples * clip.channels];
+			clip.GetData(pcm, 0);
+
+			// Pre Process
+			state.hubert_input = new float[GetSamples(clip)];
+			state.hubert_padding_mask = new float[state.hubert_input.Length]; // zeros
+			Resample(state.hubert_input, state.hubert_padding_mask, clip.samples, clip.channels, clip.frequency, pcm);
+
+			return state;
+		}
 
 		// Constructer
 		public AiliaRvc(){
@@ -41,47 +85,129 @@ namespace ailiaSDK
 				hubert_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				vc_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
+
+			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
+			hubert_model.SetMemoryMode(memory_mode);
+			vc_model.SetMemoryMode(memory_mode);
+
 			bool status = hubert_model.OpenFile(hubert_stream, hubert_weight);
 			if (!status){
 				return status;
 			}
-			return vc_model.OpenFile(vc_stream, vc_weight);
+			status = vc_model.OpenFile(vc_stream, vc_weight);
+			if (!status){
+				return status;
+			}
+			f0_mode = false;
+			return status;
+		}
+
+		public bool OpenFileF0(string f0_stream, string f0_weight, bool f0_gpu_mode){
+			bool status = f0_model.OpenFile(f0_stream, f0_weight, f0_gpu_mode);
+			f0_mode = true;
+			return status;
 		}
 
 		// Close model
 		public void Close(){
+			AsyncDestroy();
 			hubert_model.Close();
 			vc_model.Close();
+			f0_model.Close();
+		}
+
+		// Set f0
+		public void SetF0UpKeys(int up_key){
+			f0_up_key = up_key;
+		}
+
+		// Set target sampling rate
+		public void SetTargetSmaplingRate(int hz){
+			OUTPUT_SAMPLE_RATE = hz;
+			T_PAD_TGT = (int)((long)T_PAD * hz / HUBERT_SAMPLE_RATE);
+			//Debug.Log("Output Sample Rate " + hz+" T_PAD_TGT " + T_PAD_TGT);
 		}
 
 		// Get backend environment name
 		public string EnvironmentName(){
+			if (f0_mode){
+				return "rvc env : "+hubert_model.EnvironmentName()+"\nf0 env : "+f0_model.EnvironmentName();
+			}
 			return hubert_model.EnvironmentName();
 		}
 
-		// Voice convert
-		public AudioClip Process(AudioClip clip)
-		{
-			// Get PCM
+		private bool _validate(AudioClip clip){
 			if (clip.channels != 1){
 				Debug.Log("channel must be 1");
-				return null;
+				return false;
 			}
 			if (clip.samples <= 0){
 				Debug.Log("samples must be greater than 1");
+				return false;
+			}
+			return true;
+		}
+
+		// Voice convert (sync API)
+		public AudioClip Process(AudioClip clip)
+		{
+			RvcState state = GetRvcState(clip);
+			if (state == null){
 				return null;
 			}
+			ProcessCore(state);
+			AudioClip newClip = AudioClip.Create("Segment", state.output.Length, 1, OUTPUT_SAMPLE_RATE, false);
+			newClip.SetData(state.output, 0);
+			return newClip;
+		}
 
-			// Hubert
-			float[] hubert_input = new float[GetSamples(clip)];
-			float[] hubert_padding_mask = new float[hubert_input.Length]; // zeros
+		// Voice convert (async API)
 
-			Resample(hubert_input, hubert_padding_mask, clip);
+		public void AsyncProcess(AudioClip clip){
+			if (async_processing_state == STATE_PROCESSING){
+				return;
+			}
+			async_state = GetRvcState(clip);
+			async_processing_state = STATE_PROCESSING;
+			async_task = Task.Run(
+				() => {
+					ProcessCore(async_state);
+					async_processing_state = STATE_FINISH;
+				}
+			);
+		}
+
+		public bool AsyncProcessing(){
+			return (async_processing_state == STATE_PROCESSING);
+		}
+
+		public bool AsyncResultExist(){
+			return (async_processing_state == STATE_FINISH);
+		}
+
+		public AudioClip AsyncGetResult(){
+			AudioClip newClip = AudioClip.Create("Segment", async_state.output.Length, 1, OUTPUT_SAMPLE_RATE, false);
+			newClip.SetData(async_state.output, 0);
+			async_processing_state = STATE_EMPTY;
+			return newClip;
+		}
+
+		private void AsyncDestroy(){
+			if (async_task == null){
+				return;
+			}
+			async_task.Wait();
+		}
+
+		// RVC core
+		private void ProcessCore(RvcState state)
+		{
+			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Create Inference Buffer
 			List<float[]> hubert_inputs = new List<float[]>();
-			hubert_inputs.Add(hubert_input);
-			hubert_inputs.Add(hubert_padding_mask);
+			hubert_inputs.Add(state.hubert_input);
+			hubert_inputs.Add(state.hubert_padding_mask);
 			
 			// Hubert Inference
 			List<float[]> hubert_outputs = Forward(hubert_model, hubert_inputs, true);
@@ -101,10 +227,26 @@ namespace ailiaSDK
 			sid[0] = 0;
 			Randn(rnd);
 
+			// Pitch
+			float [] pitch = new float[len];
+			float [] pitch_f = new float[len];
+			if (f0_mode){
+				long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				f0_model.GetF0(pitch, pitch_f, state.hubert_input, f0_up_key);
+				long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				f0_time = end_time2 - start_time2;
+			}else{
+				f0_time = 0;
+			}
+
 			// VC Inference
 			List<float[]> vc_inputs = new List<float[]>();
 			vc_inputs.Add(feats);
 			vc_inputs.Add(p_len);
+			if (f0_mode){
+				vc_inputs.Add(pitch);
+				vc_inputs.Add(pitch_f);
+			}
 			vc_inputs.Add(sid);
 			vc_inputs.Add(rnd);
 				
@@ -115,24 +257,32 @@ namespace ailiaSDK
 			Clip(vc_output);
 
 			// Trim
+			if (vc_output.Length <= T_PAD_TGT *2){
+				Debug.LogError("model output is too small (" + vc_output.Length + ")");
+			}
 			float[] trm = new float[vc_output.Length - T_PAD_TGT*2];
 			for (int i = 0; i < trm.Length; i++){
 				trm[i] = vc_output[i + T_PAD_TGT];
 			}
+			state.output = trm;
 
-			// Create new Audio Clip
-			AudioClip newClip = AudioClip.Create("Segment", trm.Length, 1, 40000, false);
-			newClip.SetData(trm, 0);
-			return newClip;
+			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+			rvc_time = end_time - start_time;
+		}
+
+		public long GetProfile(){
+			return rvc_time - f0_time;
+		}
+
+		public long GetProfileF0(){
+			return f0_time;
 		}
 
 		// Resampler
-		private void Resample(float [] hubert_input, float [] hubert_padding_mask, AudioClip clip){
+		private void Resample(float [] hubert_input, float [] hubert_padding_mask, int samples, int channels, int frequency, float [] pcm){
 			// Get PCM
-			float [] pcm = new float[clip.samples * clip.channels];
-			clip.GetData(pcm, 0);
-			int sampleRate = clip.frequency;
-			int targetSampleRate = 16000;
+			int sampleRate = frequency;
+			int targetSampleRate = HUBERT_SAMPLE_RATE;
 
 			// Resampling to targetSampleRate
 			for (int i = 0; i < hubert_input.Length; i++){
@@ -155,7 +305,7 @@ namespace ailiaSDK
 
 		private int GetSamples(AudioClip clip){
 			int sampleRate = clip.frequency;
-			int targetSampleRate = 16000;
+			int targetSampleRate = HUBERT_SAMPLE_RATE;
 			float rate = 1.0f * targetSampleRate / sampleRate;
 			return (int)(clip.samples * rate) + T_PAD * 2;
 		}
@@ -228,14 +378,31 @@ namespace ailiaSDK
 						sequence_shape.w=1;
 						sequence_shape.dim=3;
 					}
-					if ( i == 1 || i == 2){
+					if ( i == 1){
 						sequence_shape.x=1;
 						sequence_shape.y=1;
 						sequence_shape.z=1;
 						sequence_shape.w=1;
 						sequence_shape.dim=1;
 					}
-					if ( i == 3){
+					if (f0_mode) {
+						if ( i == 2 || i == 3 ){
+							// picth and pitchf
+							sequence_shape.x=(uint)inputs[i].Length / (uint)BATCH_SIZE;
+							sequence_shape.y=(uint)BATCH_SIZE;
+							sequence_shape.z=1;
+							sequence_shape.w=1;
+							sequence_shape.dim=2;
+						}
+					}
+					if ((!f0_mode && i == 2) || (f0_mode && i == 4)){
+						sequence_shape.x=1;
+						sequence_shape.y=1;
+						sequence_shape.z=1;
+						sequence_shape.w=1;
+						sequence_shape.dim=1;
+					}
+					if ((!f0_mode && i == 3) || (f0_mode && i == 5)){
 						sequence_shape.x=(uint)inputs[i].Length / RND_SIZE / (uint)BATCH_SIZE;
 						sequence_shape.y=RND_SIZE;
 						sequence_shape.z=(uint)BATCH_SIZE;

@@ -555,7 +555,9 @@ MonoBehaviour:
   ailiaModelType: 1
   UICanvas: {fileID: 688907547}
   gpu_mode: 0
+  f0_gpu_mode: 1
   mic_mode: 0
+  async_mode: 1
   audio_clip: {fileID: 8300000, guid: 7a7fd51ca141746ee845ae5daab35fdb, type: 3}
   audio_source: {fileID: 903068208}
 --- !u!1001 &1813464802
