@@ -46,6 +46,9 @@ namespace ailiaSDK
 		private float profile_post;
 		private string profile_text;
 
+		// Mode
+		private bool legacy;
+
 		// Tokens
 		private static float [] empty_tokens = {
 				49406, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
@@ -84,7 +87,7 @@ namespace ailiaSDK
 				diffusionMidModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				diffusionOutModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 				aeModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-				clipModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				//clipModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU); // CLIP VitL Do not support FP16 Inference
 			}
 
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
@@ -94,17 +97,26 @@ namespace ailiaSDK
 			aeModel.SetMemoryMode(memory_mode);
 			// clip requres internal state
 
+			legacy = true;
+			if (diffusion_mid_model_path == null){
+				legacy = false;
+			}
+
 			bool modelPrepared = false;
-			modelPrepared = diffusionEmbModel.OpenFile(diffusion_emb_model_path, diffusion_emb_weight_path);
+			modelPrepared = aeModel.OpenFile(ae_model_path, ae_weight_path);
 			if (modelPrepared == true){
-				modelPrepared = diffusionMidModel.OpenFile(diffusion_mid_model_path, diffusion_mid_weight_path);
+				modelPrepared = clipModel.OpenFile(clip_model_path, clip_weight_path);
 				if (modelPrepared == true){
-					modelPrepared = diffusionOutModel.OpenFile(diffusion_out_model_path, diffusion_out_weight_path);
-					if (modelPrepared == true){
-						modelPrepared = aeModel.OpenFile(ae_model_path, ae_weight_path);
+					if (legacy){
+						modelPrepared = diffusionEmbModel.OpenFile(diffusion_emb_model_path, diffusion_emb_weight_path);
 						if (modelPrepared == true){
-							modelPrepared = clipModel.OpenFile(clip_model_path, clip_weight_path);
+							modelPrepared = diffusionMidModel.OpenFile(diffusion_mid_model_path, diffusion_mid_weight_path);
+							if (modelPrepared == true){
+								modelPrepared = diffusionOutModel.OpenFile(diffusion_out_model_path, diffusion_out_weight_path);
+							}
 						}
+					}else{
+						modelPrepared = diffusionEmbModel.OpenFile(diffusion_emb_model_path, diffusion_emb_weight_path);
 					}
 				}
 			}
@@ -317,38 +329,45 @@ namespace ailiaSDK
 			}
 
 			List<AiliaTensor> output_tensors_emb = Infer(diffusionEmbModel, input_tensors);
-			
-			// diffusion mid
-			input_tensors = new Dictionary<string,AiliaTensor>();
-			input_tensors.Add("h", output_tensors_emb[0]);
-			input_tensors.Add("emb", output_tensors_emb[1]);
-			if (update_context){
-				input_tensors.Add("context", context_tensor);
+			List<AiliaTensor> output_tensors_out;
+
+			if (legacy){
+				// diffusion mid
+				input_tensors = new Dictionary<string,AiliaTensor>();
+				input_tensors.Add("h", output_tensors_emb[0]);
+				input_tensors.Add("emb", output_tensors_emb[1]);
+				if (update_context){
+					input_tensors.Add("context", context_tensor);
+				}
+				input_tensors.Add("h6", output_tensors_emb[8]);
+				input_tensors.Add("h7", output_tensors_emb[9]);
+				input_tensors.Add("h8", output_tensors_emb[10]);
+				input_tensors.Add("h9", output_tensors_emb[11]);
+				input_tensors.Add("h10", output_tensors_emb[12]);
+				input_tensors.Add("h11", output_tensors_emb[13]);
+
+				List<AiliaTensor> output_tensors_mid = Infer(diffusionMidModel, input_tensors);
+
+				// diffusin out
+				input_tensors = new Dictionary<string,AiliaTensor>();
+				input_tensors.Add("h", output_tensors_mid[0]);
+				input_tensors.Add("emb", output_tensors_emb[1]);
+				if (update_context){
+					input_tensors.Add("context", context_tensor);
+				}
+				input_tensors.Add("h0", output_tensors_emb[2]);
+				input_tensors.Add("h1", output_tensors_emb[3]);
+				input_tensors.Add("h2", output_tensors_emb[4]);
+				input_tensors.Add("h3", output_tensors_emb[5]);
+				input_tensors.Add("h4", output_tensors_emb[6]);
+				input_tensors.Add("h5", output_tensors_emb[7]);
+
+				output_tensors_out = Infer(diffusionOutModel, input_tensors);
+			}else{
+				// one model
+				output_tensors_out = output_tensors_emb;
 			}
-			input_tensors.Add("h6", output_tensors_emb[8]);
-			input_tensors.Add("h7", output_tensors_emb[9]);
-			input_tensors.Add("h8", output_tensors_emb[10]);
-			input_tensors.Add("h9", output_tensors_emb[11]);
-			input_tensors.Add("h10", output_tensors_emb[12]);
-			input_tensors.Add("h11", output_tensors_emb[13]);
 
-			List<AiliaTensor> output_tensors_mid = Infer(diffusionMidModel, input_tensors);
-
-			// diffusin out
-			input_tensors = new Dictionary<string,AiliaTensor>();
-			input_tensors.Add("h", output_tensors_mid[0]);
-			input_tensors.Add("emb", output_tensors_emb[1]);
-			if (update_context){
-				input_tensors.Add("context", context_tensor);
-			}
-			input_tensors.Add("h0", output_tensors_emb[2]);
-			input_tensors.Add("h1", output_tensors_emb[3]);
-			input_tensors.Add("h2", output_tensors_emb[4]);
-			input_tensors.Add("h3", output_tensors_emb[5]);
-			input_tensors.Add("h4", output_tensors_emb[6]);
-			input_tensors.Add("h5", output_tensors_emb[7]);
-
-			List<AiliaTensor> output_tensors_out = Infer(diffusionOutModel, input_tensors);
 			float[] diffusion_output = output_tensors_out[0].data;
 
 			float[] z = new float[CondInputWidth * CondInputHeight * CondInputChannel];
