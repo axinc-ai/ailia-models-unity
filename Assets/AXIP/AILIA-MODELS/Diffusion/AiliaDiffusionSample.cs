@@ -54,6 +54,7 @@ namespace ailiaSDK
 		private const float SLEEP_TIME = 1.0f;
 		private float sleep = SLEEP_TIME;
 		private bool oneshot = true;
+		private bool stable_diffusion_legacy = false;
 
 		bool modelPrepared;
 
@@ -269,12 +270,17 @@ namespace ailiaSDK
 					break;
 				case DiffusionModels.StableDiffusion:
 					serverFolderName = "stable-diffusion-txt2img";
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx"});
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx"});
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx"});
+					if (stable_diffusion_legacy){
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_emb.onnx"});
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_mid.onnx"});
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion_out.onnx"});
+					} else {
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion.opt.onnx.prototxt" });
+						urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "diffusion.opt.onnx"});
+					}
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx.prototxt", local_name =  "autoencoder_sd.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = "autoencoder.onnx", local_name =  "autoencoder_sd.onnx" });
 					serverFolderName = "clip";
@@ -297,13 +303,23 @@ namespace ailiaSDK
 						modelPrepared = super_resolution.Open(asset_path + "/" + "diffusion_model_sr.onnx.prototxt", asset_path + "/" + "diffusion_model_sr.onnx", asset_path + "/" + "first_stage_decode.onnx.prototxt", asset_path + "/" + "first_stage_decode.onnx", gpu_mode);
 						break;
 					case DiffusionModels.StableDiffusion:
-						modelPrepared = stable_diffusion.Open(
-							asset_path + "/" + "diffusion_emb.onnx.prototxt", asset_path + "/" + "diffusion_emb.onnx",
-							asset_path + "/" + "diffusion_mid.onnx.prototxt", asset_path + "/" + "diffusion_mid.onnx",
-							asset_path + "/" + "diffusion_out.onnx.prototxt", asset_path + "/" + "diffusion_out.onnx",
-							asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx",
-							asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
-							gpu_mode);
+						if (stable_diffusion_legacy){
+							modelPrepared = stable_diffusion.Open(
+								asset_path + "/" + "diffusion_emb.onnx.prototxt", asset_path + "/" + "diffusion_emb.onnx",
+								asset_path + "/" + "diffusion_mid.onnx.prototxt", asset_path + "/" + "diffusion_mid.onnx",
+								asset_path + "/" + "diffusion_out.onnx.prototxt", asset_path + "/" + "diffusion_out.onnx",
+								asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx",
+								asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
+								gpu_mode);
+						} else {
+							modelPrepared = stable_diffusion.Open(
+								asset_path + "/" + "diffusion.opt.onnx.prototxt", asset_path + "/" + "diffusion.opt.onnx",
+								null, null,
+								null, null,
+								asset_path + "/" + "autoencoder_sd.onnx.prototxt", asset_path + "/" + "autoencoder_sd.onnx",
+								asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
+								gpu_mode);
+						}
 						break;
 				}
 			}));
