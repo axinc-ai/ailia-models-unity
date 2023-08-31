@@ -199,6 +199,16 @@ public class AiliaPoseEstimator
         public float y;
         /**
         * \~japanese
+        * 姿勢検出のみ有効。体中心を座標0とした時に推定されるローカルX座標。単位(スケール)は x と同じです。
+        */
+        public float x_local;
+        /**
+        * \~japanese
+        * 姿勢検出のみ有効。体中心を座標0とした時に推定されるローカルY座標。単位(スケール)は x と同じです。
+        */
+        public float y_local;
+        /**
+        * \~japanese
         * 姿勢検出のみ有効。体中心を座標0とした時に推定されるローカルZ座標。単位(スケール)は x と同じです。
         * 
         * \~english
@@ -223,6 +233,22 @@ public class AiliaPoseEstimator
         public Int32 interpolated;
     }
 
+
+    /*
+    //追加
+    [StructLayout(LayoutKind.Sequential)]
+    public struct AILIAPoseEstimatorKeypointCoord3D
+    {
+        
+        public float x;
+        
+        public float y;
+        
+        public float z;
+    }
+    */
+
+
     /**
     * \~japanese
     *  構造体フォーマットバージョン
@@ -243,6 +269,11 @@ public class AiliaPoseEstimator
         * Detected joint points. The sequence index corresponds to the joint number.
         */
         public AILIAPoseEstimatorKeypoint[] points;
+        /**
+        * \~japanese
+        * 検出した関節点の3次元座標。配列インデックスが関節番号に相当します。
+        */
+        //public AILIAPoseEstimatorKeypointCoord3D[] pointsCoord3D; //追加
         /**
         * \~japanese
         * このオブジェクトの検出信頼度
