@@ -23,6 +23,7 @@ namespace ailiaSDK {
 		private GameObject UICanvas = null;
 		public AudioClip audio = null;
 		public AudioSource audio_source = null;
+		public bool play_audio = false;
 
 		//Settings
 		[SerializeField]
@@ -52,6 +53,9 @@ namespace ailiaSDK {
 
 		// AILIA open file
 		private bool FileOpened = false;
+
+		// State
+		private float audio_time = 0.0f;
 
 		private void CreateAiliaDetector(AiliaGenerativeAdversarialNetworksModels modelType)
 		{
@@ -101,8 +105,10 @@ namespace ailiaSDK {
 			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
 			ailia_camera.CreateCamera(camera_id);
-			lip_gan.SetAudio(audio);
-			audio_source.PlayOneShot(audio);
+			lip_gan.SetAudio(audio, debug);
+			if (play_audio){
+				audio_source.PlayOneShot(audio);
+			}
 		}
 
 		// Update is called once per frame
@@ -158,7 +164,11 @@ namespace ailiaSDK {
 
 			//Compute lipgan
 			long recognition_time = 0;
-			float audio_time = audio_source.time;
+			if (play_audio){
+				audio_time = audio_source.time;
+			}else{
+				audio_time = audio_time + Time.deltaTime;
+			}
 			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;

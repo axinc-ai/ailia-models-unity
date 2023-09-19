@@ -62,8 +62,18 @@ namespace ailiaSDK
 			}
 
 			// Resample
-			float[] data = new float[clip_samples * SAMPLE_RATE / clip_frequency];
-			AiliaAudio.ailiaAudioResample(data, data_s, SAMPLE_RATE, data.Length, clip_frequency, data_s.Length);
+			int resample_samples = (int)((long)clip_samples * SAMPLE_RATE / clip_frequency);
+			if(debug){
+				Debug.Log("samplingRate:"+clip_frequency);
+				Debug.Log("samples:"+clip_samples);
+				Debug.Log("resample_samples:"+resample_samples);
+			}
+			float[] data = new float[resample_samples];
+			int status=AiliaAudio.ailiaAudioResample(data, data_s, SAMPLE_RATE, data.Length, clip_frequency, data_s.Length);
+			if(status!=0){
+				Debug.Log("ailiaAudioResample failed %d\n"+status);
+				return;
+			}
 
 			// Preemphasis
 			Preemphasis(data);
@@ -71,14 +81,13 @@ namespace ailiaSDK
 			// Get melspectrum
 			int len = data.Length;
 			int frame_len=0;
-			int status = AiliaAudio.ailiaAudioGetFrameLen(ref frame_len, len, FFT_N, HOP_N, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE);
+			status = AiliaAudio.ailiaAudioGetFrameLen(ref frame_len, len, FFT_N, HOP_N, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE);
 			if(status!=0){
 				Debug.Log("ailiaAudioGetFrameLen failed %d\n"+status);
 				return;
 			}
-			if(debug){
-				Debug.Log("samplingRate:"+clip_frequency);
-				Debug.Log("samples:"+clip_samples);
+
+			if (debug){
 				Debug.Log("frame_len:"+frame_len);
 			}
 
@@ -119,7 +128,7 @@ namespace ailiaSDK
 
 		// Crop input data
 		private float [] CropInputFace(int fx, int fy, int fw, int fh, Color32[] camera, int tex_width, int tex_height){
-			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
+			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 6];
 			int w = DETECTION_WIDTH;
 			int h = DETECTION_HEIGHT;
 			float scale = 1.0f * fw / w;
@@ -167,9 +176,13 @@ namespace ailiaSDK
 				{
 					int x2 = x * DETECTION_WIDTH / fw;
 					int y2 = y * DETECTION_HEIGHT / fh;
-					result[(tex_height - 1 - y) * tex_width + x].r = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 0] ) * 255.0);
-					result[(tex_height - 1 - y) * tex_width + x].g = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 1] ) * 255.0);
-					result[(tex_height - 1 - y) * tex_width + x].b = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 2] ) * 255.0);
+					int x3 = fx - fw / 2 + x;
+					int y3 = fy - fh / 2 + y;
+					if (x3 >= 0 && x3 < tex_width && y3 >= 0 && y3 < tex_height){
+						result[(tex_height - 1 - y3) * tex_width + x3].r = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 0] ) * 255.0);
+						result[(tex_height - 1 - y3) * tex_width + x3].g = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 1] ) * 255.0);
+						result[(tex_height - 1 - y3) * tex_width + x3].b = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 2] ) * 255.0);
+					}
 				}
 			}
 		}
@@ -203,9 +216,13 @@ namespace ailiaSDK
 					{
 						for (int x = 0; x < w; x++)
 						{
-							camera[tex_width*(tex_height-1-y)+x].r = (byte)((data[(y * w + x) * 6 + 0] ) * 255.0);
-							camera[tex_width*(tex_height-1-y)+x].g = (byte)((data[(y * w + x) * 6 + 1] ) * 255.0);
-							camera[tex_width*(tex_height-1-y)+x].b = (byte)((data[(y * w + x) * 6 + 2] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x].r = (byte)((data[(y * w + x) * 6 + 0] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x].g = (byte)((data[(y * w + x) * 6 + 1] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x].b = (byte)((data[(y * w + x) * 6 + 2] ) * 255.0);
+
+							result[tex_width*(tex_height-1-y)+x+w].r = (byte)((data[(y * w + x) * 6 + 3] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x+w].g = (byte)((data[(y * w + x) * 6 + 4] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x+w].b = (byte)((data[(y * w + x) * 6 + 5] ) * 255.0);
 						}
 					}
 				}
@@ -228,12 +245,36 @@ namespace ailiaSDK
 				uint[] input_blobs = ailia_model.GetInputBlobList();
 				if (input_blobs != null)
 				{
-					bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
+
+					Ailia.AILIAShape input_shape = new Ailia.AILIAShape();
+					input_shape.x=6;
+					input_shape.y=(uint)DETECTION_WIDTH;
+					input_shape.z=(uint)DETECTION_HEIGHT;
+					input_shape.w=1;
+					input_shape.dim=4;
+
+					bool success = ailia_model.SetInputBlobShape(input_shape, (int)input_blobs[1]);
+					if (success == false){
+						Debug.Log("SetInputBlobShape failed");
+					}
+
+					input_shape.x=1;
+					input_shape.y=(uint)MEL_FRAMES;
+					input_shape.z=(uint)MELS;
+					input_shape.w=1;
+					input_shape.dim=4;
+
+					success = ailia_model.SetInputBlobShape(input_shape, (int)input_blobs[0]);
+					if (success == false){
+						Debug.Log("SetInputBlobShape failed");
+					}
+
+					success = ailia_model.SetInputBlobData(data, (int)input_blobs[1]);
 					if (!success)
 					{
 						Debug.Log("Can not SetInputBlobData");
 					}
-					success = ailia_model.SetInputBlobData(mels, (int)input_blobs[1]);
+					success = ailia_model.SetInputBlobData(mels, (int)input_blobs[0]);
 					if (!success)
 					{
 						Debug.Log("Can not SetInputBlobData");
@@ -258,9 +299,9 @@ namespace ailiaSDK
 					{
 						for (int x = 0; x < w; x++)
 						{
-							camera[tex_width*(tex_height-1-y)+x+tex_width].r = (byte)((output[(y * w + x) * 3 + 0] ) * 255.0);
-							camera[tex_width*(tex_height-1-y)+x+tex_width].g = (byte)((output[(y * w + x) * 3 + 1] ) * 255.0);
-							camera[tex_width*(tex_height-1-y)+x+tex_width].b = (byte)((output[(y * w + x) * 3 + 2] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x+w*2].r = (byte)((output[(y * w + x) * 3 + 0] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x+w*2].g = (byte)((output[(y * w + x) * 3 + 1] ) * 255.0);
+							result[tex_width*(tex_height-1-y)+x+w*2].b = (byte)((output[(y * w + x) * 3 + 2] ) * 255.0);
 						}
 					}
 				}
