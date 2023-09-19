@@ -44,7 +44,7 @@ namespace ailiaSDK {
 		private AiliaModel ailia_face_gan = new AiliaModel();
 
 		private AiliaBlazeface blaze_face = new AiliaBlazeface();
-		private AiliaFaceMesh lip_gan = new AiliaLipGAN();
+		private AiliaFaceMesh lip_gan = new AiliaLipGan();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
