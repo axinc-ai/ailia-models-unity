@@ -18,10 +18,11 @@ namespace ailiaSDK {
         }
 
 		[SerializeField]
-		private AiliaGenerativeAdversarialNetworksModels ailiaModelType = AiliaGenerativeAdversarialNetworks.lipgan;
+		private AiliaGenerativeAdversarialNetworksModels ailiaModelType = AiliaGenerativeAdversarialNetworksModels.lipgan;
 		[SerializeField]
 		private GameObject UICanvas = null;
 		public AudioClip audio = null;
+		public AudioSource audio_source = null;
 
 		//Settings
 		[SerializeField]
@@ -44,7 +45,7 @@ namespace ailiaSDK {
 		private AiliaModel ailia_face_gan = new AiliaModel();
 
 		private AiliaBlazeface blaze_face = new AiliaBlazeface();
-		private AiliaFaceMesh lip_gan = new AiliaLipGan();
+		private AiliaLipGan lip_gan = new AiliaLipGan();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -52,18 +53,18 @@ namespace ailiaSDK {
 		// AILIA open file
 		private bool FileOpened = false;
 
-		private void CreateAiliaDetector(FaceDetectorModels modelType)
+		private void CreateAiliaDetector(AiliaGenerativeAdversarialNetworksModels modelType)
 		{
 			string asset_path = Application.temporaryCachePath;
 			var urlList = new List<ModelDownloadURL>();
 			if (gpu_mode)
 			{
 				ailia_face_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-				ailia_face_recognizer.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+				ailia_face_gan.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
 			switch (modelType)
 			{		
-				case FaceDetectorModels.lipgan:
+				case AiliaGenerativeAdversarialNetworksModels.lipgan:
 					mode_text.text = "ailia LipGAN";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
@@ -91,7 +92,7 @@ namespace ailiaSDK {
 		private void DestroyAiliaDetector()
 		{
 			ailia_face_detector.Close();
-			ailia_face_recognizer.Close();
+			ailia_face_gan.Close();
 		}
 
 		// Use this for initialization
@@ -101,6 +102,7 @@ namespace ailiaSDK {
 			CreateAiliaDetector(ailiaModelType);
 			ailia_camera.CreateCamera(camera_id);
 			lip_gan.SetAudio(audio);
+			audio_source.PlayOneShot(audio);
 		}
 
 		// Update is called once per frame
@@ -135,7 +137,7 @@ namespace ailiaSDK {
 			long detection_time = (end_time - start_time);
 
 			//Draw result
-			if(ailiaModelType==FaceDetectorModels.lipgan){
+			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
 				for (int i = 0; i < result_detections.Count; i++)
 				{
 					AiliaBlazeface.FaceInfo face = result_detections[i];
@@ -156,44 +158,19 @@ namespace ailiaSDK {
 
 			//Compute lipgan
 			long recognition_time = 0;
+			float audio_time = audio_source.time;
 			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				//List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = 
-				lip_gan.Detection(ailia_face_gan, camera, tex_width, tex_height, result_detections, debug);
+				Color32 [] generated_image = lip_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, audio_time, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
-
-				/*
-				//Draw result
-				for (int i = 0; i < result_facemesh.Count; i++)
-				{
-					AiliaFaceMesh.FaceMeshInfo face = result_facemesh[i];
-
-					int fw = (int)(face.width * tex_width);
-					int fh = (int)(face.height * tex_height);
-					int fx = (int)(face.center.x * tex_width) - fw / 2;
-					int fy = (int)(face.center.y * tex_height) - fh / 2;
-					DrawAffine2D(Color.green, fx, fy, fw, fh, tex_width, tex_height, face.theta);
-
-					float scale = 1.0f * fw / AiliaFaceMesh.DETECTION_WIDTH;
-
-					float ss=(float)System.Math.Sin(face.theta);
-					float cs=(float)System.Math.Cos(face.theta);
-
-					for (int k = 0; k < AiliaFaceMesh.NUM_KEYPOINTS; k++)
-					{
-						int x = (int)(face.center.x * tex_width  + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * cs + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) * -ss)* scale);
-						int y = (int)(face.center.y * tex_height + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * ss + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) *  cs)* scale);
-						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
-					}
-				}
-				*/
+				camera = generated_image;
 			}
 
 			if (label_text != null)
 			{
-				label_text.text = detection_time + "ms + " + recognition_time + "ms\n" + ailia_face_detector.EnvironmentName();
+				label_text.text = detection_time + "ms + " + recognition_time + "ms\nposition " + audio_time + "\n" + ailia_face_detector.EnvironmentName();
 			}
 
 			//Apply

@@ -15,30 +15,29 @@ namespace ailiaSDK
 {
 	public class AiliaLipGan
 	{
-		public const int NUM_KEYPOINTS = 468;
-		public const int DETECTION_WIDTH = 96;
-		public const int DETECTION_HEIGHT = 96;
+		private const int DETECTION_WIDTH = 96;
+		private const int DETECTION_HEIGHT = 96;
+		private const int SAMPLE_RATE=16000;
+		private const int FFT_N=800;
+		private const int HOP_N=200; // 0.0125ms (HOP_N / SAMPLE_RATE)
+		private const int WIN_N=800;
+		private const float POWER=1;
+		private const int MELS = 80;
+		private const float F_MIN=55;
+		private const float F_MAX=7600;
+		private const int MEL_FRAMES = 27;
+		
+		private float [] m_melspectrogram = null;
+		private int m_frame_len = 0;
 
-
-		public struct LipGanInfo
-		{
-			public float width;
-			public float height;
-			public Vector2[] keypoints;
-			public Vector2 center;
-			public float theta;
-		}
-
-		private float [] melspectrogram = null;
-
+		// Audio utils
 		private void Preemphasis(float [] data){
 			float before = 0.0f;
 			for (int i = 0; i < data.Length; i++){
 				float new_before = data[i];
-				data[i] = data[i] - 0.97 * before;
+				data[i] = data[i] - 0.97f * before;
 				before = new_before;
 			}
-
 		}
 
 		private float AmpToDb(float x, float min_level, float ref_level_db){
@@ -46,11 +45,11 @@ namespace ailiaSDK
 		}
 
 		private float Normalize(float s, float max_abs_value, float min_level_db){
-			return Mathf.Clip((2 * max_abs_value) * ((s - min_level_db) / (-min_level_db))) - max_abs_value, -max_abs_value, max_abs_value);
+			return Mathf.Clamp((2 * max_abs_value) * ((s - min_level_db) / (-min_level_db)) - max_abs_value, -max_abs_value, max_abs_value);
 		}
 
 		// Get melspectrum using ailia.audio
-		private void MelSpectrum(float [] samples,int clip_samples,int clip_channels,int clip_frequency){
+		private void MelSpectrum(float [] samples,int clip_samples,int clip_channels,int clip_frequency, bool debug){
 			// Convert stereo to mono
 			float[] data_s = new float[clip_samples];
 			for (int i = 0; i < data_s.Length; ++i)
@@ -63,31 +62,21 @@ namespace ailiaSDK
 			}
 
 			// Resample
-			int targetSampleRate = 16000;
-			float[] data = new float[clip_samples * targetSampleRate / clip_frequency];
-			AiliaAudio.ailiaAudioResample(data, data_s, targetSampleRate, data.Length, clip_frequency, data_s.Length);
+			float[] data = new float[clip_samples * SAMPLE_RATE / clip_frequency];
+			AiliaAudio.ailiaAudioResample(data, data_s, SAMPLE_RATE, data.Length, clip_frequency, data_s.Length);
 
 			// Preemphasis
 			Preemphasis(data);
 
 			// Get melspectrum
 			int len = data.Length;
-			const int SAMPLE_RATE=16000;
-			const int FFT_N=800;
-			const int HOP_N=200;
-			const int WIN_N=800;
-			const float POWER=1;
-			const int MELS = 80;
-			const float F_MIN=55
-			const float f_max=7600;
-
 			int frame_len=0;
 			int status = AiliaAudio.ailiaAudioGetFrameLen(ref frame_len, len, FFT_N, HOP_N, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE);
 			if(status!=0){
 				Debug.Log("ailiaAudioGetFrameLen failed %d\n"+status);
-				return null;
+				return;
 			}
-			if(DEBUG_MODE){
+			if(debug){
 				Debug.Log("samplingRate:"+clip_frequency);
 				Debug.Log("samples:"+clip_samples);
 				Debug.Log("frame_len:"+frame_len);
@@ -95,11 +84,11 @@ namespace ailiaSDK
 
 			float [] melspectrogram = new float [MELS*frame_len];
 			status=AiliaAudio.ailiaAudioGetMelSpectrogram(melspectrogram, data, len, SAMPLE_RATE, FFT_N, HOP_N, WIN_N, AiliaAudio.AILIA_AUDIO_WIN_TYPE_HANN, 
-				frame_len, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE, POWER, AiliaAudio.AILIA_AUDIO_FFT_NORMALIZE_NONE ,F_MIN, f_max, MELS, 
+				frame_len, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE, POWER, AiliaAudio.AILIA_AUDIO_FFT_NORMALIZE_NONE ,F_MIN, F_MAX, MELS, 
 				AiliaAudio.AILIA_AUDIO_MEL_NORMALIZE_NONE,AiliaAudio.AILIA_AUDIO_MEL_SCALE_FORMULA_HTK);
 			if(status!=0){
 				Debug.Log("ailiaAudioGetMelSpectrogram failed "+status);
-				return null;
+				return;
 			}
 
 			float min_level_db = -100;
@@ -114,27 +103,86 @@ namespace ailiaSDK
 			}
 
 			m_melspectrogram = melspectrogram;
+			m_frame_len = frame_len;
 		}
 
 		// Melspectrum
-		public void SetAudio(AudioClip clip)
+		public void SetAudio(AudioClip clip, bool debug = false)
 		{
 			// Get pcm from audio clip
 			float[] samples = new float[clip.samples * clip.channels];
 			clip.GetData(samples, 0);   //float range
 
 			// Get mel spectrum using ailia.audio
-			float [] mel_spectrum=MelSpectrum(samples,clip.samples,clip.channels,clip.frequency);
-			if(mel_spectrum==null){
-				Debug.Log("MelSpectrum failed");
-				return;
+			MelSpectrum(samples,clip.samples,clip.channels,clip.frequency, debug);
+		}
+
+		// Crop input data
+		private float [] CropInputFace(int fx, int fy, int fw, int fh, Color32[] camera, int tex_width, int tex_height){
+			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
+			int w = DETECTION_WIDTH;
+			int h = DETECTION_HEIGHT;
+			float scale = 1.0f * fw / w;
+			for (int y = 0; y < h; y++)
+			{
+				for (int x = 0; x < w; x++)
+				{
+					int ox = (x - w/2);
+					int oy = (y - h/2);
+					int x2 = (int)((ox) * scale + fx);
+					int y2 = (int)((oy) * scale + fy);
+					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
+					{
+						data[(y * w + x) + 0 * w * h] = 0;
+						data[(y * w + x) + 1 * w * h] = 0;
+						data[(y * w + x) + 2 * w * h] = 0;
+						continue;
+					}
+
+					// img
+					data[(y * w + x) * 6 + 0] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
+					data[(y * w + x) * 6 + 1] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
+					data[(y * w + x) * 6 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+
+					// img masked
+					if (y > h / 2){
+						data[(y * w + x) * 6 + 3] = 0;
+						data[(y * w + x) * 6 + 4] = 0;
+						data[(y * w + x) * 6 + 5] = 0;
+					}else{
+						data[(y * w + x) * 6 + 3] = data[(y * w + x) * 6 + 0];
+						data[(y * w + x) * 6 + 4] = data[(y * w + x) * 6 + 1];
+						data[(y * w + x) * 6 + 5] = data[(y * w + x) * 6 + 2];
+					}
+				}
+			}
+			return data;
+		}
+
+		// Output
+		private void Composite(int fx, int fy, int fw, int fh, Color32[] result, int tex_width, int tex_height, float [] output){
+			for (int y = 0; y < fh; y++)
+			{
+				for (int x = 0; x < fw; x++)
+				{
+					int x2 = x * DETECTION_WIDTH / fw;
+					int y2 = y * DETECTION_HEIGHT / fh;
+					result[(tex_height - 1 - y) * tex_width + x].r = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 0] ) * 255.0);
+					result[(tex_height - 1 - y) * tex_width + x].g = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 1] ) * 255.0);
+					result[(tex_height - 1 - y) * tex_width + x].b = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 2] ) * 255.0);
+				}
 			}
 		}
 
 		// Update is called once per frame
-		public List<FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazeface.FaceInfo> result_detections, bool debug=false)
+		public Color32[] GenerateImage(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazeface.FaceInfo> result_detections, float audio_time, bool debug=false)
 		{
-			List<FaceMeshInfo> result = new List<FaceMeshInfo>();
+			// create base images
+			Color32[] result = new Color32 [camera.Length];
+			for (int i = 0; i < result.Length; i++){
+				result[i] = camera[i];
+			}
+			
 			for (int i = 0; i < result_detections.Count; i++)
 			{
 				//extract roi
@@ -143,45 +191,11 @@ namespace ailiaSDK
 				int fh = (int)(face.height * tex_height);
 				int fx = (int)(face.center.x * tex_width);
 				int fy = (int)(face.center.y * tex_height);
-
-				//extract data
-				float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
 				int w = DETECTION_WIDTH;
 				int h = DETECTION_HEIGHT;
-				float scale = 1.0f * fw / w;
-				for (int y = 0; y < h; y++)
-				{
-					for (int x = 0; x < w; x++)
-					{
-						int ox = (x - w/2);
-						int oy = (y - h/2);
-						int x2 = (int)((ox) * scale + fx);
-						int y2 = (int)((oy) * scale + fy);
-						if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
-						{
-							data[(y * w + x) + 0 * w * h] = 0;
-							data[(y * w + x) + 1 * w * h] = 0;
-							data[(y * w + x) + 2 * w * h] = 0;
-							continue;
-						}
 
-						// img
-						data[(y * w + x) * 6 + 0] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-						data[(y * w + x) * 6 + 1] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-						data[(y * w + x) * 6 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
-
-						// img masked
-						if (y > h / 2){
-							data[(y * w + x) * 6 + 3] = 0;
-							data[(y * w + x) * 6 + 4] = 0;
-							data[(y * w + x) * 6 + 5] = 0;
-						}else{
-							data[(y * w + x) * 6 + 3] = data[(y * w + x) * 6 + 0];
-							data[(y * w + x) * 6 + 4] = data[(y * w + x) * 6 + 1];
-							data[(y * w + x) * 6 + 5] = data[(y * w + x) * 6 + 2];
-						}
-					}
-				}
+				//extract data
+				float [] data = CropInputFace(fx, fy, fw, fh, camera, tex_width, tex_height);
 
 				//debug display data
 				if(debug){
@@ -197,13 +211,45 @@ namespace ailiaSDK
 				}
 
 				// mel = (1, 80, 27, 1) // 27 frames mel, channel last
+				float steps = HOP_N / SAMPLE_RATE;
+				float [] mels = new float [1 * MELS * MEL_FRAMES * 1];
+				for (int m = 0; m < MELS; m++){
+					for (int j = 0; j < MEL_FRAMES; j++){
+						int t = j + (int)(steps * audio_time);
+						if (t > m_frame_len){
+							t = m_frame_len - 1;
+						}
+						mels[m * MEL_FRAMES + j] = m_melspectrogram[m * m_frame_len + t];
+					}
+				}
 
 				//compute
 				float [] output = new float [w * h * 3];
-				bool success = ailia_model.Predict(output,data);
-				if (!success)
+				uint[] input_blobs = ailia_model.GetInputBlobList();
+				if (input_blobs != null)
 				{
-					Debug.Log("Can not Predict");
+					bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
+					if (!success)
+					{
+						Debug.Log("Can not SetInputBlobData");
+					}
+					success = ailia_model.SetInputBlobData(mels, (int)input_blobs[1]);
+					if (!success)
+					{
+						Debug.Log("Can not SetInputBlobData");
+					}
+
+					ailia_model.Update();
+
+					uint[] output_blobs = ailia_model.GetOutputBlobList();
+					if (output_blobs != null && output_blobs.Length >= 1)
+					{
+						success = ailia_model.GetBlobData(output, (int)output_blobs[0]);
+						if (!success)
+						{
+							Debug.Log("Can not GetBlobData");
+						}
+					}
 				}
 
 				//display
@@ -218,10 +264,12 @@ namespace ailiaSDK
 						}
 					}
 				}
+
+				//Write output
+				Composite(fx, fy, fw, fh, result, tex_width, tex_height, output);
 			}
 
 			return result;
 		}
-
 	}
 }
