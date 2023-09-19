@@ -37,6 +37,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 |:-----------|------------:|:------------:|:------------:|
 | [detic](/Assets/AXIP/AILIA-MODELS/Foundation/) | [Detecting Twenty-thousand Classes using Image-level Supervision](https://github.com/facebookresearch/Detic) | Pytorch | 1.2.14 and later |
 
+## Generative adversarial networks
+
+| | Model | Reference | Exported From | Supported Ailia Version | Blog |
+|:-----------|------------:|:------------:|:------------:|:------------:|:------------:|
+| [lipgan](/Assets/AXIP/AILIA-MODELS/GenerativeAdversarialNetworks/) | [LipGAN](https://github.com/Rudrabha/LipGAN) | Keras | 1.2.15 and later | |
+
 ## Hand recognition
 
 | Name | Detail | Exported From | Supported Ailia Version |
