@@ -24,6 +24,7 @@ namespace ailiaSDK {
 		public AudioClip audio = null;
 		public AudioSource audio_source = null;
 		public bool play_audio = false;
+		public Texture2D image = null; 
 
 		//Settings
 		[SerializeField]
@@ -104,7 +105,9 @@ namespace ailiaSDK {
 		{
 			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
-			ailia_camera.CreateCamera(camera_id);
+			if (image == null){
+				ailia_camera.CreateCamera(camera_id);
+			}
 			lip_gan.SetAudio(audio, debug);
 			if (play_audio){
 				audio_source.PlayOneShot(audio);
@@ -114,7 +117,7 @@ namespace ailiaSDK {
 		// Update is called once per frame
 		void Update()
 		{
-			if (!ailia_camera.IsEnable())
+			if (!ailia_camera.IsEnable() || image != null)
 			{
 				return;
 			}
@@ -127,14 +130,28 @@ namespace ailiaSDK {
 			Clear();
 
 			//Get camera image
-			int tex_width = ailia_camera.GetWidth();
-			int tex_height = ailia_camera.GetHeight();
+			int tex_width = 0;
+			int tex_height = 0;
+			Color32[] camera = null;
+
+			//Get image
+			if (image == null){
+				tex_width = ailia_camera.GetWidth();
+				tex_height = ailia_camera.GetHeight();
+				camera = ailia_camera.GetPixels32();
+			}	
+			if (image != null){
+				tex_width = image.width;
+				tex_height = image.height;
+				camera = image.GetPixels32();
+			}
+
+			//Create output image
 			if (preview_texture == null)
 			{
 				preview_texture = new Texture2D(tex_width, tex_height);
 				raw_image.texture = preview_texture;
 			}
-			Color32[] camera = ailia_camera.GetPixels32();
 
 			//BlazeFace
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -153,12 +170,12 @@ namespace ailiaSDK {
 					int fy = (int)(face.center.y * tex_height) - fh / 2;
 					DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
 
-					for (int k = 0; k < AiliaBlazeface.NUM_KEYPOINTS; k++)
-					{
-						int x = (int)(face.keypoints[k].x * tex_width);
-						int y = (int)(face.keypoints[k].y * tex_height);
-						DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
-					}
+					//for (int k = 0; k < AiliaBlazeface.NUM_KEYPOINTS; k++)
+					//{
+					//	int x = (int)(face.keypoints[k].x * tex_width);
+					//	int y = (int)(face.keypoints[k].y * tex_height);
+					//	DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
+					//}
 				}
 			}
 
@@ -168,6 +185,9 @@ namespace ailiaSDK {
 				audio_time = audio_source.time;
 			}else{
 				audio_time = audio_time + Time.deltaTime;
+			}
+			if (audio_time > audio.samples / audio.frequency){
+				audio_time = audio.samples / audio.frequency;
 			}
 			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
 				//Compute

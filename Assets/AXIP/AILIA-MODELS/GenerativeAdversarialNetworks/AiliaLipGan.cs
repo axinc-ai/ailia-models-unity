@@ -250,8 +250,9 @@ namespace ailiaSDK
 				}
 
 				// mel = (1, 80, 27, 1) // 27 frames mel, channel last
-				float steps = 1.0f * HOP_N / SAMPLE_RATE;
+				float steps = 1.0f / (1.0f * HOP_N / SAMPLE_RATE);
 				float [] mels = new float [1 * MELS * MEL_FRAMES * 1];
+				//Debug.Log("mel from " + (int)(steps * audio_time));
 				for (int m = 0; m < MELS; m++){
 					for (int j = 0; j < MEL_FRAMES; j++){
 						int t = j + (int)(steps * audio_time);
@@ -261,6 +262,8 @@ namespace ailiaSDK
 						mels[m * MEL_FRAMES + j] = m_melspectrogram[m * m_frame_len + t];
 					}
 				}
+				Debug.Log("data " + data[0]+ " " + data[1]+ " " + data[2]+ " " + data[3]+ " " + data[4]+ " " + data[5]);
+				Debug.Log("mels " + mels[0]+ " " + mels[1]);
 
 				//compute
 				float [] output = new float [w * h * 3];

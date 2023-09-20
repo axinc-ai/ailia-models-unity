@@ -557,6 +557,7 @@ MonoBehaviour:
   audio: {fileID: 8300000, guid: 7a7fd51ca141746ee845ae5daab35fdb, type: 3}
   audio_source: {fileID: 326292669}
   play_audio: 0
+  image: {fileID: 2800000, guid: f56ac26da4b874cafa45faef2ce3c413, type: 3}
   gpu_mode: 0
   camera_id: 0
   debug: 1
