@@ -262,8 +262,8 @@ namespace ailiaSDK
 						mels[m * MEL_FRAMES + j] = m_melspectrogram[m * m_frame_len + t];
 					}
 				}
-				Debug.Log("data " + data[0]+ " " + data[1]+ " " + data[2]+ " " + data[3]+ " " + data[4]+ " " + data[5]);
-				Debug.Log("mels " + mels[0]+ " " + mels[1]);
+				//Debug.Log("data " + data[0]+ " " + data[1]+ " " + data[2]+ " " + data[3]+ " " + data[4]+ " " + data[5]);
+				//Debug.Log("mels " + mels[0]+ " " + mels[1]);
 
 				//compute
 				float [] output = new float [w * h * 3];

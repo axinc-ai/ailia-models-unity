@@ -168,14 +168,16 @@ namespace ailiaSDK {
 					int fh = (int)(face.height * tex_height);
 					int fx = (int)(face.center.x * tex_width) - fw / 2;
 					int fy = (int)(face.center.y * tex_height) - fh / 2;
-					DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
+					if (debug){
+						DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
 
-					//for (int k = 0; k < AiliaBlazeface.NUM_KEYPOINTS; k++)
-					//{
-					//	int x = (int)(face.keypoints[k].x * tex_width);
-					//	int y = (int)(face.keypoints[k].y * tex_height);
-					//	DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
-					//}
+						for (int k = 0; k < AiliaBlazeface.NUM_KEYPOINTS; k++)
+						{
+							int x = (int)(face.keypoints[k].x * tex_width);
+							int y = (int)(face.keypoints[k].y * tex_height);
+							//DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
+						}
+					}
 				}
 			}
 

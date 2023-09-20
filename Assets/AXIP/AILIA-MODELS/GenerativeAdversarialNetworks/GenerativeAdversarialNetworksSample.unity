@@ -560,7 +560,7 @@ MonoBehaviour:
   image: {fileID: 2800000, guid: f56ac26da4b874cafa45faef2ce3c413, type: 3}
   gpu_mode: 0
   camera_id: 0
-  debug: 1
+  debug: 0
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
