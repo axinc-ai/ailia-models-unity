@@ -40,8 +40,8 @@ namespace ailiaSDK
 			}
 		}
 
-		private float AmpToDb(float x, float min_level, float ref_level_db){
-			return 20 * Mathf.Log(Mathf.Max(min_level, x)) / Mathf.Log(10) - ref_level_db;
+		private float AmpToDb(float x, float min_level){
+			return 20 * Mathf.Log(Mathf.Max(min_level, x)) / Mathf.Log(10);
 		}
 
 		private float Normalize(float s, float max_abs_value, float min_level_db){
@@ -76,7 +76,13 @@ namespace ailiaSDK
 			}
 
 			// Preemphasis
+			if(debug){
+				Debug.Log("Input ["+data[ 0] + " " + data[ 1] + " " + data[ 2] + "]");
+			}
 			Preemphasis(data);
+			if(debug){
+				Debug.Log("Preemphasis ["+data[ 0] + " " + data[ 1] + " " + data[ 2] + "]");
+			}
 
 			// Get melspectrum
 			int len = data.Length;
@@ -94,21 +100,33 @@ namespace ailiaSDK
 			float [] melspectrogram = new float [MELS*frame_len];
 			status=AiliaAudio.ailiaAudioGetMelSpectrogram(melspectrogram, data, len, SAMPLE_RATE, FFT_N, HOP_N, WIN_N, AiliaAudio.AILIA_AUDIO_WIN_TYPE_HANN, 
 				frame_len, AiliaAudio.AILIA_AUDIO_STFT_CENTER_ENABLE, POWER, AiliaAudio.AILIA_AUDIO_FFT_NORMALIZE_NONE ,F_MIN, F_MAX, MELS, 
-				AiliaAudio.AILIA_AUDIO_MEL_NORMALIZE_NONE,AiliaAudio.AILIA_AUDIO_MEL_SCALE_FORMULA_HTK);
+				AiliaAudio.AILIA_AUDIO_MEL_NORMALIZE_ENABLE,AiliaAudio.AILIA_AUDIO_MEL_SCALE_FORMULA_SLANYE);
 			if(status!=0){
 				Debug.Log("ailiaAudioGetMelSpectrogram failed "+status);
 				return;
 			}
 
+			if(debug){
+				Debug.Log("Melspectrogram ("+MELS+","+frame_len+")");
+				Debug.Log("["+melspectrogram[ 0] + " " + melspectrogram[ 1] + " " + melspectrogram[ 2] + " ... " + melspectrogram[frame_len-3] + " " + melspectrogram[frame_len-2] + " " + melspectrogram[frame_len-1] + "]");
+				Debug.Log("["+melspectrogram[frame_len] + " " + melspectrogram[frame_len+1] + " " + melspectrogram[frame_len+2] + " ... " + melspectrogram[frame_len+frame_len-3] + " " + melspectrogram[frame_len+frame_len-2] + " " + melspectrogram[frame_len+frame_len-1] + "]");
+			}
+
 			float min_level_db = -100;
-			float ref_level_db = 30;
+			float ref_level_db = 20;
 			float max_abs_value = 4.0f;
 			float min_level = Mathf.Exp(min_level_db / 20 * Mathf.Log(10));
 			for (int i = 0; i < melspectrogram.Length; i++){
 				float x = melspectrogram[i];
-				float s = AmpToDb(x, min_level, ref_level_db);
+				float s = AmpToDb(x, min_level) - ref_level_db;
 				s = Normalize(s, max_abs_value, min_level_db);
 				melspectrogram[i] = s;
+			}
+
+			if(debug){
+				Debug.Log("Normalized ("+MELS+","+frame_len+")");
+				Debug.Log("["+melspectrogram[ 0] + " " + melspectrogram[ 1] + " " + melspectrogram[ 2] + " ... " + melspectrogram[frame_len-3] + " " + melspectrogram[frame_len-2] + " " + melspectrogram[frame_len-1] + "]");
+				Debug.Log("["+melspectrogram[frame_len] + " " + melspectrogram[frame_len+1] + " " + melspectrogram[frame_len+2] + " ... " + melspectrogram[frame_len+frame_len-3] + " " + melspectrogram[frame_len+frame_len-2] + " " + melspectrogram[frame_len+frame_len-1] + "]");
 			}
 
 			m_melspectrogram = melspectrogram;
@@ -142,9 +160,13 @@ namespace ailiaSDK
 					int y2 = (int)((oy) * scale + fy);
 					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 					{
-						data[(y * w + x) + 0 * w * h] = 0;
-						data[(y * w + x) + 1 * w * h] = 0;
-						data[(y * w + x) + 2 * w * h] = 0;
+						data[(y * w + x) * 6 + 0] = 0;
+						data[(y * w + x) * 6 + 1] = 0;
+						data[(y * w + x) * 6 + 2] = 0;
+
+						data[(y * w + x) * 6 + 3] = 0;
+						data[(y * w + x) * 6 + 4] = 0;
+						data[(y * w + x) * 6 + 5] = 0;
 						continue;
 					}
 
@@ -154,7 +176,7 @@ namespace ailiaSDK
 					data[(y * w + x) * 6 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
 
 					// img masked
-					if (y > h / 2){
+					if (y >= h / 2){
 						data[(y * w + x) * 6 + 3] = 0;
 						data[(y * w + x) * 6 + 4] = 0;
 						data[(y * w + x) * 6 + 5] = 0;
@@ -228,7 +250,7 @@ namespace ailiaSDK
 				}
 
 				// mel = (1, 80, 27, 1) // 27 frames mel, channel last
-				float steps = HOP_N / SAMPLE_RATE;
+				float steps = 1.0f * HOP_N / SAMPLE_RATE;
 				float [] mels = new float [1 * MELS * MEL_FRAMES * 1];
 				for (int m = 0; m < MELS; m++){
 					for (int j = 0; j < MEL_FRAMES; j++){
