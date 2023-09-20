@@ -117,7 +117,7 @@ namespace ailiaSDK {
 		// Update is called once per frame
 		void Update()
 		{
-			if (!ailia_camera.IsEnable() || image != null)
+			if (!ailia_camera.IsEnable() && image == null)
 			{
 				return;
 			}
