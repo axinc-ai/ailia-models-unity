@@ -257,7 +257,11 @@ namespace ailiaSDK {
 			{
 				int x = (int)(face_center.x * tex_width  + ((face_keypoints[k].x - dw/2) * cs + (face_keypoints[k].y - dh/2) * -ss)* scale);
 				int y = (int)(face_center.y * tex_height + ((face_keypoints[k].x - dw/2) * ss + (face_keypoints[k].y - dh/2) *  cs)* scale);
-				DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
+				Color color = Color.green;
+				if (k >= 468){
+					color = Color.white;
+				}
+				DrawRect2D(color, x, y, 1, 1, tex_width, tex_height);
 			}
 		}
 
