@@ -190,6 +190,12 @@ namespace ailiaSDK
 			return data;
 		}
 
+		byte Blend(byte dst, float src, float alpha){
+			float v = (float)dst * (1 - alpha) + src * alpha * 255;
+			v = Mathf.Min(Mathf.Max(v, 0), 255);
+			return (byte)v;
+		}
+
 		// Output
 		private void Composite(int fx, int fy, int fw, int fh, Color32[] result, int tex_width, int tex_height, float [] output){
 			for (int y = 0; y < fh; y++)
@@ -201,9 +207,15 @@ namespace ailiaSDK
 					int x3 = fx - fw / 2 + x;
 					int y3 = fy - fh / 2 + y;
 					if (x3 >= 0 && x3 < tex_width && y3 >= 0 && y3 < tex_height){
-						result[(tex_height - 1 - y3) * tex_width + x3].r = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 0] ) * 255.0);
-						result[(tex_height - 1 - y3) * tex_width + x3].g = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 1] ) * 255.0);
-						result[(tex_height - 1 - y3) * tex_width + x3].b = (byte)((output[(y2 * DETECTION_WIDTH + x2) * 3 + 2] ) * 255.0);
+						int rx = 16;
+						int ry = 16;
+						float dx = Mathf.Min(Mathf.Min(x2, DETECTION_WIDTH - 1 - x2) / rx, 1);
+						float dy = Mathf.Min(Mathf.Min(y2, DETECTION_HEIGHT - 1 - y2) / ry, 1);
+						float alpha = Mathf.Min(dx, dy);
+						int d_adr = (tex_height - 1 - y3) * tex_width + x3;
+						result[d_adr].r = Blend(result[d_adr].r, output[(y2 * DETECTION_WIDTH + x2) * 3 + 0], alpha);
+						result[d_adr].g = Blend(result[d_adr].g, output[(y2 * DETECTION_WIDTH + x2) * 3 + 1], alpha);
+						result[d_adr].b = Blend(result[d_adr].b, output[(y2 * DETECTION_WIDTH + x2) * 3 + 2], alpha);
 					}
 				}
 			}

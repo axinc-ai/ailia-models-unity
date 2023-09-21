@@ -110,7 +110,8 @@ namespace ailiaSDK {
 			}
 			lip_gan.SetAudio(audio, debug);
 			if (play_audio){
-				audio_source.PlayOneShot(audio);
+				audio_source.clip = audio;
+				audio_source.Play();
 			}
 		}
 
@@ -182,9 +183,9 @@ namespace ailiaSDK {
 			}
 
 			//Compute lipgan
-			long recognition_time = 0;
+			long gan_time = 0;
 			if (play_audio){
-				audio_time = audio_source.time;
+				audio_time = (float)audio_source.timeSamples / audio_source.clip.frequency;
 			}else{
 				audio_time = audio_time + Time.deltaTime;
 			}
@@ -196,13 +197,13 @@ namespace ailiaSDK {
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				Color32 [] generated_image = lip_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, audio_time, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				recognition_time = (rec_end_time - rec_start_time);
+				gan_time = (rec_end_time - rec_start_time);
 				camera = generated_image;
 			}
 
 			if (label_text != null)
 			{
-				label_text.text = detection_time + "ms + " + recognition_time + "ms\nposition " + audio_time + "\n" + ailia_face_detector.EnvironmentName();
+				label_text.text = detection_time + "ms + " + gan_time + "ms\nposition " + audio_time + "\n" + ailia_face_detector.EnvironmentName();
 			}
 
 			//Apply
