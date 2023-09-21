@@ -207,10 +207,10 @@ namespace ailiaSDK
 					int x3 = fx - fw / 2 + x;
 					int y3 = fy - fh / 2 + y;
 					if (x3 >= 0 && x3 < tex_width && y3 >= 0 && y3 < tex_height){
-						int rx = 16;
-						int ry = 16;
-						float dx = Mathf.Min(Mathf.Min(x2, DETECTION_WIDTH - 1 - x2) / rx, 1);
-						float dy = Mathf.Min(Mathf.Min(y2, DETECTION_HEIGHT - 1 - y2) / ry, 1);
+						int rx = DETECTION_WIDTH / 16;
+						int ry = DETECTION_HEIGHT / 16;
+						float dx = Mathf.Min((float)Mathf.Min(x2, (DETECTION_WIDTH - 1 - x2)) / rx, 1);
+						float dy = Mathf.Min((float)Mathf.Min(y2, (DETECTION_HEIGHT - 1 - y2)) / ry, 1);
 						float alpha = Mathf.Min(dx, dy);
 						int d_adr = (tex_height - 1 - y3) * tex_width + x3;
 						result[d_adr].r = Blend(result[d_adr].r, output[(y2 * DETECTION_WIDTH + x2) * 3 + 0], alpha);
