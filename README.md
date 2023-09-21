@@ -127,6 +127,7 @@ The collection of pre-trained, state-of-the-art models for Unity.
 |:-----------|------------:|:------------:|:------------:|
 |[blazeface](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [BlazeFace-PyTorch](https://github.com/hollance/BlazeFace-PyTorch) | Pytorch | 1.2.1 and later |
 |[facemesh](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [facemesh.pytorch](https://github.com/thepowerfuldeez/facemesh.pytorch) | Pytorch | 1.2.2 and later |
+|[facemesh_v2](/Assets/AXIP/AILIA-MODELS/FaceDetection/) | [MediaPipe Face landmark detection](https://developers.google.com/mediapipe/solutions/vision/face_landmarker)| Pytorch | 1.2.9 and later |
 
 ## Face identification
 

@@ -15,7 +15,8 @@ namespace ailiaSDK {
         public enum FaceDetectorModels
         {
             blazeface,
-            facemesh
+            facemesh,
+            facemesh_v2,
         }
 
 		[SerializeField]
@@ -42,9 +43,11 @@ namespace ailiaSDK {
 		//AILIA
 		private AiliaModel ailia_face_detector = new AiliaModel();
 		private AiliaModel ailia_face_recognizer = new AiliaModel();
+		private AiliaModel ailia_face_blendshape= new AiliaModel();
 
 		private AiliaBlazeface blaze_face = new AiliaBlazeface();
 		private AiliaFaceMesh face_mesh = new AiliaFaceMesh();
+		private AiliaFaceMeshV2 face_mesh_v2 = new AiliaFaceMeshV2();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -87,7 +90,32 @@ namespace ailiaSDK {
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
-						FileOpened = ailia_face_recognizer.OpenFile(asset_path + "/facemesh.onnx.prototxt", asset_path + "/facemesh.onnx");
+						if (FileOpened){
+							FileOpened = ailia_face_recognizer.OpenFile(asset_path + "/facemesh.onnx.prototxt", asset_path + "/facemesh.onnx");
+						}
+					}));
+
+					break;
+
+				case FaceDetectorModels.facemesh_v2:
+					mode_text.text = "ailia face Recognizer";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_landmarks_detector.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_landmarks_detector.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_blendshapes.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_blendshapes.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+						if (FileOpened){
+							FileOpened = ailia_face_recognizer.OpenFile(asset_path + "/face_landmarks_detector.onnx.prototxt", asset_path + "/face_landmarks_detector.onnx");
+							if (FileOpened){
+								FileOpened = ailia_face_blendshape.OpenFile(asset_path + "/face_blendshapes.onnx.prototxt", asset_path + "/face_blendshapes.onnx");
+							}
+						}
 					}));
 
 					break;
@@ -103,6 +131,7 @@ namespace ailiaSDK {
 		{
 			ailia_face_detector.Close();
 			ailia_face_recognizer.Close();
+			ailia_face_blendshape.Close();
 		}
 
 		// Use this for initialization
@@ -166,10 +195,16 @@ namespace ailiaSDK {
 
 			//Compute facemesh
 			long recognition_time = 0;
-			if(ailiaModelType==FaceDetectorModels.facemesh){
+			if(ailiaModelType==FaceDetectorModels.facemesh || ailiaModelType==FaceDetectorModels.facemesh_v2){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-				List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
+				List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = new List<AiliaFaceMesh.FaceMeshInfo>();
+				if(ailiaModelType==FaceDetectorModels.facemesh){
+					result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
+				}
+				if(ailiaModelType==FaceDetectorModels.facemesh_v1){
+					result_facemesh = face_mesh_v2.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
+				}
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
 
