@@ -195,16 +195,11 @@ namespace ailiaSDK {
 
 			//Compute facemesh
 			long recognition_time = 0;
-			if(ailiaModelType==FaceDetectorModels.facemesh || ailiaModelType==FaceDetectorModels.facemesh_v2){
+			if(ailiaModelType==FaceDetectorModels.facemesh){
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = new List<AiliaFaceMesh.FaceMeshInfo>();
-				if(ailiaModelType==FaceDetectorModels.facemesh){
-					result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
-				}
-				if(ailiaModelType==FaceDetectorModels.facemesh_v1){
-					result_facemesh = face_mesh_v2.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
-				}
+				result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				recognition_time = (rec_end_time - rec_start_time);
 
@@ -212,24 +207,22 @@ namespace ailiaSDK {
 				for (int i = 0; i < result_facemesh.Count; i++)
 				{
 					AiliaFaceMesh.FaceMeshInfo face = result_facemesh[i];
+					DrawKeyPoints(face.width, face.height, face.theta, face.center, face.keypoints, AiliaFaceMesh.DETECTION_WIDTH, AiliaFaceMesh.DETECTION_HEIGHT, tex_width, tex_height);
+				}
+			}
+			if(ailiaModelType==FaceDetectorModels.facemesh_v2){
+				//Compute
+				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaFaceMeshV2.FaceMeshV2Info> result_facemesh_v2 = face_mesh_v2.Detection(ailia_face_recognizer, ailia_face_blendshape, camera, tex_width, tex_height, result_detections, debug);
+				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				recognition_time = (rec_end_time - rec_start_time);
 
-					int fw = (int)(face.width * tex_width);
-					int fh = (int)(face.height * tex_height);
-					int fx = (int)(face.center.x * tex_width) - fw / 2;
-					int fy = (int)(face.center.y * tex_height) - fh / 2;
-					DrawAffine2D(Color.green, fx, fy, fw, fh, tex_width, tex_height, face.theta);
-
-					float scale = 1.0f * fw / AiliaFaceMesh.DETECTION_WIDTH;
-
-					float ss=(float)System.Math.Sin(face.theta);
-					float cs=(float)System.Math.Cos(face.theta);
-
-					for (int k = 0; k < AiliaFaceMesh.NUM_KEYPOINTS; k++)
-					{
-						int x = (int)(face.center.x * tex_width  + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * cs + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) * -ss)* scale);
-						int y = (int)(face.center.y * tex_height + ((face.keypoints[k].x - AiliaFaceMesh.DETECTION_WIDTH/2) * ss + (face.keypoints[k].y - AiliaFaceMesh.DETECTION_HEIGHT/2) *  cs)* scale);
-						DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
-					}
+				//Draw result
+				for (int i = 0; i < result_facemesh_v2.Count; i++)
+				{
+					AiliaFaceMeshV2.FaceMeshV2Info face = result_facemesh_v2[i];
+					DrawKeyPoints(face.width, face.height, face.theta, face.center, face.keypoints, AiliaFaceMeshV2.DETECTION_WIDTH, AiliaFaceMeshV2.DETECTION_HEIGHT, tex_width, tex_height);
+					DrawBlendshape(face.blendshape, tex_width, tex_height);
 				}
 			}
 
@@ -245,6 +238,41 @@ namespace ailiaSDK {
 			//Apply
 			preview_texture.SetPixels32(camera);
 			preview_texture.Apply();
+		}
+
+		private void DrawKeyPoints(float face_width, float face_height, float face_theta, Vector2 face_center, Vector2[] face_keypoints, int dw, int dh, int tex_width, int tex_height){
+			int fw = (int)(face_width * tex_width);
+			int fh = (int)(face_height * tex_height);
+			int fx = (int)(face_center.x * tex_width) - fw / 2;
+			int fy = (int)(face_center.y * tex_height) - fh / 2;
+			DrawAffine2D(Color.green, fx, fy, fw, fh, tex_width, tex_height, face_theta);
+
+			float scale = 1.0f * fw / dw;
+
+			float ss=(float)System.Math.Sin(face_theta);
+			float cs=(float)System.Math.Cos(face_theta);
+
+			for (int k = 0; k < face_keypoints.Length; k++)
+			{
+				int x = (int)(face_center.x * tex_width  + ((face_keypoints[k].x - dw/2) * cs + (face_keypoints[k].y - dh/2) * -ss)* scale);
+				int y = (int)(face_center.y * tex_height + ((face_keypoints[k].x - dw/2) * ss + (face_keypoints[k].y - dh/2) *  cs)* scale);
+				DrawRect2D(Color.green, x, y, 1, 1, tex_width, tex_height);
+			}
+		}
+
+		private void DrawBlendshape(float [] face_blendshape, int tex_width, int tex_height){
+			int y = 0;
+			for (int k = 0; k < face_blendshape.Length; k++)
+			{
+				string result = "";
+				result = AiliaFaceMeshV2.BlendshapeLabels[k] + " " + (int)(face_blendshape[k] * 100) + "%";
+
+				int margin = 4;
+				Color32 color = Color.HSVToRGB(k / face_blendshape.Length, 1.0f, 1.0f);
+				DrawText(color, result, margin, margin + y, tex_width, tex_height);
+				DrawRect2D(color, margin + 100, margin + y, (int)(margin + 100 + 100 * face_blendshape[k]), margin + y, tex_width, tex_height);
+				y += tex_height / 12;
+			}
 		}
 
 		void SetUIProperties()

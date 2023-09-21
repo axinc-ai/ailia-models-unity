@@ -22,7 +22,8 @@ namespace ailiaSDK
 
 		private const float DSCALE = 1.5f;
 
-		string [] Labels = [
+		// Blenshape Label
+		public static string [] BlendshapeLabels = {
 			"_neutral",
 			"browDownLeft",
 			"browDownRight",
@@ -75,9 +76,10 @@ namespace ailiaSDK
 			"mouthUpperUpRight",
 			"noseSneerLeft",
 			"noseSneerRight"
-		];
+		};
 
-		int [] LandmarksSubsetIdxs = {
+		// Input idxs for blendshape
+		private int [] LandmarksSubsetIdxs = {
 			0, 1, 4, 5, 6, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39,
 			40, 46, 52, 53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80,
 			81, 82, 84, 87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133,
@@ -90,15 +92,20 @@ namespace ailiaSDK
 			466, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477
 		};
 
-		public struct FaceMeshBlendShapeInfo
+		public struct FaceMeshV2Info
 		{
+			public float width;
+			public float height;
+			public Vector2[] keypoints;
+			public Vector2 center;
 			public float theta;
+			public float[] blendshape;
 		}
 
 		// Update is called once per frame
-		public List<AiliaFaceMesh.FaceMeshInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazeface.FaceInfo> result_detections, bool debug=false)
+		public List<FaceMeshV2Info> Detection(AiliaModel ailia_model,AiliaModel blendshape_model, Color32[] camera, int tex_width, int tex_height, List<AiliaBlazeface.FaceInfo> result_detections, bool debug=false)
 		{
-			List<AiliaFaceMesh.FaceMeshInfo> result = new List<AiliaFaceMesh.FaceMeshInfo>();
+			List<FaceMeshV2Info> result = new List<AiliaFaceMeshV2.FaceMeshV2Info>();
 			for (int i = 0; i < result_detections.Count; i++)
 			{
 				//extract roi
@@ -154,16 +161,34 @@ namespace ailiaSDK
 					}
 				}
 
+				//set input shape
+				uint[] input_blobs = ailia_model.GetInputBlobList();
+				bool success = true;
+				if (input_blobs != null)
+				{
+					Ailia.AILIAShape input_shape = new Ailia.AILIAShape();
+					input_shape.x=3;
+					input_shape.y=(uint)DETECTION_WIDTH;
+					input_shape.z=(uint)DETECTION_HEIGHT;
+					input_shape.w=1;
+					input_shape.dim=4;
+
+					success = ailia_model.SetInputBlobShape(input_shape, (int)input_blobs[0]);
+					if (!success){
+						Debug.Log("SetInputBlobShape failed");
+					}
+				}
+
 				//compute
 				float [] output = new float [NUM_KEYPOINTS * 3];
-				bool success = ailia_model.Predict(output,data);
+				success = ailia_model.Predict(output,data);
 				if (!success)
 				{
 					Debug.Log("Can not Predict");
 				}
 
 				//object
-				FaceMeshInfo facemesh_info = new FaceMeshInfo();
+				FaceMeshV2Info facemesh_info = new FaceMeshV2Info();
 				facemesh_info.center = face.center;
 				facemesh_info.theta = theta;
 				facemesh_info.width = face.width * DSCALE;
@@ -186,28 +211,22 @@ namespace ailiaSDK
 					}
 				}
 
+				//Blendshape
+				ss=(float)System.Math.Sin(-facemesh_info.theta);
+				cs=(float)System.Math.Cos(-facemesh_info.theta);
+				float [] landmarks = new float[LandmarksSubsetIdxs.Length * 2];
+				for (int j = 0; j < LandmarksSubsetIdxs.Length; j++){
+					int k = LandmarksSubsetIdxs[j];
+					int x = (int)(facemesh_info.center.x * tex_width  + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * cs + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) * -ss)* scale);
+					int y = (int)(facemesh_info.center.y * tex_height + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * ss + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) *  cs)* scale);
+					landmarks[j*2+0] = x;
+					landmarks[j*2+1] = y;
+				}
+				facemesh_info.blendshape = new float [BLENDSHAPE_COUNT];
+				blendshape_model.Predict(facemesh_info.blendshape, landmarks);
+		
 				result.Add(facemesh_info);
 			}
-
-			return result;
-		}
-
-
-		public List<FaceMeshBlendShapeInfo> BlendShape(AiliaModel ailia_model, List<AiliaFaceMesh.FaceMeshInfo> face_mesh_info, bool debug=false)
-			FaceMeshBlendShapeInfo result = new List<FaceMeshBlendShapeInfo>();
-
-			// 1 146 2
-			float [] landmarks = new float[LandmarksSubsetIdxs.Count * 2];
-			for (int i = 0; i < LandmarksSubsetIdxs.Count; i++){
-				landmarks[i*2+0] = face_mesh_info.keypoints.x;
-				landmarks[i*2+1] = face_mesh_info.keypoints.y;
-
-			}
-
-			// 52
-			float [] output = new float [BLENDSHAPE_COUNT];
-			ailia_model.Predict(output, landmarks);
-
 			return result;
 		}
 	}
