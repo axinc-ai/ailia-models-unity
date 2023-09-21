@@ -268,7 +268,7 @@ namespace ailiaSDK
 				for (int m = 0; m < MELS; m++){
 					for (int j = 0; j < MEL_FRAMES; j++){
 						int t = j + (int)(steps * audio_time);
-						if (t > m_frame_len){
+						if (t >= m_frame_len){
 							t = m_frame_len - 1;
 						}
 						mels[m * MEL_FRAMES + j] = m_melspectrogram[m * m_frame_len + t];
