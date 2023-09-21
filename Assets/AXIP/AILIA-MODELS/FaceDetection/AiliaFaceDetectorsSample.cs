@@ -32,6 +32,9 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool debug = false;
 
+		//TestImage
+		public Texture2D image = null;
+
 		//Result
 		RawImage raw_image = null;
 		Text label_text = null;
@@ -101,8 +104,8 @@ namespace ailiaSDK {
 				case FaceDetectorModels.facemesh_v2:
 					mode_text.text = "ailia facemeshv2 (space to next page)";
 
-					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
-					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_detector.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_detector.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_landmarks_detector.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_landmarks_detector.onnx" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "facemesh_v2", file_name = "face_blendshapes.onnx.prototxt" });
@@ -110,7 +113,7 @@ namespace ailiaSDK {
 
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
-						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/face_detector.onnx.prototxt", asset_path + "/face_detector.onnx");
 						if (FileOpened){
 							FileOpened = ailia_face_recognizer.OpenFile(asset_path + "/face_landmarks_detector.onnx.prototxt", asset_path + "/face_landmarks_detector.onnx");
 							if (FileOpened){
@@ -161,12 +164,21 @@ namespace ailiaSDK {
 			//Get camera image
 			int tex_width = ailia_camera.GetWidth();
 			int tex_height = ailia_camera.GetHeight();
+			Color32[] camera = ailia_camera.GetPixels32();
+
+			//Test image
+			if (image != null){
+				tex_width = image.width;
+				tex_height = image.height;
+				camera = image.GetPixels32();
+			}
+
+			//Output image
 			if (preview_texture == null)
 			{
 				preview_texture = new Texture2D(tex_width, tex_height);
 				raw_image.texture = preview_texture;
 			}
-			Color32[] camera = ailia_camera.GetPixels32();
 
 			//BlazeFace
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
