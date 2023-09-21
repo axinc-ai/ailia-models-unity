@@ -105,7 +105,7 @@ namespace ailiaSDK
 			newLine.SetActive(true);
 
 			Color32 c1 = color;
-			c1.a = 128 + 32;
+			//c1.a = 128 + 32;
 
 			lRend.startColor = c1;
 			lRend.endColor = c1;

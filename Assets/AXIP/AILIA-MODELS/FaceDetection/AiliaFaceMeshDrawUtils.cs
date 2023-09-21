@@ -530,6 +530,7 @@ namespace ailiaSDK
 			case 6: return new Color32(0, 0, 255, 255);
 			case 7: return new Color32(224, 224, 224, 255);
 			case 8: return new Color32(128, 128, 128, 255);
+			case 9: return new Color32(128, 128, 128, 255);
 		}
 		return new Color32(0, 0, 0, 0);
 	}
@@ -544,7 +545,7 @@ namespace ailiaSDK
 			case 5: return 2;
 			case 6: return 2;
 			case 7: return 2;
-			case 8: return 2;
+			case 8: return 0; // nose is disabled
 			case 9: return 1;
 		}
 		return 1;
