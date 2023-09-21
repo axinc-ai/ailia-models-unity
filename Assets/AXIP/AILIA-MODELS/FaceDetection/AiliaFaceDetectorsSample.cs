@@ -54,6 +54,7 @@ namespace ailiaSDK {
 
 		// AILIA open file
 		private bool FileOpened = false;
+		private int page = 0;
 
 		private void CreateAiliaDetector(FaceDetectorModels modelType)
 		{
@@ -67,7 +68,7 @@ namespace ailiaSDK {
 			switch (modelType)
 			{		
 				case FaceDetectorModels.blazeface:
-					mode_text.text = "ailia face Detector";
+					mode_text.text = "ailia blazeface";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
@@ -80,7 +81,7 @@ namespace ailiaSDK {
 					break;
 
 				case FaceDetectorModels.facemesh:
-					mode_text.text = "ailia face Recognizer";
+					mode_text.text = "ailia facemesh";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
@@ -98,7 +99,7 @@ namespace ailiaSDK {
 					break;
 
 				case FaceDetectorModels.facemesh_v2:
-					mode_text.text = "ailia face Recognizer";
+					mode_text.text = "ailia facemeshv2 (space to next page)";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
@@ -262,16 +263,28 @@ namespace ailiaSDK {
 
 		private void DrawBlendshape(float [] face_blendshape, int tex_width, int tex_height){
 			int y = 0;
-			for (int k = 0; k < face_blendshape.Length; k++)
+			int margin = 4;
+			int w = tex_width / 2;
+			int h = tex_height / 24;
+			int page_n = 20;
+			int max_page = (face_blendshape.Length + page_n - 1) / page_n;
+			for (int i = 0; i < page_n; i++)
 			{
+				int k = (page % max_page) * page_n + i;
+				if (k >= face_blendshape.Length){
+					continue;
+				}
 				string result = "";
 				result = AiliaFaceMeshV2.BlendshapeLabels[k] + " " + (int)(face_blendshape[k] * 100) + "%";
 
-				int margin = 4;
-				Color32 color = Color.HSVToRGB(k / face_blendshape.Length, 1.0f, 1.0f);
+				Color32 color = Color.HSVToRGB(1.0f * k / face_blendshape.Length, 1.0f, 1.0f);
 				DrawText(color, result, margin, margin + y, tex_width, tex_height);
-				DrawRect2D(color, margin + 100, margin + y, (int)(margin + 100 + 100 * face_blendshape[k]), margin + y, tex_width, tex_height);
-				y += tex_height / 12;
+				DrawRect2D(color, margin + w, margin + y, (int)(w * face_blendshape[k]), h - margin * 2, tex_width, tex_height);
+				y += h;
+			}
+
+			if (Input.GetKeyDown(KeyCode.Space)){
+				page = page + 1;
 			}
 		}
 
