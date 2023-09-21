@@ -253,15 +253,22 @@ namespace ailiaSDK {
 			float ss=(float)System.Math.Sin(face_theta);
 			float cs=(float)System.Math.Cos(face_theta);
 
-			for (int k = 0; k < face_keypoints.Length; k++)
-			{
-				int x = (int)(face_center.x * tex_width  + ((face_keypoints[k].x - dw/2) * cs + (face_keypoints[k].y - dh/2) * -ss)* scale);
-				int y = (int)(face_center.y * tex_height + ((face_keypoints[k].x - dw/2) * ss + (face_keypoints[k].y - dh/2) *  cs)* scale);
-				Color color = Color.green;
-				if (k >= 468){
-					color = Color.white;
+			AiliaFaceMeshDrawUtils draw_utils = new AiliaFaceMeshDrawUtils();
+			for (int t = 0; t < 10; t++){
+				int [] keypoints = draw_utils.GetKeypoints(t);
+				Color32 color = draw_utils.GetColor(t);
+				float thickness = draw_utils.GetThickness(t) * 0.2f;
+				for (int i = 0; i < keypoints.Length; i+=2){
+					int from = keypoints[i];
+					int to = keypoints[i+1];
+					if (from < face_keypoints.Length && to < face_keypoints.Length){
+						int x1 = (int)(face_center.x * tex_width  + ((face_keypoints[from].x - dw/2) * cs + (face_keypoints[from].y - dh/2) * -ss)* scale);
+						int y1 = (int)(face_center.y * tex_height + ((face_keypoints[from].x - dw/2) * ss + (face_keypoints[from].y - dh/2) *  cs)* scale);
+						int x2 = (int)(face_center.x * tex_width  + ((face_keypoints[to].x - dw/2) * cs + (face_keypoints[to].y - dh/2) * -ss)* scale);
+						int y2 = (int)(face_center.y * tex_height + ((face_keypoints[to].x - dw/2) * ss + (face_keypoints[to].y - dh/2) *  cs)* scale);
+						DrawLine(color, x1, y1, 0, x2, y2, 0, tex_width, tex_height, thickness);
+					}
 				}
-				DrawRect2D(color, x, y, 1, 1, tex_width, tex_height);
 			}
 		}
 
