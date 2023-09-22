@@ -115,16 +115,16 @@ namespace ailiaSDK
 			int w = DETECTION_WIDTH;
 			int h = DETECTION_HEIGHT;
 			float scale = 1.0f * fw / w;
-			float ss=(float)System.Math.Sin(-theta);
-			float cs=(float)System.Math.Cos(-theta);
+			float ss=(float)System.Math.Sin(theta);
+			float cs=(float)System.Math.Cos(theta);
 			for (int y = 0; y < h; y++)
 			{
 				for (int x = 0; x < w; x++)
 				{
 					int ox = (x - w/2);
 					int oy = (y - h/2);
-					int x2 = (int)((ox *  cs + oy * ss) * scale + fx);
-					int y2 = (int)((ox * -ss + oy * cs) * scale + fy);
+					int x2 = (int)((ox *  cs + oy * -ss) * scale + fx);
+					int y2 = (int)((ox *  ss + oy *  cs) * scale + fy);
 					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 					{
 						data[(y * w + x) * 3 + 0] = 0;
@@ -228,8 +228,8 @@ namespace ailiaSDK
 				float [] landmarks = new float[LandmarksSubsetIdxs.Length * 2];
 				for (int j = 0; j < LandmarksSubsetIdxs.Length; j++){
 					int k = LandmarksSubsetIdxs[j];
-					int x = (int)(facemesh_info.center.x * tex_width  + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * cs + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) * -ss)* scale);
-					int y = (int)(facemesh_info.center.y * tex_height + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * ss + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) *  cs)* scale);
+					float x = (facemesh_info.center.x * tex_width  + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * cs + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) * -ss)* scale);
+					float y = (facemesh_info.center.y * tex_height + ((facemesh_info.keypoints[k].x - DETECTION_WIDTH/2) * ss + (facemesh_info.keypoints[k].y - DETECTION_HEIGHT/2) *  cs)* scale);
 					landmarks[j*2+0] = x;
 					landmarks[j*2+1] = y;
 				}
