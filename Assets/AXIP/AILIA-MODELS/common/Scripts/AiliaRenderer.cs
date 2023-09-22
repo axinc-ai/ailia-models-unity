@@ -53,7 +53,7 @@ namespace ailiaSDK
 			DrawLine(color, from_x, from_y, obj.points[from].z_local, to_x, to_y, obj.points[to].z_local, tex_width, tex_height);
 		}
 
-		public void DrawLine(Color32 color, int from_x, int from_y, float from_z, int to_x, int to_y, float to_z, int tex_width, int tex_height)
+		public void DrawLine(Color32 color, int from_x, int from_y, float from_z, int to_x, int to_y, float to_z, int tex_width, int tex_height, float thickness = 1.0f)
 		{
 			RectTransform panelRect = line_panel.GetComponent<RectTransform>();
 			float width = panelRect.rect.width;
@@ -105,12 +105,12 @@ namespace ailiaSDK
 			newLine.SetActive(true);
 
 			Color32 c1 = color;
-			c1.a = 128 + 32;
+			//c1.a = 128 + 32;
 
 			lRend.startColor = c1;
 			lRend.endColor = c1;
 
-			float base_width = r / 2.0f;
+			float base_width = r / 2.0f * thickness;
 
 			//from_z = 0;
 			//to_z = 0;

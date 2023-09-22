@@ -33,11 +33,23 @@ namespace ailiaSDK
 		// Update is called once per frame
 		public List<FaceInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height)
 		{
-			//リサイズ
+			//Get input shape
+			uint[] input_blobs = ailia_model.GetInputBlobList();
+			Ailia.AILIAShape input_shape = null;
+			if (input_blobs != null)
+			{
+				input_shape = ailia_model.GetBlobShape((int)input_blobs[0]);
+				if (input_shape == null){
+					Debug.Log("Failed GetBlobShape");
+				}
+			}
+
+			//Resize
 			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
 			int w = DETECTION_WIDTH;
 			int h = DETECTION_HEIGHT;
 			float scale = 1.0f * tex_width / w;
+			bool channel_last = (input_shape.x == 3); // facemeshv2
 			for (int y = 0; y < h; y++)
 			{
 				for (int x = 0; x < w; x++)
@@ -46,24 +58,35 @@ namespace ailiaSDK
 					int x2 = (int)(1.0 * x * scale);
 					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 					{
-						data[(y * w + x) + 0 * w * h] = 0;
-						data[(y * w + x) + 1 * w * h] = 0;
-						data[(y * w + x) + 2 * w * h] = 0;
+						if (channel_last){
+							data[(y * w + x) + 0 * w * h] = 0;
+							data[(y * w + x) + 1 * w * h] = 0;
+							data[(y * w + x) + 2 * w * h] = 0;
+						}else{
+							data[(y * w + x) * 3 + 0] = 0;
+							data[(y * w + x) * 3 + 1] = 0;
+							data[(y * w + x) * 3 + 2] = 0;
+						}
 						continue;
 					}
-					data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
-					data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
-					data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
+					if (channel_last){
+						data[(y * w + x) * 3 + 0] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
+						data[(y * w + x) * 3 + 1] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
+						data[(y * w + x) * 3 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
+					}else{
+						data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
+						data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
+						data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
+					}
 				}
 			}
 
-			uint[] input_blobs = ailia_model.GetInputBlobList();
 			if (input_blobs != null)
 			{
 				bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
 				if (!success)
 				{
-					Debug.Log("Can not SetInputBlobData");
+					Debug.Log("Failed SetInputBlobData");
 				}
 
 				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
