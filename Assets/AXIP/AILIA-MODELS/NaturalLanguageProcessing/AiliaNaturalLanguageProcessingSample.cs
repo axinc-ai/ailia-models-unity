@@ -25,7 +25,6 @@ namespace ailiaSDK
 		// Result
 		Text label_text = null;
 		Text mode_text = null;
-		private bool oneshot = true;
 
 		// AILIA
 		private AiliaModel ailiaModel = null;
@@ -57,6 +56,8 @@ namespace ailiaSDK
 			mode_text = UICanvas.transform.Find("ModeLabel").GetComponent<Text>();
 
 			mode_text.text = "ailia Natural Processing Sample";
+
+			UICanvas.transform.Find("RawImage").GetComponent<RawImage>().gameObject.SetActive(false);
 		}
 
 		void AiliaInit()
@@ -134,7 +135,7 @@ namespace ailiaSDK
 				return;
 			}
 
-			string query_text = "ailia SDKとは何ですか。";
+			string query_text = "NNAPIとは何ですか。";
 			string result = "";
 
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -146,14 +147,14 @@ namespace ailiaSDK
 				float [] query_embedding = textEmbedding.Embedding(query_text, ailiaModel, ailiaTokenizer);
 				float max_sim = 0.0f;
 				for (int i = 0; i < chunk_cnt; i++){
-					float sim = textEmbedding.CosSim(query_embedding, chunk_embedding[i]);
+					float sim = textEmbedding.CosSimilarity(query_embedding, chunk_embedding[i]);
 					Debug.Log(""+ chunk_text[i]+"/"+sim);
 					if (sim > max_sim){
 						max_sim = sim;
 						result = chunk_text[i];
 					}
 				}
-				result = "Query : "+query_text+"\nTarget : "+result+" ("+max_sim+")\n";
+				result = "Query : "+query_text+"\nResult : "+result+" ("+max_sim+")\n";
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
@@ -161,8 +162,6 @@ namespace ailiaSDK
 			{
 				label_text.text = result+(end_time - start_time).ToString() + "ms\n" + ailiaModel.EnvironmentName();
 			}
-
-			oneshot = false;
 		}
 
 		void OnApplicationQuit()

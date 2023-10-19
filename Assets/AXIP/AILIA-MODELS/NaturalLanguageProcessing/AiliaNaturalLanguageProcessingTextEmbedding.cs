@@ -16,7 +16,7 @@ namespace ailiaSDK
 	public class AiliaNaturalLanguageProcessingTextEmbedding
 	{
 
-		private void Norm(float [] data){
+		private void Normalize(float [] data){
 			float norm = 0;
 			for (int i = 0; i < data.Length; i++){
 				norm += data[i] * data[i];
@@ -27,10 +27,10 @@ namespace ailiaSDK
 			}
 		}
 
-		public float CosSim(float [] vec1, float [] vec2){
+		public float CosSimilarity(float [] vec1, float [] vec2){
 			float sum = 0.0f;
 			for (int i = 0; i < vec1.Length; i++){
-				sum += vec1[i] * vec1[2];
+				sum += vec1[i] * vec2[i];
 			}
 			return sum;
 		}
@@ -70,6 +70,8 @@ namespace ailiaSDK
 			for (int j = 0; j < output_shape.x; j++){
 				embedding[j] = embedding[j] / output_shape.y;
 			}
+
+			Normalize(embedding);
 
 			return embedding;
 		}
