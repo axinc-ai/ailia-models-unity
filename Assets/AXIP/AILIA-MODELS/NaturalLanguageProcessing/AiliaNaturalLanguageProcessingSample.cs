@@ -96,7 +96,7 @@ namespace ailiaSDK
 			}
 			if (modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
 				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "multilingual-e5-base.onnx.prototxt" });
-				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "multilingual-e5-base.onnx.onnx" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "multilingual-e5-base.onnx" });
 				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "sentencepiece.bpe.model" });
 			}
 
