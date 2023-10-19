@@ -142,6 +142,14 @@ The collection of pre-trained, state-of-the-art models for Unity.
 |:-----------|------------:|:------------:|:------------:|
 |[person_reid_baseline_pytorch](/Assets/AXIP/AILIA-MODELS/FaceIdentification/) | [UTS-Person-reID-Practical](https://github.com/layumi/Person_reID_baseline_pytorch) | Pytorch | 1.2.6 and later |
 
+## Natural Language Processing
+
+This model requires the installation of [ailia Tokenizer](https://axip-console.appspot.com/trial/terms/AILIA-TOKENIZER?lang=en).
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+|[sentence_transformers_japanese](/Assets/AXIP/AILIA-MODELS/NaturalLanguageProcessing/ | [sentence transformers](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2) | Pytorch | 1.2.7 and later |
+
 # Document
 
 [ailia SDK Tutorial (Unity)](https://medium.com/axinc-ai/ailia-sdk-tutorial-unity-54f2a8155b8f)
