@@ -13,21 +13,8 @@ using UnityEngine.Video;
 
 namespace ailiaSDK
 {
-	
 	public class AiliaNaturalLanguageProcessingTextEmbedding
 	{
-		private Ailia.AILIAShape SetShape(AiliaModel model,int n_sqeuences)
-		{
-			Ailia.AILIAShape shape = null;
-			shape = new Ailia.AILIAShape();
-			shape.x = (uint)n_sqeuences;
-			shape.y = 1;
-			shape.z = 1;
-			shape.w = 1;
-			shape.dim = 2;
-			model.SetInputShape(shape);
-			return model.GetOutputShape();
-		}
 
 		private void Norm(float [] data){
 			float norm = 0;
@@ -47,16 +34,32 @@ namespace ailiaSDK
 			}
 			return sum;
 		}
+
 		public float[] Embedding(string text, AiliaModel model, AiliaTokenizerModel tokenizer){
 			int[] tokens = tokenizer.Encode(text);
+
 			float[] input = new float[tokens.Length];
+			float[] mask = new float[tokens.Length];
 			for (int i = 0; i < tokens.Length; i++){
 				input[i] = tokens[i];
+				mask[i] = 1.0f;
 			}
 
-			Ailia.AILIAShape output_shape = SetShape(model, tokens.Length);
+			Ailia.AILIAShape shape = new Ailia.AILIAShape();
+			shape.x = (uint)tokens.Length;
+			shape.y = 1;
+			shape.z = 1;
+			shape.w = 1;
+			shape.dim = 2;
+
+			model.SetInputBlobShape(shape, (int)model.GetInputBlobList()[0]);
+			model.SetInputBlobData(input, (int)model.GetInputBlobList()[0]);
+			model.SetInputBlobShape(shape, (int)model.GetInputBlobList()[1]);
+			model.SetInputBlobData(mask, (int)model.GetInputBlobList()[1]);
+			model.Update();
+			Ailia.AILIAShape output_shape = model.GetBlobShape((int)model.GetOutputBlobList()[0]);
 			float[] output = new float [output_shape.x * output_shape.y * output_shape.z * output_shape.w];
-			model.Predict(output, input);
+			model.GetBlobData(output, (int)model.GetOutputBlobList()[0]);
 
 			float[] embedding = new float [output_shape.x];
 			for (int i = 0; i < output_shape.y; i++){

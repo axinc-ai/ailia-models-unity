@@ -417,6 +417,7 @@ MonoBehaviour:
   modelType: 0
   gpu_mode: 0
   UICanvas: {fileID: 1813464803}
+  database: {fileID: 4900000, guid: befcc31acdaae481da229bd8c9517b1f, type: 3}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
