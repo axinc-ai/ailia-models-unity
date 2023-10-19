@@ -149,7 +149,7 @@ This model requires the installation of [ailia Tokenizer](https://axip-console.a
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 |[sentence_transformers_japanese](/Assets/AXIP/AILIA-MODELS/NaturalLanguageProcessing/) | [sentence transformers](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2) | Pytorch | 1.2.7 and later |
-|[multilingual-e5](/Assets/AXIP/AILIA-MODELS/NaturalLanguageProcessing/) | [multilingual-e5-base](https://huggingface.co/intfloat/multilingual-e5-base) | Pytorch | 1.2.16 and later |
+|[multilingual-e5](/Assets/AXIP/AILIA-MODELS/NaturalLanguageProcessing/) | [multilingual-e5-base](https://huggingface.co/intfloat/multilingual-e5-base) | Pytorch | 1.2.15 and later |
 
 # Document
 
