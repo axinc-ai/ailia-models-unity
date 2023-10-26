@@ -37,6 +37,11 @@ namespace ailiaSDK
 		public AiliaImageSource AiliaImageSourceMask;
 		public AiliaImageSource AiliaImageSourceMaskResize;
 
+		// Input image
+		public Texture2D image_source_inpainting = null;
+		public Texture2D image_source_inpainting_mask = null;
+		public Texture2D image_source_super_resolution = null;
+
 		// Image size
 		private int InputWidth = -1;
 		private int InputHeight = -1;
@@ -330,12 +335,12 @@ namespace ailiaSDK
 			switch (diffusionModels)
 			{
 				case DiffusionModels.Inpainting:
-					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting.png");
-					AiliaImageSourceMask.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
-					AiliaImageSourceMaskResize.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/inpainting_mask.png");
+					AiliaImageSource.CreateSource(image_source_inpainting);
+					AiliaImageSourceMask.CreateSource(image_source_inpainting_mask);
+					AiliaImageSourceMaskResize.CreateSource(image_source_inpainting_mask);
 					break;
 				case DiffusionModels.SuperResolution:
-					AiliaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/Diffusion/SampleImage/super_resolution.jpg");
+					AiliaImageSource.CreateSource(image_source_super_resolution);
 					break;
 				case DiffusionModels.StableDiffusion:
 					break;
