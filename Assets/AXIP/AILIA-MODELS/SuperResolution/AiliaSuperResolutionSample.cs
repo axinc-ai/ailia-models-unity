@@ -32,6 +32,9 @@ namespace ailiaSDK
 
         // Input source
         AiliaImageSource AiliaImageSource;
+        public Texture2D image_source_srresnet = null;
+        public Texture2D image_source_real_esrgan = null;
+        public Texture2D image_source_real_esrgn_anime = null;
 
         // shader
         int InputWidth;
@@ -261,13 +264,13 @@ namespace ailiaSDK
             switch (superResolutionModels)
             {
                 case ImageSuperResolutionModels.SRResNet:
-                    ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/superResolution/SampleImage/lenna.png");
+                    ailiaImageSource.CreateSource(image_source_srresnet);
                     break;
                 case ImageSuperResolutionModels.RealESRGAN:
-                    ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/superResolution/SampleImage/real_esrgan.jpg");
+                    ailiaImageSource.CreateSource(image_source_real_esrgan);
                     break;
                 case ImageSuperResolutionModels.RealESRGANAnime:
-                    ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/superResolution/SampleImage/real_esrgan_anime.jpg");
+                    ailiaImageSource.CreateSource(image_source_real_esrgn_anime);
                     break;
             }
         }

@@ -431,6 +431,12 @@ MonoBehaviour:
   gpu_mode: 0
   UICanvas: {fileID: 1813464803}
   oneshot: 1
+  image_source_srresnet: {fileID: 2800000, guid: c92256f9138504d0e8614033d3968a92,
+    type: 3}
+  image_source_real_esrgan: {fileID: 2800000, guid: 8d100089b33bd4a8a88119057fff7641,
+    type: 3}
+  image_source_real_esrgn_anime: {fileID: 2800000, guid: a4daa23a63cd54d93a6a74c59be24f88,
+    type: 3}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
