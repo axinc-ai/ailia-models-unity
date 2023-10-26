@@ -463,6 +463,12 @@ MonoBehaviour:
   AiliaImageSource: {fileID: 572209406}
   AiliaImageSourceMask: {fileID: 2010145409}
   AiliaImageSourceMaskResize: {fileID: 1963998715}
+  image_source_inpainting: {fileID: 2800000, guid: 80bfa3b18f8c64197a51c7a341f71bc9,
+    type: 3}
+  image_source_inpainting_mask: {fileID: 2800000, guid: ce1713e06be074de287feffa538c9cbb,
+    type: 3}
+  image_source_super_resolution: {fileID: 2800000, guid: 7d6da58ad2e494b37a4f1df5eebd7bff,
+    type: 3}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
