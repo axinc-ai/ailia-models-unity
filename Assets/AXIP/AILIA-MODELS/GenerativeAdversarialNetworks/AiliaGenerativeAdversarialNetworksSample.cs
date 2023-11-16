@@ -12,11 +12,11 @@ using UnityEngine.UI;
 
 namespace ailiaSDK {
 	public class AiliaGenerativeAdversarialNetworksSample : AiliaRenderer {
-        public enum AiliaGenerativeAdversarialNetworksModels
-        {
-            lipgan,
+		public enum AiliaGenerativeAdversarialNetworksModels
+		{
+			lipgan,
 			gfpgan
-        }
+		}
 
 		[SerializeField]
 		private AiliaGenerativeAdversarialNetworksModels ailiaModelType = AiliaGenerativeAdversarialNetworksModels.lipgan;
@@ -61,6 +61,7 @@ namespace ailiaSDK {
 
 		// State
 		private float audio_time = 0.0f;
+		private bool one_shot = true;
 
 		private void CreateAiliaDetector(AiliaGenerativeAdversarialNetworksModels modelType)
 		{
@@ -92,7 +93,7 @@ namespace ailiaSDK {
 					break;
 
 				case AiliaGenerativeAdversarialNetworksModels.gfpgan:
-					mode_text.text = "ailia GFPGAN";
+					mode_text.text = "ailia GFPGAN\nSpace key down to original image";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
@@ -212,41 +213,66 @@ namespace ailiaSDK {
 				}
 			}
 
-			//Compute lipgan
-			long gan_time = 0;
-			if (play_audio){
-				audio_time = (float)audio_source.timeSamples / audio_source.clip.frequency;
-			}else{
-				audio_time = audio_time + Time.deltaTime;
-			}
-			if (audio_time > audio.samples / audio.frequency){
-				audio_time = audio.samples / audio.frequency;
-			}
 			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
+				//TimeStep
+				long gan_time = 0;
+				if (play_audio){
+					audio_time = (float)audio_source.timeSamples / audio_source.clip.frequency;
+				}else{
+					audio_time = audio_time + Time.deltaTime;
+				}
+				if (audio_time > audio.samples / audio.frequency){
+					audio_time = audio.samples / audio.frequency;
+				}
+
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				Color32 [] generated_image = lip_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, audio_time, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				gan_time = (rec_end_time - rec_start_time);
 				camera = generated_image;
+
+				//Inference Time
+				if (label_text != null)	{
+					label_text.text = detection_time + "ms + " + gan_time + "ms\nposition " + audio_time + "\n" + ailia_face_detector.EnvironmentName();
+				}
+
+				//Apply
+				preview_texture.SetPixels32(camera);
+				preview_texture.Apply();
 			}
-			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.gfpgan){
+			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.gfpgan && one_shot){
 				//Compute
+				long gan_time = 0;
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				Color32 [] generated_image = gfp_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				gan_time = (rec_end_time - rec_start_time);
 				camera = generated_image;
+			
+				//Inference Time
+				if (label_text != null){
+					label_text.text = detection_time + "ms + " + gan_time + "ms\n" + ailia_face_detector.EnvironmentName();
+				}
+
+				//Apply
+				if (one_shot){
+					preview_texture.SetPixels32(camera);
+					preview_texture.Apply();
+				}
+
+				one_shot = false;
 			}
 
-			if (label_text != null)
+			// When space key down, draw original image
+			if (Input.GetKey(KeyCode.Space))
 			{
-				label_text.text = detection_time + "ms + " + gan_time + "ms\nposition " + audio_time + "\n" + ailia_face_detector.EnvironmentName();
+				raw_image.texture = image;
 			}
-
-			//Apply
-			preview_texture.SetPixels32(camera);
-			preview_texture.Apply();
+			else
+			{
+				raw_image.texture = preview_texture;
+			}
 		}
 
 		void SetUIProperties()
