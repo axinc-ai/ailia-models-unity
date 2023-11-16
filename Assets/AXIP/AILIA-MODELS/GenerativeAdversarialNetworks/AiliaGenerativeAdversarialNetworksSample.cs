@@ -261,7 +261,9 @@ namespace ailiaSDK {
 					preview_texture.Apply();
 				}
 
-				one_shot = false;
+				if (image != null){
+					one_shot = false;
+				}
 			}
 
 			// When space key down, draw original image
