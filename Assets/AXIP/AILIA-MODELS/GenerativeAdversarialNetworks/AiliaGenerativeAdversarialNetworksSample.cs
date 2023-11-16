@@ -1,4 +1,4 @@
-/* AILIA Unity Plugin LipGAN Sample */
+/* AILIA Unity Plugin GAN Sample */
 /* Copyright 2023 AXELL CORPORATION */
 
 using System.Collections;
@@ -14,7 +14,8 @@ namespace ailiaSDK {
 	public class AiliaGenerativeAdversarialNetworksSample : AiliaRenderer {
         public enum AiliaGenerativeAdversarialNetworksModels
         {
-            lipgan
+            lipgan,
+			gfpgan
         }
 
 		[SerializeField]
@@ -24,7 +25,9 @@ namespace ailiaSDK {
 		public AudioClip audio = null;
 		public AudioSource audio_source = null;
 		public bool play_audio = false;
-		public Texture2D image = null; 
+		public Texture2D image_lipgan = null; 
+		public Texture2D image_gfpgan = null; 
+		private Texture2D image = null;
 
 		//Settings
 		[SerializeField]
@@ -48,6 +51,7 @@ namespace ailiaSDK {
 
 		private AiliaBlazeface blaze_face = new AiliaBlazeface();
 		private AiliaLipGan lip_gan = new AiliaLipGan();
+		private AiliaGfpGan gfp_gan = new AiliaGfpGan();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -87,6 +91,24 @@ namespace ailiaSDK {
 
 					break;
 
+				case AiliaGenerativeAdversarialNetworksModels.gfpgan:
+					mode_text.text = "ailia GFPGAN";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazeface.onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "gfpgan", file_name = "GFPGANv1.4.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "gfpgan", file_name = "GFPGANv1.4.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+						if (FileOpened){
+							FileOpened = ailia_face_gan.OpenFile(asset_path + "/GFPGANv1.4.onnx.prototxt", asset_path + "/GFPGANv1.4.onnx");
+						}
+					}));
+
+					break;
+
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -103,6 +125,13 @@ namespace ailiaSDK {
 		// Use this for initialization
 		void Start()
 		{
+			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
+				image = image_lipgan;
+			}
+			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.gfpgan){
+				image = image_gfpgan;
+			}
+
 			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
 			if (image == null){
@@ -140,7 +169,7 @@ namespace ailiaSDK {
 				tex_width = ailia_camera.GetWidth();
 				tex_height = ailia_camera.GetHeight();
 				camera = ailia_camera.GetPixels32();
-			}	
+			}
 			if (image != null){
 				tex_width = image.width;
 				tex_height = image.height;
@@ -161,7 +190,8 @@ namespace ailiaSDK {
 			long detection_time = (end_time - start_time);
 
 			//Draw result
-			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
+			bool display_blazeface_result = true;
+			if(display_blazeface_result){
 				for (int i = 0; i < result_detections.Count; i++)
 				{
 					AiliaBlazeface.FaceInfo face = result_detections[i];
@@ -176,7 +206,7 @@ namespace ailiaSDK {
 						{
 							int x = (int)(face.keypoints[k].x * tex_width);
 							int y = (int)(face.keypoints[k].y * tex_height);
-							//DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
+							DrawRect2D(Color.blue, x, y, 1, 1, tex_width, tex_height);
 						}
 					}
 				}
@@ -196,6 +226,14 @@ namespace ailiaSDK {
 				//Compute
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				Color32 [] generated_image = lip_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, audio_time, debug);
+				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				gan_time = (rec_end_time - rec_start_time);
+				camera = generated_image;
+			}
+			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.gfpgan){
+				//Compute
+				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				Color32 [] generated_image = gfp_gan.GenerateImage(ailia_face_gan, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				gan_time = (rec_end_time - rec_start_time);
 				camera = generated_image;

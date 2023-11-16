@@ -42,6 +42,7 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | Name | Detail | Exported From | Supported Ailia Version |
 |:-----------|------------:|:------------:|:------------:|
 | [lipgan](/Assets/AXIP/AILIA-MODELS/GenerativeAdversarialNetworks/) | [LipGAN](https://github.com/Rudrabha/LipGAN) | Keras | 1.2.15 and later |
+| [gfpgan](/Assets/AXIP/AILIA-MODELS/GenerativeAdversarialNetworks/) | [GFP-GAN: Towards Real-World Blind Face Restoration with Generative Facial Prior](https://github.com/TencentARC/GFPGAN) | Pytorch | 1.2.10 and later |
 
 ## Hand recognition
 
