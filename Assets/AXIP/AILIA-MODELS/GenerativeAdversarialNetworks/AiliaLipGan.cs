@@ -144,6 +144,44 @@ namespace ailiaSDK
 			MelSpectrum(samples,clip.samples,clip.channels,clip.frequency, debug);
 		}
 
+		// Bilinear
+		private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
+		{
+			int x2 = (int)fx;
+			int y2 = (int)fy;
+			float xa = 1.0f - (fx - x2);
+			float xb = 1.0f - xa;
+			float ya = 1.0f - (fy - y2);
+			float yb = 1.0f - ya;
+			Color32 c1 = face[y2 * w + x2];
+			Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
+			Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
+			Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
+			byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
+			byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
+			byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
+			return new Color32(r, g, b, 255);
+		}
+
+		private float[] Bilinear(float[] face, int w, int h, float fx, float fy)
+		{
+			int x2 = (int)fx;
+			int y2 = (int)fy;
+			float xa = 1.0f - (fx - x2);
+			float xb = 1.0f - xa;
+			float ya = 1.0f - (fy - y2);
+			float yb = 1.0f - ya;
+			float[] v = new float[3];
+			for (int i = 0; i < 3; i++){
+				float c1 = face[(y2 * w + x2) * 3 + i];
+				float c2 = (x2+1 < w) ? face[(y2 * w + x2 + 1) * 3 + i] : c1;
+				float c3 = (y2+1 < h) ? face[((y2 + 1) * w + x2) * 3 + i] : c1;
+				float c4 = (x2+1 < w && y2+1 < h) ? face[((y2 + 1) * w + x2 + 1) * 3 + i] : c1;
+				v[i] = (c1 * xa * ya + c2 * xb * ya + c3 * xa * yb + c4 * xb * yb);
+			}
+			return v;
+		}
+
 		// Crop input data
 		private float [] CropInputFace(int fx, int fy, int fw, int fh, Color32[] camera, int tex_width, int tex_height){
 			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 6];
@@ -156,8 +194,8 @@ namespace ailiaSDK
 				{
 					int ox = (x - w/2);
 					int oy = (y - h/2);
-					int x2 = (int)((ox) * scale + fx);
-					int y2 = (int)((oy) * scale + fy);
+					float x2 = ((ox) * scale + fx);
+					float y2 = ((oy) * scale + fy);
 					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 					{
 						data[(y * w + x) * 6 + 0] = 0;
@@ -171,9 +209,10 @@ namespace ailiaSDK
 					}
 
 					// img
-					data[(y * w + x) * 6 + 0] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-					data[(y * w + x) * 6 + 1] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-					data[(y * w + x) * 6 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+					Color32 v = Bilinear(camera, tex_width, tex_height, x2, tex_height - 1 - y2);
+					data[(y * w + x) * 6 + 0] = (float)((v.b) / 255.0);
+					data[(y * w + x) * 6 + 1] = (float)((v.g) / 255.0);
+					data[(y * w + x) * 6 + 2] = (float)((v.r) / 255.0);
 
 					// img masked
 					if (y >= h / 2){
@@ -202,8 +241,8 @@ namespace ailiaSDK
 			{
 				for (int x = 0; x < fw; x++)
 				{
-					int x2 = x * DETECTION_WIDTH / fw;
-					int y2 = y * DETECTION_HEIGHT / fh;
+					float x2 = 1.0f * x * DETECTION_WIDTH / fw;
+					float y2 = 1.0f * y * DETECTION_HEIGHT / fh;
 					int x3 = fx - fw / 2 + x;
 					int y3 = fy - fh / 2 + y;
 					if (x3 >= 0 && x3 < tex_width && y3 >= 0 && y3 < tex_height){
@@ -213,9 +252,10 @@ namespace ailiaSDK
 						float dy = Mathf.Max(Mathf.Min((float)Mathf.Min(y2 - DETECTION_HEIGHT/2, (DETECTION_HEIGHT - 1 - y2)) / ry, 1) ,0);
 						float alpha = Mathf.Min(dx, dy);
 						int d_adr = (tex_height - 1 - y3) * tex_width + x3;
-						result[d_adr].r = Blend(result[d_adr].r, output[(y2 * DETECTION_WIDTH + x2) * 3 + 0], alpha);
-						result[d_adr].g = Blend(result[d_adr].g, output[(y2 * DETECTION_WIDTH + x2) * 3 + 1], alpha);
-						result[d_adr].b = Blend(result[d_adr].b, output[(y2 * DETECTION_WIDTH + x2) * 3 + 2], alpha);
+						float [] v = Bilinear(output, DETECTION_WIDTH, DETECTION_HEIGHT, x2, y2);
+						result[d_adr].r = Blend(result[d_adr].r, v[2], alpha);
+						result[d_adr].g = Blend(result[d_adr].g, v[1], alpha);
+						result[d_adr].b = Blend(result[d_adr].b, v[0], alpha);
 					}
 				}
 			}
@@ -250,13 +290,16 @@ namespace ailiaSDK
 					{
 						for (int x = 0; x < w; x++)
 						{
-							result[tex_width*(tex_height-1-y)+x].r = (byte)((data[(y * w + x) * 6 + 0] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x].g = (byte)((data[(y * w + x) * 6 + 1] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x].b = (byte)((data[(y * w + x) * 6 + 2] ) * 255.0);
-
-							result[tex_width*(tex_height-1-y)+x+w].r = (byte)((data[(y * w + x) * 6 + 3] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x+w].g = (byte)((data[(y * w + x) * 6 + 4] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x+w].b = (byte)((data[(y * w + x) * 6 + 5] ) * 255.0);
+							if (x + w * 0 < tex_width && y < tex_height){
+								result[tex_width*(tex_height-1-y)+x].b = (byte)((data[(y * w + x) * 6 + 0] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x].g = (byte)((data[(y * w + x) * 6 + 1] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x].r = (byte)((data[(y * w + x) * 6 + 2] ) * 255.0);
+							}
+							if (x + w * 1 < tex_width && y < tex_height){
+								result[tex_width*(tex_height-1-y)+x+w].b = (byte)((data[(y * w + x) * 6 + 3] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x+w].g = (byte)((data[(y * w + x) * 6 + 4] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x+w].r = (byte)((data[(y * w + x) * 6 + 5] ) * 255.0);
+							}
 						}
 					}
 				}
@@ -336,9 +379,11 @@ namespace ailiaSDK
 					{
 						for (int x = 0; x < w; x++)
 						{
-							result[tex_width*(tex_height-1-y)+x+w*2].r = (byte)((output[(y * w + x) * 3 + 0] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x+w*2].g = (byte)((output[(y * w + x) * 3 + 1] ) * 255.0);
-							result[tex_width*(tex_height-1-y)+x+w*2].b = (byte)((output[(y * w + x) * 3 + 2] ) * 255.0);
+							if (x + w * 2 < tex_width && y < tex_height){
+								result[tex_width*(tex_height-1-y)+x+w*2].b = (byte)((output[(y * w + x) * 3 + 0] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x+w*2].g = (byte)((output[(y * w + x) * 3 + 1] ) * 255.0);
+								result[tex_width*(tex_height-1-y)+x+w*2].r = (byte)((output[(y * w + x) * 3 + 2] ) * 255.0);
+							}
 						}
 					}
 				}
