@@ -18,7 +18,8 @@ namespace ailiaSDK
 	{
 		// Model input parameter
 		private const int BATCH_SIZE = 1;
-		private const int FEAT_SIZE = 256;
+		private const int FEAT_SIZE_V1 = 256;
+		private const int FEAT_SIZE_V2 = 768;
 		private const int RND_SIZE = 192;
 		private const int T_PAD = 48000; // 16khz domain samples
 		private const int HUBERT_SAMPLE_RATE = 16000;
@@ -38,6 +39,8 @@ namespace ailiaSDK
 		// Mode
 		private bool f0_mode = false;
 		private int f0_up_key = 0;
+		private int rvc_version = 1;
+		private int feat_size = FEAT_SIZE_V1;
 
 		// State
 		private class RvcState{
@@ -78,7 +81,7 @@ namespace ailiaSDK
 		}
 
 		// Open model from onnx file
-		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, bool gpu_mode){
+		public bool OpenFile(string hubert_stream, string hubert_weight, string vc_stream, string vc_weight, int version, bool gpu_mode){
 			Close();
 			if (gpu_mode)
 			{
@@ -87,7 +90,13 @@ namespace ailiaSDK
 			}
 
 			uint memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
-			hubert_model.SetMemoryMode(memory_mode);
+			rvc_version = version;
+			if (rvc_version != 2){
+				hubert_model.SetMemoryMode(memory_mode);
+				feat_size = FEAT_SIZE_V1;
+			}else{
+				feat_size = FEAT_SIZE_V2;
+			}
 			vc_model.SetMemoryMode(memory_mode);
 
 			bool status = hubert_model.OpenFile(hubert_stream, hubert_weight);
@@ -217,7 +226,7 @@ namespace ailiaSDK
 			float [] feats = Interpolate(hubert_output);
 
 			// VC
-			int len = feats.Length / FEAT_SIZE;
+			int len = feats.Length / feat_size;
 
 			float [] p_len = new float[1];
 			float [] sid = new float[1];
@@ -313,10 +322,10 @@ namespace ailiaSDK
 		// Interpolate
 		private float [] Interpolate(float [] hubert_output){
 			float [] feats = new float [hubert_output.Length * 2];
-			for (int i = 0; i < hubert_output.Length / FEAT_SIZE; i++){
-				for (int j = 0; j < FEAT_SIZE; j++){
-					feats[(i * 2 + 0) * FEAT_SIZE + j] = hubert_output[i * FEAT_SIZE + j];
-					feats[(i * 2 + 1) * FEAT_SIZE + j] = hubert_output[i * FEAT_SIZE + j];
+			for (int i = 0; i < hubert_output.Length / feat_size; i++){
+				for (int j = 0; j < feat_size; j++){
+					feats[(i * 2 + 0) * feat_size + j] = hubert_output[i * feat_size + j];
+					feats[(i * 2 + 1) * feat_size + j] = hubert_output[i * feat_size + j];
 				}
 			}
 			return feats;
@@ -372,8 +381,8 @@ namespace ailiaSDK
 					sequence_shape.dim=2;
 				}else{
 					if ( i == 0 ){
-						sequence_shape.x=FEAT_SIZE;
-						sequence_shape.y=(uint)inputs[i].Length / FEAT_SIZE / (uint)BATCH_SIZE;
+						sequence_shape.x=(uint)feat_size;
+						sequence_shape.y=(uint)inputs[i].Length / (uint)feat_size / (uint)BATCH_SIZE;
 						sequence_shape.z=(uint)BATCH_SIZE;
 						sequence_shape.w=1;
 						sequence_shape.dim=3;
@@ -439,6 +448,10 @@ namespace ailiaSDK
 			for (int i = 0; i < output_blobs.Length; i++){
 				uint output_blob_idx = output_blobs[i];
 				
+				if (hubert && rvc_version == 2){
+					output_blob_idx = (uint)ailia_model.FindBlobIndexByName("/encoder/Slice_5_output_0");
+				}
+
 				Ailia.AILIAShape output_blob_shape = ailia_model.GetBlobShape((int)output_blob_idx);
 				if (debug){
 					Debug.Log("Output "+i+" Shape "+output_blob_shape.w+","+output_blob_shape.z+","+output_blob_shape.y+","+output_blob_shape.x+" dim "+output_blob_shape.dim);
