@@ -419,17 +419,6 @@ MonoBehaviour:
   line: {fileID: 0}
   text_panel: {fileID: 1813464806}
   text_base: {fileID: 1813464805}
-  spheres: {fileID: 0}
-  sphere: {fileID: 0}
-  sphereObjectBuffer: []
-  sphereObjectBufferIndex: 0
-  lines3D: {fileID: 0}
-  line3D: {fileID: 0}
-  axisSphereObjectBuffer: []
-  axisSphereObjectBufferIndex: 0
-  drawPos: {x: 0, y: 0, z: 140}
-  scale: 20
-  time: 0
   ailiaModelType: 0
   language: 0
   output_mode: 1
