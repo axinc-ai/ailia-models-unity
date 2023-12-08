@@ -11,22 +11,25 @@ namespace ailiaSDK
 		{
 			lightweight_human_pose_estimation,
 			blazepose_fullbody,
-			mediapipe_pose_world_landmarks //追記
+			mediapipe_pose_world_landmarks
 		}
 
 		[SerializeField]
 		private PoseEstimatorModels ailiaModelType = PoseEstimatorModels.lightweight_human_pose_estimation;
 		[SerializeField, HideInInspector]
 		private GameObject UICanvas = null;
+
 		//Settings
 		public bool gpu_mode = false;
 		public bool video_mode = true;
 		public int camera_id = 0;
+		public Texture2D test_image = null;
 
 		//Result
 		public Text label_text = null;
 		public Text mode_text = null;
 		public RawImage raw_image = null;
+
 		//Preview
 		private Texture2D preview_texture = null;
 
@@ -40,11 +43,9 @@ namespace ailiaSDK
 		[SerializeField]
 		private ComputeShader computeShaderBlazepose;
 
-		private AiliaMediapipePoseWorldLandmarks ailia_mediapipepose; //追記
+		private AiliaMediapipePoseWorldLandmarks ailia_mediapipepose;
 		[SerializeField]
-		private ComputeShader computeShaderMediapipepose; //追記
-
-		Texture2D SampleImage; //追記
+		private ComputeShader computeShaderMediapipepose;
 
 
 		// AILIA open file(model file)
@@ -129,10 +130,6 @@ namespace ailiaSDK
 			SetUIProperties();
 			CreateAiliaPoseEstimator();
 			ailia_camera.CreateCamera(camera_id);
-
-
-
-			SampleImage = ReadImage.PngToTex2D("Assets/AXIP/AILIA-MODELS/PoseEstimation/SampleImage.png"); //追加　720*720
 		}
 
 		// Update is called once per frame
@@ -162,7 +159,7 @@ namespace ailiaSDK
 			Color32[] camera = ailia_camera.GetPixels32();
 
 			if (!video_mode) {
-				camera = SampleImage.GetPixels32(); //入力画像を変更
+				camera = test_image.GetPixels32(); //入力画像を変更
 			}
 
 
@@ -245,28 +242,28 @@ namespace ailiaSDK
 					DrawBone(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), tex_width, tex_height, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT, r, false);
 
 					//3次元landmarkの描画
-					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); //追加
-					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); //追加
-					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); //追加
+					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 
+					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 
+					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 
 
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE); //追加
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EAR_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_LEFT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EAR_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_RIGHT); //追加
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE); 
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EAR_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_LEFT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EAR_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_EYE_RIGHT); 
 
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT); //追加
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_WRIST_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_LEFT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_WRIST_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_RIGHT); //追加
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT); 
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_WRIST_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_LEFT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_WRIST_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ELBOW_RIGHT); 
 
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT); //追加
-					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT); //追加
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT); 
+					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT); 
 
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT); //追加
-					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_LEFT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT); //追加
-					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT); //追加
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT); 
+					DrawBone3D(new Color(0.0f, 179.0f / 255, 255.0f / 255, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_LEFT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT); 
+					DrawBone3D(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT); 
 
 
 					//3次元座標軸の描画

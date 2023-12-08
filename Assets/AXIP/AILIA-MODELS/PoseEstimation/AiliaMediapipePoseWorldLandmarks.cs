@@ -7,6 +7,8 @@ using UnityEngine;
 
 public class AiliaMediapipePoseWorldLandmarks : IDisposable
 {
+    AiliaMediapipePoseWorldLandmarksAnchors anchors_holder = new AiliaMediapipePoseWorldLandmarksAnchors();
+    
     public ComputeShader computeShader = null;
 
     private AiliaModel ailiaPoseDetection = new AiliaModel();
@@ -74,8 +76,9 @@ public class AiliaMediapipePoseWorldLandmarks : IDisposable
         }
         Debug.Log($"Model loaded {modelName}");
 
-        string anchorsJSON = File.ReadAllText($"{jsonPath}/mediapipepose_anchors.json");
-        float[] anchorsFlat = JsonUtility.FromJson<JsonFloatArray>($"{{ \"array\": {anchorsJSON} }}").array;
+        // string anchorsJSON = File.ReadAllText($"{jsonPath}/mediapipepose_anchors.json");
+        // float[] anchorsFlat = JsonUtility.FromJson<JsonFloatArray>($"{{ \"array\": {anchorsJSON} }}").array;
+        float[] anchorsFlat = ConvertDoubleArrayToFloatArray(anchors_holder.anchors);
 
         anchors = new float[MEDIAPIPEPOSE_DETECTOR_TENSOR_COUNT, 4];
 
@@ -634,6 +637,19 @@ public class AiliaMediapipePoseWorldLandmarks : IDisposable
         }
         result_list.Add(one_pose);
         return result_list;
+    }
+
+
+    public static float[] ConvertDoubleArrayToFloatArray(double[] doubleArray)
+    {
+        float[] floatArray = new float[doubleArray.Length];
+
+        for (int i = 0; i < doubleArray.Length; i++)
+        {
+            floatArray[i] = (float)doubleArray[i];
+        }
+
+        return floatArray;
     }
 
 
