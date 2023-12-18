@@ -420,13 +420,14 @@ MonoBehaviour:
   text_panel: {fileID: 1813464806}
   text_base: {fileID: 1813464805}
   ailiaModelType: 0
-  language: 0
+  language: 2
   output_mode: 1
   UICanvas: {fileID: 1813464810}
   gpu_mode: 0
   video_mode: 0
   camera_id: 0
   debug: 0
+  test_image: {fileID: 2800000, guid: ae3e45be397464eb2b4cebeea924eb54, type: 3}
   label_text: {fileID: 1813464804}
   mode_text: {fileID: 1813464803}
   raw_image: {fileID: 1813464809}

@@ -47,6 +47,7 @@ namespace ailiaSDK
         public bool video_mode = false;
         public int camera_id = 0;
         public bool debug = false;
+        public Texture2D test_image = null;
 
         //Result
         public Text label_text = null;
@@ -106,37 +107,32 @@ namespace ailiaSDK
                 case Language.Japanese:
                     weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "jpn_eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageJapanese.png";
                     textmesh_width = TEXTMESH_WIDTH_JAPANESE;
                     break;
                 case Language.English:
                     weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageEnglish.png";
+                    // sample_input_image_path = "SampleImageEnglish.png";
                     textmesh_width = TEXTMESH_WIDTH_ENGLISH;
                     break;
                 case Language.Chinese:
                     weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageChinese.png";
                     textmesh_width = TEXTMESH_WIDTH_CHINESE;
                     break;
                 case Language.German:
                     weight_path_recognition = "ger_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "ger_eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageGerman.png";
                     textmesh_width = TEXTMESH_WIDTH_GERMAN;
                     break;
                 case Language.French:
                     weight_path_recognition = "fre_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "fre_eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageFrench.png";
                     textmesh_width = TEXTMESH_WIDTH_FRENCH;
                     break;
                 case Language.Korean:
                     weight_path_recognition = "kor_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "kor_eng_num_sym_org.txt";
-                    sample_input_image_path = "SampleImageKorean.png";
                     textmesh_width = TEXTMESH_WIDTH_KOREAN;
                     break;
                 default:
@@ -198,8 +194,6 @@ namespace ailiaSDK
             SetUIProperties();
             CreateAiliaTextRecognizer();
             ailia_camera.CreateCamera(camera_id, false); //第二引数は入力が正方形どうか
-
-            SampleImage = ReadImage.PngToTex2D("Assets/AXIP/AILIA-MODELS/TextRecognition/" + sample_input_image_path);
         }
 
 
@@ -222,7 +216,7 @@ namespace ailiaSDK
 
             if (!video_mode)
             {
-                camera = SampleImage.GetPixels32(); //サンプル画像を入力画像として設定
+                camera = test_image.GetPixels32(); //サンプル画像を入力画像として設定
             }
 
             
