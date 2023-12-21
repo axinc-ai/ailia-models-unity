@@ -62,18 +62,14 @@ namespace ailiaSDK
         private AiliaCamera ailia_camera = new AiliaCamera();
         private AiliaDownload ailia_download = new AiliaDownload();
 
-        //入力画像
-        Texture2D SampleImage;
-        private String sample_input_image_path = "";
-
         // AILIA open file
         private AiliaModel ailia_text_detector = new AiliaModel();
         private AiliaModel ailia_text_classificator = new AiliaModel();
         private AiliaModel ailia_text_recognizer = new AiliaModel();
 
-        private AiliaPaddleOCR paddle_ocr = new AiliaPaddleOCR(); //推論を担当する //あとで別のスクリプトでクラスを定義
+        private AiliaPaddleOCR paddle_ocr = new AiliaPaddleOCR();
 
-        private String[] txt_file; ///デコード用のテキストファイル
+        private String[] txt_file;
 
         public const float TEXTMESH_WIDTH_JAPANESE = 0.4f;
         public const float TEXTMESH_WIDTH_ENGLISH = 0.8f;
@@ -112,7 +108,6 @@ namespace ailiaSDK
                 case Language.English:
                     weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "eng_num_sym_org.txt";
-                    // sample_input_image_path = "SampleImageEnglish.png";
                     textmesh_width = TEXTMESH_WIDTH_ENGLISH;
                     break;
                 case Language.Chinese:
@@ -193,7 +188,7 @@ namespace ailiaSDK
         {
             SetUIProperties();
             CreateAiliaTextRecognizer();
-            ailia_camera.CreateCamera(camera_id, false); //第二引数は入力が正方形どうか
+            ailia_camera.CreateCamera(camera_id, false);
         }
 
 
@@ -213,16 +208,24 @@ namespace ailiaSDK
 
             //Get camera image
             Color32[] camera = ailia_camera.GetPixels32();
+            int original_width = ailia_camera.GetWidth();
+            int original_height = ailia_camera.GetHeight();      
 
             if (!video_mode)
             {
-                camera = test_image.GetPixels32(); //サンプル画像を入力画像として設定
+                camera = test_image.GetPixels32();
+                original_width = test_image.width;
+                original_height = test_image.height;
             }
 
-            
             int tex_width = 1536;
             int tex_height = 839;
+
+            if(camera.Length != tex_width * tex_height){
+                camera = ResizeColorArray(camera, original_width, original_height, tex_width, tex_height);
+            }
             
+
             //Predict
             long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             List<AiliaPaddleOCR.TextInfo> result_detections = paddle_ocr.Detection(ailia_text_detector, camera, tex_width, tex_height);
@@ -256,35 +259,72 @@ namespace ailiaSDK
 
                         DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
                     }
+
                 }
                 else if(output_mode == OutputMode.RecognizedText){
-                    if(!isInstantiate){
 
-                        for(int i = 0; i < result_recognitions.Count; i++){
+                    for(int i = 0; i < result_recognitions.Count; i++){
 
-                            //位置の調整
-                            float scale_x = -66.0f/tex_width;
-                            float scale_y = 66.0f/tex_height;
-                            float x = (result_recognitions[i].box[0].x - tex_width / 2.0f) * scale_x;
-                            float y = (result_recognitions[i].box[0].y - tex_height / 2.0f) * scale_y;
-                            GameObject text = Instantiate(text_mesh, new Vector3(x, y, 70.0f), text_mesh.transform.rotation);
+                        /*
+                        //位置の調整
+                        float scale_x = -66.0f/tex_width;
+                        float scale_y = 66.0f/tex_height;
+                        float x = (result_recognitions[i].box[0].x - tex_width / 2.0f) * scale_x;
+                        float y = (result_recognitions[i].box[0].y - tex_height / 2.0f) * scale_y;
+                        // GameObject text = Instantiate(text_mesh, new Vector3(x, y, 70.0f), text_mesh.transform.rotation);
 
-                            //サイズの調整
-                            float scale_w = textmesh_width/188;
-                            float scale_h = 0.6f/48;
-                            float w = (result_recognitions[i].box[3].x - result_recognitions[i].box[0].x) * scale_w;
-                            float h = (result_recognitions[i].box[1].y - result_recognitions[i].box[0].y) * scale_h;
-                            if(w > 0.5f){ //はみ出てしまうため、幅の最大値を決める
-                                w = 0.5f;
-                            }
-                            text.transform.localScale = new Vector3(w, h, 1.0f);
-                            text.GetComponent<TextMesh>().text = result_recognitions[i].text;
-                        }
+                        //サイズの調整
+                        float scale_w = textmesh_width/188;
+                        float scale_h = 0.6f/48;
+                        float w = (result_recognitions[i].box[3].x - result_recognitions[i].box[0].x) * 0.01f; //* scale_w;
+                        float h = (result_recognitions[i].box[1].y - result_recognitions[i].box[0].y) * 0.01f; //* scale_h;
+                        // if(w > 0.5f){ //はみ出てしまうため、幅の最大値を決める
+                        //     w = 0.5f;
+                        // }
+                        // text.transform.localScale = new Vector3(w, h, 1.0f);
+                        // text.GetComponent<TextMesh>().text = result_recognitions[i].text;
+                        */
+                        int fx = (int)(result_recognitions[i].box[0].x);
+                        int fy = (int)(result_recognitions[i].box[0].y);
 
-                        isInstantiate = true;
+                        DrawText(Color.white, result_recognitions[i].text, fx, fy, tex_width, tex_height);
                     }
                 }
             }
+        }
+
+
+
+        private Color32[] ResizeColorArray(Color32[] originalPixels, int originalWidth, int originalHeight, int newWidth, int newHeight)
+		{
+			Texture2D newTexture = new Texture2D(newWidth, newHeight, TextureFormat.RGBA32, false);
+
+			Texture2D originalTexture = new Texture2D(originalWidth, originalHeight, TextureFormat.RGBA32, false);
+			originalTexture.SetPixels32(originalPixels);
+			originalTexture.Apply();
+
+            newTexture = GetResized(originalTexture, newWidth, newHeight);
+
+			Color32[] resizedPixels = newTexture.GetPixels32();
+
+			return resizedPixels;
+		}
+
+
+        private Texture2D GetResized(Texture2D texture, int width, int height)
+        {
+            var rt = RenderTexture.GetTemporary(width, height);
+            Graphics.Blit(texture, rt);
+
+            var preRT = RenderTexture.active;
+            RenderTexture.active = rt;
+            var ret = new Texture2D(width, height);
+            ret.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            ret.Apply();
+            RenderTexture.active = preRT;
+
+            RenderTexture.ReleaseTemporary(rt);
+            return ret;
         }
 
 

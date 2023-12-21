@@ -43,6 +43,9 @@ namespace ailiaSDK
 		public const int RECOGNITION_IMAGE_HEIGHT = 32;
 		public const int RECOGNITION_IMAGE_WIDTH = 320;
 
+		public const int CAMERA_HEIGHT = 1080;
+		public const int CAMERA_WIDTH = 1920;
+
 		public const int IMAGE_SCALE = 4; //処理を軽くするために画像のサイズを調整
 
 
@@ -158,15 +161,13 @@ namespace ailiaSDK
 		}
 
 
-
-		private bool isClassification = true;
-		List<TextInfo> classifications = new List<TextInfo>();
-
 		public List<TextInfo> Classification(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaPaddleOCR.TextInfo> result_detections)
 		{
 			bool status;
 
-			if(isClassification){
+			List<TextInfo> classifications = new List<TextInfo>();
+
+			if(result_detections != null){
 
 				int[,] binary_camera = Color32ToArray(camera, tex_width, tex_height);
 
@@ -265,8 +266,6 @@ namespace ailiaSDK
 					classification.angle = ClsLabelDecode(maxIndexs, maxProbs).Item1;
 					classifications.Add(classification);					
 				}
-
-				isClassification = false;
 			}
 
 			return classifications;
@@ -274,19 +273,17 @@ namespace ailiaSDK
 
 
 
-
-		private bool isRecognition = true;
-		List<TextInfo> recognitions = new List<TextInfo>();
-
 		public List<TextInfo> Recognition(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaPaddleOCR.TextInfo> result_classifications, String[] txt_file, AiliaTextRecognizersSample.Language language)
 		{
 			bool status;
+
+			List<TextInfo> recognitions = new List<TextInfo>();
 
 			List<(String, float)> result_list = new List<(String, float)>();
 			List<List<Vector2>> box_list = new List<List<Vector2>>(); //最後にList<TextInfo> resultにまとめて格納する、ROIの座標情報
 
 
-			if(isRecognition){
+			if(result_classifications != null){
 
 				int[,] binary_camera = Color32ToArray(camera, tex_width, tex_height);
 
@@ -444,9 +441,6 @@ namespace ailiaSDK
 					textinfo.score = result_list[r].Item2;
 					recognitions.Add(textinfo);
 				}
-
-				isRecognition = false;
-
 			}
 
 		
@@ -869,7 +863,7 @@ namespace ailiaSDK
 
 		
 		private (String, float) ClsLabelDecode(int[] angle_index, float[] angle_prob){
-			//[('180', 0.78958)]のようなリストを返す
+
 			String result_angle = "";
 			float result_prob = 0.0f;
 			String[] angle_list = {"0", "180"};
@@ -888,10 +882,6 @@ namespace ailiaSDK
 		
 
 		private (String, float) RecLabelDecode(int[] text_index, float[] text_prob, String[] txt_file){
-			//[('やみつきになる', 1.0)]のようなリストを返す
-			// Debug.Log(text_index.Length); //どの言語の時も 31,19...など
-			// Debug.Log(txt_file.Length); //英語の時 96 //日本語の時4400 //ドイツ語の時144
-
 
 			if(text_index.Length == 0)
 			{
@@ -904,7 +894,6 @@ namespace ailiaSDK
 			for(int i = 0; i < text_index.Length; i++){
 				if(text_index[i] != 0){
 					result_text += txt_file[text_index[i]];
-					// Debug.Log(txt_file[text_index[i]]); //こっちでエラー //一旦元のテキストファイルの行数を増やし解決
 					result_prob += text_prob[i];
 					result_num += 1;
 				}
