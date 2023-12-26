@@ -153,7 +153,7 @@ namespace ailiaSDK
 
 			if (detections.Count == 0)
 			{
-				Debug.Log("null");
+				//Debug.Log("null");
 				return null;
 			}
 
