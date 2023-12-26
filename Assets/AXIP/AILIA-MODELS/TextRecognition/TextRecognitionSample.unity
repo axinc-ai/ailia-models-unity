@@ -421,10 +421,11 @@ MonoBehaviour:
   text_base: {fileID: 1813464805}
   ailiaModelType: 0
   language: 0
+  modelSize: 0
   output_mode: 1
   UICanvas: {fileID: 1813464810}
   gpu_mode: 0
-  video_mode: 1
+  video_mode: 0
   camera_id: 0
   debug: 0
   test_image: {fileID: 2800000, guid: 3d377a8a8ef34422ebfb769f22240865, type: 3}
@@ -537,17 +538,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
         type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
-        type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
         type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
+      propertyPath: m_LocalRotation.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
@@ -557,12 +553,17 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
         type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
+      propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
         type: 3}
-      propertyPath: m_LocalRotation.z
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 224685227790268904, guid: b13fba7fbe84549eaad325ff3431cb6f,

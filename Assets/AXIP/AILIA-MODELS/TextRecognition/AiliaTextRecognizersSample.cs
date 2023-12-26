@@ -27,6 +27,12 @@ namespace ailiaSDK
             Korean
         }
 
+        public enum ModelSize
+        {
+            Server,
+            Mobile
+        }
+
         public enum OutputMode
         {
             DetectedRoi,
@@ -37,6 +43,8 @@ namespace ailiaSDK
         private TextRecognizerModels ailiaModelType = TextRecognizerModels.PaddleOCR;
         [SerializeField]
         private Language language = Language.Japanese;
+        [SerializeField]
+        private ModelSize modelSize = ModelSize.Server;
         [SerializeField]
         private OutputMode output_mode = OutputMode.DetectedRoi;
         [SerializeField]
@@ -101,9 +109,15 @@ namespace ailiaSDK
             switch (language)
             {
                 case Language.Japanese:
-                    weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
-                    dict_path = txt_file_dir + "jpn_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_JAPANESE;
+                    if (modelSize == ModelSize.Server){
+                        weight_path_recognition = "jpn_eng_num_sym_server_rec_add.onnx";
+                        dict_path = txt_file_dir + "jpn_eng_num_sym_add.txt";
+                        textmesh_width = TEXTMESH_WIDTH_JAPANESE;
+                    }else{
+                        weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
+                        dict_path = txt_file_dir + "jpn_eng_num_sym_org.txt";
+                        textmesh_width = TEXTMESH_WIDTH_JAPANESE;
+                    }
                     break;
                 case Language.English:
                     weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
@@ -111,9 +125,15 @@ namespace ailiaSDK
                     textmesh_width = TEXTMESH_WIDTH_ENGLISH;
                     break;
                 case Language.Chinese:
-                    weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
-                    dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_CHINESE;
+                    if (modelSize == ModelSize.Server){
+                        weight_path_recognition = "chi_eng_num_sym_server_rec_org.onnx";
+                        dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
+                        textmesh_width = TEXTMESH_WIDTH_CHINESE;
+                    }else{
+                        weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
+                        dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
+                        textmesh_width = TEXTMESH_WIDTH_CHINESE;
+                    }
                     break;
                 case Language.German:
                     weight_path_recognition = "ger_eng_num_sym_mobile_rec_org.onnx";
@@ -230,7 +250,7 @@ namespace ailiaSDK
             long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             List<AiliaPaddleOCR.TextInfo> result_detections = paddle_ocr.Detection(ailia_text_detector, camera, tex_width, tex_height);
             List<AiliaPaddleOCR.TextInfo> result_classifications = paddle_ocr.Classification(ailia_text_recognizer, camera, tex_width, tex_height, result_detections);
-            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language); //一旦返り値は入れない
+            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language, modelSize); //一旦返り値は入れない
             long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             long detection_time = (end_time - start_time);
         
@@ -238,18 +258,20 @@ namespace ailiaSDK
             //Draw result
             if (ailiaModelType == TextRecognizerModels.PaddleOCR)
             {
+                // Input image preview
+                if (preview_texture == null)
+                {
+                    preview_texture = new Texture2D(tex_width, tex_height);
+                    raw_image.texture = preview_texture;
+                    raw_image.color = new Color32(128,128,128,255);
+                }
+
+                // Apply
+                preview_texture.SetPixels32(camera);
+                preview_texture.Apply();
+
+                // Detected roi or text
                 if(output_mode == OutputMode.DetectedRoi){
-
-                    if (preview_texture == null)
-                    {
-                        preview_texture = new Texture2D(tex_width, tex_height);
-                        raw_image.texture = preview_texture;
-                    }
-
-                    //Apply
-                    preview_texture.SetPixels32(camera);
-                    preview_texture.Apply();
-
                     for (int i = 0; i < result_recognitions.Count; i++)
                     {
                         int fx = (int)(result_recognitions[i].box[0].x);
