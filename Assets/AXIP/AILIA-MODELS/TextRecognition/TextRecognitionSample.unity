@@ -424,7 +424,7 @@ MonoBehaviour:
   output_mode: 1
   UICanvas: {fileID: 1813464810}
   gpu_mode: 0
-  video_mode: 1
+  video_mode: 0
   camera_id: 0
   debug: 0
   test_image: {fileID: 2800000, guid: 3d377a8a8ef34422ebfb769f22240865, type: 3}

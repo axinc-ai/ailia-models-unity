@@ -79,8 +79,10 @@ namespace ailiaSDK
         public const float TEXTMESH_WIDTH_KOREAN = 0.8f;
         private float textmesh_width;
 
+        public float UIImageWidth;
+        public float UIImageHeight;
+
         private bool FileOpened = false;
-        private bool isInstantiate = false;
 
         private void CreateAiliaTextRecognizer()
         {
@@ -189,6 +191,9 @@ namespace ailiaSDK
             SetUIProperties();
             CreateAiliaTextRecognizer();
             ailia_camera.CreateCamera(camera_id, false);
+
+            UIImageWidth = raw_image.rectTransform.rect.size.x; //800
+            UIImageHeight = raw_image.rectTransform.rect.size.y; //800
         }
 
 
@@ -218,26 +223,28 @@ namespace ailiaSDK
                 original_height = test_image.height;
             }
 
-            int tex_width = 1536;
-            int tex_height = 839;
+            int tex_width = paddle_ocr.PADDLEOCR_DETECTOR_INPUT_WIDTH_SIZE; //1536;
+            int tex_height = paddle_ocr.PADDLEOCR_DETECTOR_INPUT_HEIGHT_SIZE; //839;
 
             if(camera.Length != tex_width * tex_height){
                 camera = ResizeColorArray(camera, original_width, original_height, tex_width, tex_height);
             }
             
-
             //Predict
             long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             List<AiliaPaddleOCR.TextInfo> result_detections = paddle_ocr.Detection(ailia_text_detector, camera, tex_width, tex_height);
             List<AiliaPaddleOCR.TextInfo> result_classifications = paddle_ocr.Classification(ailia_text_recognizer, camera, tex_width, tex_height, result_detections);
             List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language); //一旦返り値は入れない
             long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-            long detection_time = (end_time - start_time);
+            long recognition_time = (end_time - start_time);
         
 
             //Draw result
             if (ailiaModelType == TextRecognizerModels.PaddleOCR)
             {
+                float ratio = tex_height/(float)tex_width;
+                raw_image.rectTransform.sizeDelta = new Vector2(UIImageWidth, UIImageHeight * ratio);
+
                 if(output_mode == OutputMode.DetectedRoi){
 
                     if (preview_texture == null)
@@ -245,7 +252,7 @@ namespace ailiaSDK
                         preview_texture = new Texture2D(tex_width, tex_height);
                         raw_image.texture = preview_texture;
                     }
-
+                    
                     //Apply
                     preview_texture.SetPixels32(camera);
                     preview_texture.Apply();
@@ -256,6 +263,8 @@ namespace ailiaSDK
                         int fy = (int)(result_recognitions[i].box[0].y);
                         int fw = (int)((result_recognitions[i].box[3].x - result_recognitions[i].box[0].x));
                         int fh = (int)((result_recognitions[i].box[1].y - result_recognitions[i].box[0].y));
+                        fy = (int)(fy * ratio + (UIImageHeight * (1 - ratio))/2.0f + 8);
+                        fh = (int)(fh * ratio);
 
                         DrawRect2D(Color.blue, fx, fy, fw, fh, tex_width, tex_height);
                     }
@@ -274,8 +283,8 @@ namespace ailiaSDK
                         // GameObject text = Instantiate(text_mesh, new Vector3(x, y, 70.0f), text_mesh.transform.rotation);
 
                         //サイズの調整
-                        float scale_w = textmesh_width/188;
-                        float scale_h = 0.6f/48;
+                        // float scale_w = textmesh_width/188;
+                        // float scale_h = 0.6f/48;
                         float w = (result_recognitions[i].box[3].x - result_recognitions[i].box[0].x) * 0.01f; //* scale_w;
                         float h = (result_recognitions[i].box[1].y - result_recognitions[i].box[0].y) * 0.01f; //* scale_h;
                         // if(w > 0.5f){ //はみ出てしまうため、幅の最大値を決める
@@ -284,13 +293,20 @@ namespace ailiaSDK
                         // text.transform.localScale = new Vector3(w, h, 1.0f);
                         // text.GetComponent<TextMesh>().text = result_recognitions[i].text;
                         */
+                        
                         int fx = (int)(result_recognitions[i].box[0].x);
                         int fy = (int)(result_recognitions[i].box[0].y);
+                        fy = (int)(fy * ratio + (UIImageHeight * (1 - ratio))/2.0f + 8);
 
-                        DrawText(Color.white, result_recognitions[i].text, fx, fy, tex_width, tex_height);
+                        DrawText(Color.white, result_recognitions[i].text, fx, fy, tex_width, tex_height, ratio);
                     }
                 }
             }
+
+            if (label_text != null)
+			{
+				label_text.text = recognition_time + "ms\n" + ailia_text_recognizer.EnvironmentName();
+			}
         }
 
 

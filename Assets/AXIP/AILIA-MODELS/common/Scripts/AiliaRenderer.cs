@@ -306,7 +306,7 @@ namespace ailiaSDK
 			newLine.SetActive(true);
 		}
 
-		public void DrawText(Color color, string text, int x, int y, int tex_width, int tex_height)
+		public void DrawText(Color color, string text, int x, int y, int tex_width, int tex_height, float scale = 1.0f)
 		{
 			RectTransform panelRect = line_panel.GetComponent<RectTransform>();
 			float width = panelRect.rect.width;
@@ -333,6 +333,7 @@ namespace ailiaSDK
 			color.a = 160 / 255.0f;
 			text_object.GetComponent<Image>().color = color;
 			text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
+			text_object.GetComponent<RectTransform>().localScale = new Vector3(scale, scale, 1);
 		}
 	}
 } 
