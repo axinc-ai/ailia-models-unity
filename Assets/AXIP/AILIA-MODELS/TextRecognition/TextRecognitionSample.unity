@@ -434,6 +434,8 @@ MonoBehaviour:
   raw_image: {fileID: 1813464809}
   text_mesh: {fileID: 4587981674945661957, guid: 81184000f700b4ada8519ecff9bcbff6,
     type: 3}
+  UIImageWidth: 0
+  UIImageHeight: 0
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
