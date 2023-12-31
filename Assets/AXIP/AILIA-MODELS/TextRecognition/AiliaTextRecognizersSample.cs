@@ -27,6 +27,12 @@ namespace ailiaSDK
             Korean
         }
 
+        public enum ModelSize
+        {
+            Server,
+            Mobile
+        }
+
         public enum OutputMode
         {
             DetectedRoi,
@@ -37,6 +43,8 @@ namespace ailiaSDK
         private TextRecognizerModels ailiaModelType = TextRecognizerModels.PaddleOCR;
         [SerializeField]
         private Language language = Language.Japanese;
+        [SerializeField]
+        private ModelSize modelSize = ModelSize.Server;
         [SerializeField]
         private OutputMode output_mode = OutputMode.DetectedRoi;
         [SerializeField]
@@ -71,14 +79,6 @@ namespace ailiaSDK
 
         private String[] txt_file;
 
-        public const float TEXTMESH_WIDTH_JAPANESE = 0.4f;
-        public const float TEXTMESH_WIDTH_ENGLISH = 0.8f;
-        public const float TEXTMESH_WIDTH_CHINESE = 0.6f;
-        public const float TEXTMESH_WIDTH_GERMAN = 0.8f;
-        public const float TEXTMESH_WIDTH_FRENCH = 0.8f;
-        public const float TEXTMESH_WIDTH_KOREAN = 0.8f;
-        private float textmesh_width;
-
         public float UIImageWidth;
         public float UIImageHeight;
 
@@ -103,34 +103,38 @@ namespace ailiaSDK
             switch (language)
             {
                 case Language.Japanese:
-                    weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
-                    dict_path = txt_file_dir + "jpn_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_JAPANESE;
+                    if (modelSize == ModelSize.Server){
+                        weight_path_recognition = "jpn_eng_num_sym_server_rec_add.onnx";
+                        dict_path = txt_file_dir + "jpn_eng_num_sym_add.txt";
+                    }else{
+                        weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
+                        dict_path = txt_file_dir + "jpn_eng_num_sym_org.txt";
+                    }
                     break;
                 case Language.English:
                     weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_ENGLISH;
                     break;
                 case Language.Chinese:
-                    weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
-                    dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_CHINESE;
+                    if (modelSize == ModelSize.Server){
+                        weight_path_recognition = "chi_eng_num_sym_server_rec_org.onnx";
+                        dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
+                    }else{
+                        weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
+                        dict_path = txt_file_dir + "chi_eng_num_sym_org.txt";
+                    }
                     break;
                 case Language.German:
                     weight_path_recognition = "ger_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "ger_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_GERMAN;
                     break;
                 case Language.French:
                     weight_path_recognition = "fre_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "fre_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_FRENCH;
                     break;
                 case Language.Korean:
                     weight_path_recognition = "kor_eng_num_sym_mobile_rec_org.onnx";
                     dict_path = txt_file_dir + "kor_eng_num_sym_org.txt";
-                    textmesh_width = TEXTMESH_WIDTH_KOREAN;
                     break;
                 default:
                     Debug.Log("Others language are working in progress.");
@@ -234,7 +238,7 @@ namespace ailiaSDK
             long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             List<AiliaPaddleOCR.TextInfo> result_detections = paddle_ocr.Detection(ailia_text_detector, camera, tex_width, tex_height);
             List<AiliaPaddleOCR.TextInfo> result_classifications = paddle_ocr.Classification(ailia_text_recognizer, camera, tex_width, tex_height, result_detections);
-            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language); //一旦返り値は入れない
+            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language, modelSize); //一旦返り値は入れない
             long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             long recognition_time = (end_time - start_time);
         
@@ -245,18 +249,20 @@ namespace ailiaSDK
                 float ratio = tex_height/(float)tex_width;
                 raw_image.rectTransform.sizeDelta = new Vector2(UIImageWidth, UIImageHeight * ratio);
 
+                // Input image preview
+                if (preview_texture == null)
+                {
+                    preview_texture = new Texture2D(tex_width, tex_height);
+                    raw_image.texture = preview_texture;
+                    raw_image.color = new Color32(128,128,128,255);
+                }
+
+                // Apply
+                preview_texture.SetPixels32(camera);
+                preview_texture.Apply();
+
+                // Detected roi or text
                 if(output_mode == OutputMode.DetectedRoi){
-
-                    if (preview_texture == null)
-                    {
-                        preview_texture = new Texture2D(tex_width, tex_height);
-                        raw_image.texture = preview_texture;
-                    }
-                    
-                    //Apply
-                    preview_texture.SetPixels32(camera);
-                    preview_texture.Apply();
-
                     for (int i = 0; i < result_recognitions.Count; i++)
                     {
                         int fx = (int)(result_recognitions[i].box[0].x);
@@ -273,26 +279,6 @@ namespace ailiaSDK
                 else if(output_mode == OutputMode.RecognizedText){
 
                     for(int i = 0; i < result_recognitions.Count; i++){
-
-                        /*
-                        //位置の調整
-                        float scale_x = -66.0f/tex_width;
-                        float scale_y = 66.0f/tex_height;
-                        float x = (result_recognitions[i].box[0].x - tex_width / 2.0f) * scale_x;
-                        float y = (result_recognitions[i].box[0].y - tex_height / 2.0f) * scale_y;
-                        // GameObject text = Instantiate(text_mesh, new Vector3(x, y, 70.0f), text_mesh.transform.rotation);
-
-                        //サイズの調整
-                        // float scale_w = textmesh_width/188;
-                        // float scale_h = 0.6f/48;
-                        float w = (result_recognitions[i].box[3].x - result_recognitions[i].box[0].x) * 0.01f; //* scale_w;
-                        float h = (result_recognitions[i].box[1].y - result_recognitions[i].box[0].y) * 0.01f; //* scale_h;
-                        // if(w > 0.5f){ //はみ出てしまうため、幅の最大値を決める
-                        //     w = 0.5f;
-                        // }
-                        // text.transform.localScale = new Vector3(w, h, 1.0f);
-                        // text.GetComponent<TextMesh>().text = result_recognitions[i].text;
-                        */
                         
                         int fx = (int)(result_recognitions[i].box[0].x);
                         int fy = (int)(result_recognitions[i].box[0].y);

@@ -153,7 +153,7 @@ namespace ailiaSDK
 
 			if (detections.Count == 0)
 			{
-				Debug.Log("null");
+				//Debug.Log("null");
 				return null;
 			}
 
@@ -273,7 +273,7 @@ namespace ailiaSDK
 
 
 
-		public List<TextInfo> Recognition(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaPaddleOCR.TextInfo> result_classifications, String[] txt_file, AiliaTextRecognizersSample.Language language)
+		public List<TextInfo> Recognition(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height, List<AiliaPaddleOCR.TextInfo> result_classifications, String[] txt_file, AiliaTextRecognizersSample.Language language, AiliaTextRecognizersSample.ModelSize modelSize)
 		{
 			bool status;
 
@@ -309,13 +309,21 @@ namespace ailiaSDK
 				switch (language)
 				{
 					case AiliaTextRecognizersSample.Language.Japanese:
-						weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
+						if (modelSize == AiliaTextRecognizersSample.ModelSize.Server){
+							weight_path_recognition = "jpn_eng_num_sym_server_rec_add.onnx";
+						}else{
+							weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
+						}
 						break;
 					case AiliaTextRecognizersSample.Language.English:
 						weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
 						break;
 					case AiliaTextRecognizersSample.Language.Chinese:
-						weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
+						if (modelSize == AiliaTextRecognizersSample.ModelSize.Server){
+							weight_path_recognition = "chi_eng_num_sym_server_rec_org.onnx";
+						}else{
+							weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
+						}
 						break;
 					case AiliaTextRecognizersSample.Language.German:
 						weight_path_recognition = "ger_eng_num_sym_mobile_rec_org.onnx";
@@ -892,7 +900,7 @@ namespace ailiaSDK
 			int result_num = 0;
 			int ignored_tokens = 0;
 			for(int i = 0; i < text_index.Length; i++){
-				if(text_index[i] != 0){
+				if(text_index[i] != 0 && text_index[i] < txt_file.Length){
 					result_text += txt_file[text_index[i]];
 					result_prob += text_prob[i];
 					result_num += 1;
