@@ -225,7 +225,7 @@ namespace ailiaSDK
 			lRend.SetPosition(jointPositionCount, startVec);
 		}
 
-		public void DrawRect2D(Color32 color, int x, int y, int w, int h, int tex_width, int tex_height)
+		public void DrawRect2D(Color32 color, int x, int y, int w, int h, int tex_width, int tex_height, float line_width = 1.0f)
 		{
 			GameObject newLine;
 			LineRenderer lRend;
@@ -252,7 +252,7 @@ namespace ailiaSDK
 			lRend.startColor = c1;
 			lRend.endColor = c1;
 
-			float lineW = 1.0f;
+			float lineW = line_width;
 			lRend.startWidth = lineW;
 			lRend.endWidth = lineW;
 
@@ -306,7 +306,7 @@ namespace ailiaSDK
 			newLine.SetActive(true);
 		}
 
-		public void DrawText(Color color, string text, int x, int y, int tex_width, int tex_height)
+		public void DrawText(Color color, string text, int x, int y, int tex_width, int tex_height, float alpha = 160/255.0f, float scale = 1.0f, Color text_color = default(Color))
 		{
 			RectTransform panelRect = line_panel.GetComponent<RectTransform>();
 			float width = panelRect.rect.width;
@@ -330,9 +330,14 @@ namespace ailiaSDK
 
 			text_object.SetActive(true);
 			text_object.transform.GetChild(0).GetComponent<Text>().text = text;
-			color.a = 160 / 255.0f;
+			// if(text_color != default(Color)){
+			// 	text_object.transform.GetChild(0).GetComponent<Text>().color = text_color;
+			// }
+			text_object.transform.GetChild(0).GetComponent<Text>().color = text_color;
+			color.a = alpha;
 			text_object.GetComponent<Image>().color = color;
 			text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
+			text_object.GetComponent<RectTransform>().localScale = new Vector3(scale, scale, 1);
 		}
 	}
 } 
