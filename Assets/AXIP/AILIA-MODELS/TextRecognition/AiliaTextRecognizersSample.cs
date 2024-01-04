@@ -79,8 +79,8 @@ namespace ailiaSDK
 
         private String[] txt_file;
 
-        public float UIImageWidth;
-        public float UIImageHeight;
+        private float UIImageWidth;
+        private float UIImageHeight;
 
         private bool FileOpened = false;
 
@@ -260,6 +260,10 @@ namespace ailiaSDK
                 // Apply
                 preview_texture.SetPixels32(camera);
                 preview_texture.Apply();
+
+                if(result_recognitions == null){
+                    return;
+                }
 
                 // Detected roi or text
                 if(output_mode == OutputMode.DetectedRoi){

@@ -266,9 +266,11 @@ namespace ailiaSDK
 					classification.angle = ClsLabelDecode(maxIndexs, maxProbs).Item1;
 					classifications.Add(classification);					
 				}
+
+				return classifications;
 			}
 
-			return classifications;
+			return null;
 		}
 
 
@@ -449,10 +451,11 @@ namespace ailiaSDK
 					textinfo.score = result_list[r].Item2;
 					recognitions.Add(textinfo);
 				}
-			}
 
+				return recognitions;
+			}
 		
-			return recognitions;
+			return null;
 		}
 
 
@@ -710,7 +713,20 @@ namespace ailiaSDK
 				for (int x = 0; x < width; x++)
 				{
 					int originalX = (int)(bottomLeft.x) + x;
-					int originalY = 832 - ((int)(bottomLeft.y) + y);
+					int originalY = PADDLEOCR_DETECTOR_INPUT_HEIGHT_SIZE - ((int)(bottomLeft.y) + y);
+
+					if(originalX < 0){
+						originalX = 0;
+					}
+					else if(originalX > binary_camera.GetLength(0) - 1){
+						originalX = binary_camera.GetLength(0) - 1;
+					}
+					if(originalY < 0){
+						originalY = 0;
+					}
+					else if(originalY > binary_camera.GetLength(1) - 1){
+						originalY = binary_camera.GetLength(1) - 1;
+					}
 
 					ROI[x, height - y - 1] = binary_camera[originalX, originalY];
 				}
