@@ -12,6 +12,8 @@ using UnityEngine.Video;
 
 using System.Drawing;
 
+using System.Text;
+
 namespace ailiaSDK
 {
 	public class AiliaPaddleOCR
@@ -36,17 +38,15 @@ namespace ailiaSDK
 		public const int PADDLEOCR_CLASSIFIER_INPUT_CHANNEL_COUNT = 3;
 		public const int PADDLEOCR_CLASSIFIER_INPUT_HEIGHT_SIZE = 48;
 		public const int PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE = 192;
-
-		public const int CLASSIFICATION_IMAGE_HEIGHT = 48;
-		public const int CLASSIFICATION_IMAGE_WIDTH = 192;
 		
-		public const int RECOGNITION_IMAGE_HEIGHT = 32;
-		public const int RECOGNITION_IMAGE_WIDTH = 320;
+		public const int PADDLEOCR_RECOGNITION_CHANNEL_COUNT = 3;
+		public const int PADDLEOCR_RECOGNITION_IMAGE_HEIGHT = 32;
+		public const int PADDLEOCR_RECOGNITION_IMAGE_WIDTH = 320;
 
 		public const int CAMERA_HEIGHT = 1080;
 		public const int CAMERA_WIDTH = 1920;
 
-		public const int IMAGE_SCALE = 4; //処理を軽くするために画像のサイズを調整
+		public const int IMAGE_SCALE = 1; //処理を軽くするために画像のサイズを調整
 
 
 		public struct TextInfo
@@ -81,9 +81,9 @@ namespace ailiaSDK
 						data[(y * w + x) + 2 * w * h] = 0;
 						continue;
 					}
-					data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-					data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-					data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+					data[(y * w + x) + 0 * w * h] = ((float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0f - 0.485f) / 0.229f);
+					data[(y * w + x) + 1 * w * h] = ((float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0f - 0.456f) / 0.224f);
+					data[(y * w + x) + 2 * w * h] = ((float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0f - 0.406f) / 0.225f);
 				}
 			}
 
@@ -153,7 +153,6 @@ namespace ailiaSDK
 
 			if (detections.Count == 0)
 			{
-				//Debug.Log("null");
 				return null;
 			}
 
@@ -169,23 +168,21 @@ namespace ailiaSDK
 
 			if(result_detections != null){
 
-				int[,] binary_camera = Color32ToArray(camera, tex_width, tex_height);
+				float[,,] array_camera = Color32ToArray(camera, tex_width, tex_height);
 
 				//ROIのデータを抽出する
-				List<int[,]> ROI_list = new List<int[,]>();
+				List<float[,,]> ROI_list = new List<float[,,]>();
 				for(int i = 0; i < result_detections.Count(); i++){
 					Vector2 box_point_1 = new Vector2(result_detections[i].box[0].y * IMAGE_SCALE, result_detections[i].box[0].x * IMAGE_SCALE);
 					Vector2 box_point_2 = new Vector2(result_detections[i].box[3].y * IMAGE_SCALE, result_detections[i].box[3].x * IMAGE_SCALE);
 					Vector2 box_point_3 = new Vector2(result_detections[i].box[2].y * IMAGE_SCALE, result_detections[i].box[2].x * IMAGE_SCALE);
 					Vector2 box_point_4 = new Vector2(result_detections[i].box[1].y * IMAGE_SCALE, result_detections[i].box[1].x * IMAGE_SCALE);
 					List<Vector2> roi_box = new List<Vector2>() { box_point_1, box_point_2 ,box_point_3, box_point_4 };
-					int[,] ROI = ExtractROI(binary_camera, roi_box);
-					int[,] resized_ROI = ResizeNormImgForClassification(ROI);
-					int[,] flipped_resized_ROI = FlipVertical(resized_ROI);
+					float[,,] ROI = ExtractROI(array_camera, roi_box);
+					float[,,] resized_ROI = ResizeNormImgForClassification(ROI);
+					float[,,] flipped_resized_ROI = FlipVertical(resized_ROI);
 					ROI_list.Add(flipped_resized_ROI);
 				}
-
-
 				
 				for(int r = 0; r < result_detections.Count(); r++){
 				
@@ -193,17 +190,15 @@ namespace ailiaSDK
 
 					float[] data = new float[PADDLEOCR_CLASSIFIER_INPUT_BATCH_SIZE * PADDLEOCR_CLASSIFIER_INPUT_CHANNEL_COUNT * PADDLEOCR_CLASSIFIER_INPUT_HEIGHT_SIZE * PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE];
 
-
 					int w = PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE;
 					int h = PADDLEOCR_CLASSIFIER_INPUT_HEIGHT_SIZE;
 					for (int y = 0; y < h; y++)
 					{
 						for (int x = 0; x < w; x++)
 						{
-							data[(y * w + x) + 0 * w * h] = (float)(ROI_list[r][x,y]);
-							data[(y * w + x) + 1 * w * h] = (float)(ROI_list[r][x,y]);
-							data[(y * w + x) + 2 * w * h] = (float)(ROI_list[r][x,y]);	
-										
+							data[(y * w + x) + 0 * w * h] = ((float)(ROI_list[r][0,x,y]) / 255.0f - 0.5f) * 2;
+							data[(y * w + x) + 1 * w * h] = ((float)(ROI_list[r][1,x,y]) / 255.0f - 0.5f) * 2;
+							data[(y * w + x) + 2 * w * h] = ((float)(ROI_list[r][2,x,y]) / 255.0f - 0.5f) * 2;		
 						}
 					}
 					
@@ -282,30 +277,31 @@ namespace ailiaSDK
 			List<TextInfo> recognitions = new List<TextInfo>();
 
 			List<(String, float)> result_list = new List<(String, float)>();
-			List<List<Vector2>> box_list = new List<List<Vector2>>(); //最後にList<TextInfo> resultにまとめて格納する、ROIの座標情報
+			List<List<Vector2>> box_list = new List<List<Vector2>>();
 
 
 			if(result_classifications != null){
 
-				int[,] binary_camera = Color32ToArray(camera, tex_width, tex_height);
+				float[,,] array_camera = Color32ToArray(camera, tex_width, tex_height);
 
 				//ROIのデータを抽出する
-				List<int[,]> ROI_list = new List<int[,]>();
+				List<float[,,]> ROI_list = new List<float[,,]>();
 				for(int i = 0; i < result_classifications.Count(); i++){
 					Vector2 box_point_1 = new Vector2(result_classifications[i].box[0].y * IMAGE_SCALE, result_classifications[i].box[0].x * IMAGE_SCALE);
 					Vector2 box_point_2 = new Vector2(result_classifications[i].box[3].y * IMAGE_SCALE, result_classifications[i].box[3].x * IMAGE_SCALE);
 					Vector2 box_point_3 = new Vector2(result_classifications[i].box[2].y * IMAGE_SCALE, result_classifications[i].box[2].x * IMAGE_SCALE);
 					Vector2 box_point_4 = new Vector2(result_classifications[i].box[1].y * IMAGE_SCALE, result_classifications[i].box[1].x * IMAGE_SCALE);
 					List<Vector2> roi_box = new List<Vector2>() { box_point_1, box_point_2 ,box_point_3, box_point_4 };
-					int[,] ROI = ExtractROI(binary_camera, roi_box);
-					int[,] resized_ROI = ResizeNormImgForRecognition(ROI);
-					int[,] flipped_resized_ROI = FlipVertical(resized_ROI);
+					float[,,] ROI = ExtractROI(array_camera, roi_box);
+					float[,,] resized_ROI = ResizeNormImgForRecognition(ROI);
+					float[,,] flipped_resized_ROI = FlipVertical(resized_ROI);
 					if(result_classifications[i].angle == "180"){
 						flipped_resized_ROI = FlipVertical(flipped_resized_ROI);
 					}
 					ROI_list.Add(flipped_resized_ROI);
 					box_list.Add(roi_box);
 				}
+
 
 				var weight_path_recognition = "";
 				switch (language)
@@ -348,7 +344,7 @@ namespace ailiaSDK
 					int INPUT_BATCH_SIZE = 1;
 					int INPUT_CHANNEL_COUNT = 3;
 					int INPUT_HEIGHT_SIZE = 32;
-					int INPUT_WIDTH_SIZE = ROI_list[r].GetLength(0);
+					int INPUT_WIDTH_SIZE = ROI_list[r].GetLength(1);
 
 
 					float[] data = new float[INPUT_BATCH_SIZE * INPUT_CHANNEL_COUNT * INPUT_HEIGHT_SIZE * INPUT_WIDTH_SIZE];
@@ -360,10 +356,9 @@ namespace ailiaSDK
 					{
 						for (int x = 0; x < w; x++)
 						{
-							data[(y * w + x) + 0 * w * h] = (float)(ROI_list[r][x,y]);
-							data[(y * w + x) + 1 * w * h] = (float)(ROI_list[r][x,y]);
-							data[(y * w + x) + 2 * w * h] = (float)(ROI_list[r][x,y]);	
-										
+							data[(y * w + x) + 0 * w * h] = ((float)(ROI_list[r][0,x,y]) / 255.0f - 0.5f) * 2;
+							data[(y * w + x) + 1 * w * h] = ((float)(ROI_list[r][1,x,y]) / 255.0f - 0.5f) * 2;
+							data[(y * w + x) + 2 * w * h] = ((float)(ROI_list[r][2,x,y]) / 255.0f - 0.5f) * 2;		
 						}
 					}
 					
@@ -509,24 +504,23 @@ namespace ailiaSDK
 
 
 		//カメラからの入力画像を、アスペクト比を変えつつ二値化
-		int[,] Color32ToArray(Color32[] camera, int width, int height, float threshold = 200)
+		float[,,] Color32ToArray(Color32[] camera, int width, int height, float threshold = 200) //200
 		{
-			int[,] result = new int[width, height];
+			if (camera.Length != width * height)
+			{
+				Debug.LogError("The length of camera array does not match the width * height");
+			}
+
+			float[,,] result = new float[3, width, height];
 
 			for (int x = 0; x < width; x++)
 			{
 				for (int y = 0; y < height; y++)
 				{
-					Color32 pixel = camera[x + y * width];
-					// グレースケール値の計算
-					float grayscaleValue = (float)(0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b);
-					// 閾値を使用して0または1に変換
-					if(grayscaleValue >= threshold){
-						result[x, y] = 1;
-					}
-					else{
-						result[x, y] = 0;
-					}
+					int i = x + y * width;
+					result[0, x, y] = camera[i].r;
+					result[1, x, y] = camera[i].g;
+					result[2, x, y] = camera[i].b;
 				}
 			}
 
@@ -687,11 +681,12 @@ namespace ailiaSDK
 
 
 		//指定した4隅の座標の範囲のデータを抽出する
-		private int[,] ExtractROI(int[,] binary_camera, List<Vector2> cornerCoordinates)
+		private float[,,] ExtractROI(float[,,] binary_camera, List<Vector2> cornerCoordinates)
 		{
 			if (binary_camera == null || cornerCoordinates == null || cornerCoordinates.Count != 4)
 			{
 				Debug.LogError("Invalid input parameters");
+				return null;
 			}
 
 			Vector2 bottomLeft = cornerCoordinates[0];
@@ -699,13 +694,13 @@ namespace ailiaSDK
 			Vector2 topRight = cornerCoordinates[2];
 			Vector2 bottomRight = cornerCoordinates[3];
 
-
 			// 部分行列のサイズを計算
-			int width = (int)(topRight.x - topLeft.x) ;
-			int height = (int)(topLeft.y - bottomLeft.y) ;
+			int channels = PADDLEOCR_CLASSIFIER_INPUT_CHANNEL_COUNT; // チャンネル数
+			int width = (int)(topRight.x - topLeft.x);
+			int height = (int)(topLeft.y - bottomLeft.y);
 
 			// 部分行列を初期化
-			int[,] ROI = new int[width, height];
+			float[,,] ROI = new float[channels, width, height];
 
 			// 部分行列をコピー
 			for (int y = 0; y < height; y++)
@@ -715,22 +710,25 @@ namespace ailiaSDK
 					int originalX = (int)(bottomLeft.x) + x;
 					int originalY = PADDLEOCR_DETECTOR_INPUT_HEIGHT_SIZE - ((int)(bottomLeft.y) + y);
 
+					// 範囲外を処理
 					if(originalX < 0){
 						originalX = 0;
 					}
-					else if(originalX > binary_camera.GetLength(0) - 1){
-						originalX = binary_camera.GetLength(0) - 1;
+					else if(originalX > binary_camera.GetLength(1) - 1){
+						originalX = binary_camera.GetLength(1) - 1;
 					}
 					if(originalY < 0){
 						originalY = 0;
 					}
-					else if(originalY > binary_camera.GetLength(1) - 1){
-						originalY = binary_camera.GetLength(1) - 1;
+					else if(originalY > binary_camera.GetLength(2) - 1){
+						originalY = binary_camera.GetLength(2) - 1;
 					}
 
-					ROI[x, height - y - 1] = binary_camera[originalX, originalY];
+					for (int c = 0; c < channels; c++)
+					{
+						ROI[c, x, height - y - 1] = binary_camera[c, originalX, originalY];
+					}
 				}
-
 			}
 
 			return ROI;
@@ -738,18 +736,19 @@ namespace ailiaSDK
 
 
 		//Classification用のリサイズ
-		private int[,] ResizeNormImgForClassification(int[,] img)
+		private float[,,] ResizeNormImgForClassification(float[,,] img)
 		{
-			int imgH = CLASSIFICATION_IMAGE_HEIGHT;
-			int imgW = CLASSIFICATION_IMAGE_WIDTH;
+			int imgC = PADDLEOCR_CLASSIFIER_INPUT_CHANNEL_COUNT;
+			int imgH = PADDLEOCR_CLASSIFIER_INPUT_HEIGHT_SIZE;
+			int imgW = PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE;
 			
-			int w = img.GetLength(0);
-			int h = img.GetLength(1);
+			int w = img.GetLength(1);
+			int h = img.GetLength(2);
 
 			double widthRatio = (double)w / imgW;
 			double heightRatio = (double)h / imgH;
 
-			int[,] resizedImg = new int[imgW, imgH];
+			float[,,] resizedImg = new float[imgC, imgW, imgH];
 			for (int y = 0; y < imgH; y++)
 			{
 				for (int x = 0; x < imgW; x++)
@@ -767,7 +766,9 @@ namespace ailiaSDK
 						sourceY = h - 1;
 					}
 
-					resizedImg[x, y] = img[sourceX, sourceY];
+					for (int c = 0; c < imgC; c++){
+						resizedImg[c, x, y] = img[c, sourceX, sourceY];
+					}
 				}
 			}
 
@@ -776,14 +777,15 @@ namespace ailiaSDK
 
 
 		//Recognition用のリサイズ
-		private int[,] ResizeNormImgForRecognition(int[,] img)
+		private float[,,] ResizeNormImgForRecognition(float[,,] img)
 		{
-			int imgH = RECOGNITION_IMAGE_HEIGHT;
-			int imgW = RECOGNITION_IMAGE_WIDTH;
+			int imgC = PADDLEOCR_RECOGNITION_CHANNEL_COUNT;
+			int imgH = PADDLEOCR_RECOGNITION_IMAGE_HEIGHT;
+			int imgW = PADDLEOCR_RECOGNITION_IMAGE_WIDTH;
 			imgW = Math.Max(Math.Min(imgW, LIMITED_MAX_WIDTH), LIMITED_MIN_WIDTH);
 
-			int w = img.GetLength(0);
-			int h = img.GetLength(1);
+			int w = img.GetLength(1);
+			int h = img.GetLength(2);
 			float ratio = w / (float)h;
 			int ratio_imgH = (int)Math.Ceiling(imgH * ratio);
 			ratio_imgH = Math.Max(ratio_imgH, LIMITED_MIN_WIDTH);
@@ -796,7 +798,7 @@ namespace ailiaSDK
 			}
 
 
-			int[,] resizedImg = new int[resized_w, imgH];
+			float[,,] resizedImg = new float[imgC, resized_w, imgH];
 			double widthRatio = (double)w / resized_w;
 			double heightRatio = (double)h / imgH;
 			for (int y = 0; y < imgH; y++)
@@ -816,7 +818,9 @@ namespace ailiaSDK
 						sourceY = h - 1;
 					}
 
-					resizedImg[x, y] = img[sourceX, sourceY];
+					for (int c = 0; c < imgC; c++){
+						resizedImg[c, x, y] = img[c, sourceX, sourceY];
+					}
 				}
 			}
 
@@ -850,40 +854,26 @@ namespace ailiaSDK
 
 
 		//上下反転
-		private int[,] FlipVertical(int[,] img){
-
-			int rows = img.GetLength(0);
-			int columns = img.GetLength(1);
-			int[,] flippedImg = new int[rows, columns];
+		private float[,,] FlipVertical(float[,,] img)
+		{
+			int channels = img.GetLength(0);
+			int rows = img.GetLength(1);
+			int columns = img.GetLength(2);
+			float[,,] flippedImg = new float[channels, rows, columns];
+			
 			for (int i = 0; i < rows; i++)
 			{
 				for (int j = 0; j < columns; j++)
 				{
-					flippedImg[i, j] = img[i, columns - 1 - j];
+					for(int c = 0; c < channels; c++){
+						flippedImg[c, i, j] = img[c, i, columns - 1 - j];
+					}
 				}
 			}
+			
 
 			return flippedImg;
 		}
-
-
-		//左右反転
-		private int[,] FlipHorizontal(int[,] img){
-
-			int rows = img.GetLength(0);
-			int columns = img.GetLength(1);
-			int[,] flippedImg = new int[rows, columns];
-			for (int i = 0; i < rows; i++)
-			{
-				for (int j = 0; j < columns; j++)
-				{
-					flippedImg[i, j] = img[rows - 1 - i, j];
-				}
-			}
-
-			return flippedImg;
-		}
-
 
 		
 		private (String, float) ClsLabelDecode(int[] angle_index, float[] angle_prob){
@@ -925,5 +915,6 @@ namespace ailiaSDK
 
 			return (result_text, result_prob/result_num);
 		}
+
 	}
 }

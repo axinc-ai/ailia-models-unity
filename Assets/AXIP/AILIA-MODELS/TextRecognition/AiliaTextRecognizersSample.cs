@@ -238,7 +238,7 @@ namespace ailiaSDK
             long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             List<AiliaPaddleOCR.TextInfo> result_detections = paddle_ocr.Detection(ailia_text_detector, camera, tex_width, tex_height);
             List<AiliaPaddleOCR.TextInfo> result_classifications = paddle_ocr.Classification(ailia_text_recognizer, camera, tex_width, tex_height, result_detections);
-            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language, modelSize); //一旦返り値は入れない
+            List<AiliaPaddleOCR.TextInfo> result_recognitions = paddle_ocr.Recognition(ailia_text_recognizer, camera, tex_width, tex_height, result_classifications, txt_file, language, modelSize);
             long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
             long recognition_time = (end_time - start_time);
         
@@ -288,7 +288,8 @@ namespace ailiaSDK
                         int fy = (int)(result_recognitions[i].box[0].y);
                         fy = (int)(fy * ratio + (UIImageHeight * (1 - ratio))/2.0f + 8);
 
-                        DrawText(Color.white, result_recognitions[i].text, fx, fy, tex_width, tex_height, ratio);
+                        DrawText(Color.white, result_recognitions[i].text, fx, fy, tex_width, tex_height, scale: ratio, text_color: Color.black);
+                        Debug.Log(result_recognitions[i].text);
                     }
                 }
             }
