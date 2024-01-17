@@ -186,8 +186,6 @@ namespace ailiaSDK
 				
 				for(int r = 0; r < result_detections.Count(); r++){
 				
-					ailia_model.OpenFile(Application.temporaryCachePath + "/" +  "chi_eng_num_sym_mobile_cls_org.onnx" + ".prototxt", Application.temporaryCachePath + "/" +  "chi_eng_num_sym_mobile_cls_org.onnx");
-
 					float[] data = new float[PADDLEOCR_CLASSIFIER_INPUT_BATCH_SIZE * PADDLEOCR_CLASSIFIER_INPUT_CHANNEL_COUNT * PADDLEOCR_CLASSIFIER_INPUT_HEIGHT_SIZE * PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE];
 
 					int w = PADDLEOCR_CLASSIFIER_INPUT_WIDTH_SIZE;
@@ -303,44 +301,8 @@ namespace ailiaSDK
 				}
 
 
-				var weight_path_recognition = "";
-				switch (language)
-				{
-					case AiliaTextRecognizersSample.Language.Japanese:
-						if (modelSize == AiliaTextRecognizersSample.ModelSize.Server){
-							weight_path_recognition = "jpn_eng_num_sym_server_rec_add.onnx";
-						}else{
-							weight_path_recognition = "jpn_eng_num_sym_mobile_rec_org.onnx";
-						}
-						break;
-					case AiliaTextRecognizersSample.Language.English:
-						weight_path_recognition = "eng_num_sym_mobile_rec_org.onnx";
-						break;
-					case AiliaTextRecognizersSample.Language.Chinese:
-						if (modelSize == AiliaTextRecognizersSample.ModelSize.Server){
-							weight_path_recognition = "chi_eng_num_sym_server_rec_org.onnx";
-						}else{
-							weight_path_recognition = "chi_eng_num_sym_mobile_rec_org.onnx";
-						}
-						break;
-					case AiliaTextRecognizersSample.Language.German:
-						weight_path_recognition = "ger_eng_num_sym_mobile_rec_org.onnx";
-						break;
-					case AiliaTextRecognizersSample.Language.French:
-						weight_path_recognition = "fre_eng_num_sym_mobile_rec_org.onnx";
-						break;
-					case AiliaTextRecognizersSample.Language.Korean:
-						weight_path_recognition = "kor_eng_num_sym_mobile_rec_org.onnx";
-						break;
-					default:
-						Debug.Log("Others language are working in progress.");
-						break;
-				}
-
 				for(int r = 0; r < result_classifications.Count(); r++){
 				
-					ailia_model.OpenFile(Application.temporaryCachePath + "/" +  weight_path_recognition + ".prototxt", Application.temporaryCachePath + "/" +  weight_path_recognition);
-
 					int INPUT_BATCH_SIZE = 1;
 					int INPUT_CHANNEL_COUNT = 3;
 					int INPUT_HEIGHT_SIZE = 32;
