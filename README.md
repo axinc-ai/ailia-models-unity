@@ -122,6 +122,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | [srresnet](/Assets/AXIP/AILIA-MODELS/SuperResolution/) | [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://github.com/twtygqyy/pytorch-SRResNet) | Pytorch | 1.2.0 and later |
 | [real-esrgan](/Assets/AXIP/AILIA-MODELS/SuperResolution/) | [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | Pytorch | 1.2.9 and later |
 
+## Text recognition
+
+| Name | Detail | Exported From | Supported Ailia Version |
+|:-----------|------------:|:------------:|:------------:|
+| [paddleocr](/Assets/AXIP/AILIA-MODELS/TextRecognition/) | [PaddleOCR : Awesome multilingual OCR toolkits based on PaddlePaddle](https://github.com/PaddlePaddle/PaddleOCR) | Pytorch | 1.2.6 and later |
+
 ## Face detection
 
 | Name | Detail | Exported From | Supported Ailia Version |
