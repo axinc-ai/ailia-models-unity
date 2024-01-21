@@ -195,11 +195,6 @@ namespace ailiaSDK {
 				raw_image.texture = preview_texture;
 			}
 
-			//BlazeFace
-			// long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			// List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
-			// long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			// long detection_time = (end_time - start_time);
 			long detection_time = 0;
 			long recognition_time = 0;
 			//Draw result
@@ -274,8 +269,6 @@ namespace ailiaSDK {
 				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				detection_time = (end_time - start_time);
 				
-
-
 				//Draw result
 				for (int i = 0; i < result_detections.Count; i++)
 				{
