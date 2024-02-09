@@ -10,7 +10,8 @@ namespace ailiaSDK
 		public enum PoseEstimatorModels
 		{
 			lightweight_human_pose_estimation,
-			blazepose_fullbody
+			blazepose_fullbody,
+			pose_resnet
 		}
 
 		[SerializeField]
@@ -37,6 +38,7 @@ namespace ailiaSDK
 		private Texture2D textureBlazepose;
 		[SerializeField]
 		private ComputeShader computeShaderBlazepose;
+		private AiliaPoseResnet ailia_pose_resnet;
 
 		// AILIA open file(model file)
 		private bool FileOpened = false;
@@ -80,6 +82,22 @@ namespace ailiaSDK
 			      		string jsonPath = Application.streamingAssetsPath + "/AILIA";
 						ailia_blazepose = new AiliaBlazepose(gpu_mode, asset_path, jsonPath);
 						ailia_blazepose.computeShader = computeShaderBlazepose;
+						FileOpened = true;
+					}));
+
+					break;
+				case PoseEstimatorModels.pose_resnet:
+					var pose_folder_path = "pose_resnet";
+					var pose_model_name = "pose_resnet_50_256x192";
+					var detect_folder_path = "yolov3";
+					var detect_model_name = "yolov3.opt2";
+					urlList.Add(new ModelDownloadURL() { folder_path = pose_folder_path, file_name = pose_model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = pose_folder_path, file_name = pose_model_name + ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = detect_folder_path, file_name = detect_model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = detect_folder_path, file_name = detect_model_name + ".onnx.prototxt" });
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						ailia_pose_resnet = new AiliaPoseResnet(gpu_mode, asset_path);
 						FileOpened = true;
 					}));
 
@@ -136,6 +154,8 @@ namespace ailiaSDK
 			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
+			}else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
+				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
 			}else{
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
 			}
