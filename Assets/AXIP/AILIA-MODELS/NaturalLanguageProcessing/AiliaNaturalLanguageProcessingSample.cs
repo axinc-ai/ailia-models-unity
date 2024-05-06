@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+using ailiaTokenizer;
+
 namespace ailiaSDK
 {
 	public class AiliaNaturalLanguageProcessingSample : MonoBehaviour

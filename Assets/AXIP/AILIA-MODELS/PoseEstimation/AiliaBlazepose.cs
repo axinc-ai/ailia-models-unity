@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 
+using ailia;
+
 struct Box
 {
     public float xMin;
