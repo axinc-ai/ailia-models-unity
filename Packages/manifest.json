@@ -2,6 +2,7 @@
   "dependencies": {
     "ai.ailia.ailia": "file:/Users/kyakuno/Desktop/ailia/ailia-sdk-unity",
     "ai.ailia.ailia_audio": "file:/Users/kyakuno/Desktop/ailia/ailia-audio-unity",
+    "ai.ailia.ailia_speech": "file:/Users/kyakuno/Desktop/ailia/ailia-speech-unity",
     "ai.ailia.ailia_tokenizer": "file:/Users/kyakuno/Desktop/ailia/ailia-tokenizer-unity",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",
