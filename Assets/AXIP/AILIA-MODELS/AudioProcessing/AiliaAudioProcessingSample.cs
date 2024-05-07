@@ -1,11 +1,10 @@
 /* AILIA Unity Plugin Audio Processing Sample */
-/* Copyright 2023 AXELL CORPORATION */
+/* Copyright 2023 - 2024 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -166,7 +165,7 @@ namespace ailiaSDK {
 						flag = AiliaSpeech.AILIA_SPEECH_FLAG_LIVE;
 					}
 					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
-					int env_id = GetEnvId(gpu_mode);
+					int env_id = ailia_speech.GetEnvironmentId(gpu_mode);
 					int api_model_type = 0;
 					if (ailiaModelType == AudioProcessingModels.whisper_tiny){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_TINY;
@@ -203,28 +202,6 @@ namespace ailiaSDK {
 			}
 		}
 
-		private int GetEnvId(bool gpu_mode){
-			string env_name = "auto";
-			int env_id = Ailia.AILIA_ENVIRONMENT_ID_AUTO;
-			if (gpu_mode) {
-				int count = 0;
-				Ailia.ailiaGetEnvironmentCount(ref count);
-				for (int i = 0; i < count; i++){
-					IntPtr env_ptr = IntPtr.Zero;
-					Ailia.ailiaGetEnvironment(ref env_ptr, (uint)i, Ailia.AILIA_ENVIRONMENT_VERSION);
-					Ailia.AILIAEnvironment env = (Ailia.AILIAEnvironment)Marshal.PtrToStructure(env_ptr, typeof(Ailia.AILIAEnvironment));
-
-					if (env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_MPS || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_CUDA || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_VULKAN){
-						env_id = env.id;
-						env_name = Marshal.PtrToStringAnsi(env.name);
-					}
-				}
-			} else {
-				env_name = "cpu";
-			}
-			return env_id;
-		}
-		
 		private void DestroyAiliaNetwork()
 		{
 			ailia_vad.Close();

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Runtime.InteropServices;
 
 using ailia;
 using ailiaTokenizer;
@@ -51,7 +50,6 @@ namespace ailiaSDK
 		private string[] chunk_text = null;
 		private List<float[]> chunk_embedding;
 		private int chunk_cnt = 0;
-		private string env_name = "";
 
 		void Start()
 		{
@@ -133,7 +131,7 @@ namespace ailiaSDK
 					modelPrepared = ailiaModel.OpenFile(asset_path + "/" + "multilingual-e5-base.onnx.prototxt", asset_path + "/" + "multilingual-e5-base.onnx");
 				}
 				if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja || modelType == NaturalLanguageProcessingSampleModels.fugumt_ja_en){
-					int env_id = GetEnvId(gpu_mode);
+					int env_id = ailia_speech_translate.GetEnvironmentId(gpu_mode);
 					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 					if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja ){
 						modelPrepared = ailia_speech_translate.Open(asset_path + "/" +"fugumt_en_ja_seq2seq-lm-with-past.onnx", null, asset_path + "/" +"fugumt_en_ja_source.spm", asset_path + "/" +"fugumt_en_ja_target.spm", AiliaSpeech.AILIA_SPEECH_POST_PROCESS_TYPE_FUGUMT_EN_JA, env_id, memory_mode);
@@ -164,27 +162,6 @@ namespace ailiaSDK
 			}));
 
 			return ailiaModel;
-		}
-
-		private int GetEnvId(bool gpu_mode){
-			int env_id = Ailia.AILIA_ENVIRONMENT_ID_AUTO;
-			if (gpu_mode) { // GPU
-				int count = 0;
-				Ailia.ailiaGetEnvironmentCount(ref count);
-				for (int i = 0; i < count; i++){
-					IntPtr env_ptr = IntPtr.Zero;
-					Ailia.ailiaGetEnvironment(ref env_ptr, (uint)i, Ailia.AILIA_ENVIRONMENT_VERSION);
-					Ailia.AILIAEnvironment env = (Ailia.AILIAEnvironment)Marshal.PtrToStructure(env_ptr, typeof(Ailia.AILIAEnvironment));
-
-					if (env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_MPS || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_CUDA || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_VULKAN){
-						env_id = env.id;
-						env_name = Marshal.PtrToStringAnsi(env.name);
-					}
-				}
-			} else {
-				env_name = "cpu";
-			}
-			return env_id;
 		}
 
 		void Update()
