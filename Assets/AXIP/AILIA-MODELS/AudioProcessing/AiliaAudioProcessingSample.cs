@@ -36,11 +36,13 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool gpu_mode = false;
 		[SerializeField]
-		private bool f0_gpu_mode = false;
-		[SerializeField]
 		private bool mic_mode = false;
 		[SerializeField]
-		private bool async_mode = false;	// Async Processing
+		private bool rvc_f0_gpu_mode = false;
+		[SerializeField]
+		private bool rvc_async_mode = false;	// Async Processing
+		[SerializeField]
+		private bool whisper_live_transcribe = true;
 
 		//Input Audio Clip
 		public AudioClip audio_clip = null;
@@ -56,8 +58,6 @@ namespace ailiaSDK {
 		private RawImage raw_image = null;
 		private Text label_text = null;
 		private Text mode_text = null;
-		private long rvc_time = 0;
-		private long f0_time = 0;
 
 		//AILIA
 		private AiliaSileroVad ailia_vad = new AiliaSileroVad();
@@ -70,12 +70,15 @@ namespace ailiaSDK {
 		//AILIA open file
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
-
-		//Crepe
-		private bool crepe_tiny = true;
-
-		//RVC model format
+	
+		//RVC
 		private int rvc_version = 1;
+		private bool crepe_tiny = true;
+		private long rvc_time = 0;
+		private long f0_time = 0;
+
+		//Whisper
+		string content_text = "";
 
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
@@ -136,9 +139,9 @@ namespace ailiaSDK {
 							FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", rvc_version, gpu_mode);
 							if (FileOpened == true){
 								if (crepe_tiny){
-									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe_tiny.onnx.prototxt", asset_path + "/crepe_tiny.onnx", f0_gpu_mode);
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe_tiny.onnx.prototxt", asset_path + "/crepe_tiny.onnx", rvc_f0_gpu_mode);
 								}else{
-									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", rvc_f0_gpu_mode);
 								}
 							}else{
 								Debug.LogError("Please put rvc_f0.onnx and rvc_f0.onnx.prototxt to streaming assets path.");
@@ -158,7 +161,10 @@ namespace ailiaSDK {
 					string vad_path = "silero_vad.onnx";
 
 					int task = AiliaSpeech.AILIA_SPEECH_TASK_TRANSCRIBE; //AiliaSpeech.AILIA_SPEECH_TASK_TRANSLATE;
-					int flag = AiliaSpeech.AILIA_SPEECH_FLAG_LIVE; //AiliaSpeech.AILIA_SPEECH_FLAG_NONE;
+					int flag = AiliaSpeech.AILIA_SPEECH_FLAG_NONE;
+					if (whisper_live_transcribe){
+						flag = AiliaSpeech.AILIA_SPEECH_FLAG_LIVE;
+					}
 					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 					int env_id = GetEnvId(gpu_mode);
 					int api_model_type = 0;
@@ -271,13 +277,6 @@ namespace ailiaSDK {
 				return;
 			}
 
-			// Display Processing
-			if (ailia_speech.IsProcessing()){
-				if (content_text == ""){
-					content_text = "[processing]";
-				}
-			}
-
 			// Get result
 			WhisperDisplayIntermediateResult();
 			WhisperGetResult();
@@ -287,24 +286,22 @@ namespace ailiaSDK {
 			ailia_speech.Transcribe(waveData, frequency, channels, complete);
 		}
 
-		string content_text = "";
-
 		private void WhisperDisplayIntermediateResult(){
 			string intermediateText = ailia_speech.GetIntermediateText();
 			if (content_text != "" || intermediateText != ""){
 				if (intermediateText != ""){
-					label_text.text = "[processing] " + intermediateText;
+					label_text.text = "[processing] " + intermediateText + "\n" + content_text;
 				}else{
 					label_text.text = content_text;
+				}
+			} else{
+				if (ailia_speech.IsProcessing()){
+					label_text.text = "[processing]";
 				}
 			}
 		}
 
-
 		private void WhisperGetResult(){
-			if (content_text == "[processing]"){
-				content_text = "";
-			}
 			List<string> results = ailia_speech.GetResults();
 			for (uint idx = 0; idx < results.Count; idx++){
 				string text = results[(int)idx];
@@ -329,14 +326,14 @@ namespace ailiaSDK {
 						label_text.text = "vad time : " + (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 					}
 				}
-				if (async_mode && ailia_rvc.AsyncProcessing()){
+				if (rvc_async_mode && ailia_rvc.AsyncProcessing()){
 					label_text.text += "\nrvc async processing\n";
 				}
 			}
 
 			// Split
 			ailia_split.Split(vad_result);
-			if (async_mode){
+			if (rvc_async_mode){
 				RvcGetResultAsync();
 				if (ailia_split.GetAudioClipCount() > 0){
 					if (!ailia_rvc.AsyncProcessing()){
