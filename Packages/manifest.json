@@ -1,9 +1,9 @@
 {
   "dependencies": {
-    "ai.ailia.ailia": "file:/Users/kyakuno/Desktop/ailia/ailia-sdk-unity",
-    "ai.ailia.ailia_audio": "file:/Users/kyakuno/Desktop/ailia/ailia-audio-unity",
-    "ai.ailia.ailia_speech": "file:/Users/kyakuno/Desktop/ailia/ailia-speech-unity",
-    "ai.ailia.ailia_tokenizer": "file:/Users/kyakuno/Desktop/ailia/ailia-tokenizer-unity",
+    "ai.ailia.ailia": "https://github.com/axinc-ai/ailia-sdk-unity.git#v1.3.0",
+    "ai.ailia.ailia_audio": "https://github.com/axinc-ai/ailia-audio-unity.git#v1.3.0",
+    "ai.ailia.ailia_speech": "https://github.com/axinc-ai/ailia-speech-unity.git#v1.2.1",
+    "ai.ailia.ailia_tokenizer": "https://github.com/axinc-ai/ailia-tokenizer-unity.git#v1.1.0",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",
     "com.unity.collab-proxy": "1.14.12",
