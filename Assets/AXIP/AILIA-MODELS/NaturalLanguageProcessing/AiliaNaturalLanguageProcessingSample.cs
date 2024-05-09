@@ -1,10 +1,14 @@
 /* AILIA Unity Plugin Natural Language Processing Sample */
-/* Copyright 2023 AXELL CORPORATION */
+/* Copyright 2023 - 2024 AXELL CORPORATION */
 
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+
+using ailia;
+using ailiaTokenizer;
+using ailiaSpeech;
 
 namespace ailiaSDK
 {
@@ -14,8 +18,14 @@ namespace ailiaSDK
 		public enum NaturalLanguageProcessingSampleModels
 		{
 			sentence_transformer_japanese,
-			multilingual_e5
+			multilingual_e5,
+			fugumt_en_ja,
+			fugumt_ja_en
 		}
+
+		// UI
+		[SerializeField]
+		public InputField input_field;
 
 		// Settings
 		public NaturalLanguageProcessingSampleModels modelType = NaturalLanguageProcessingSampleModels.sentence_transformer_japanese;
@@ -30,6 +40,7 @@ namespace ailiaSDK
 		private AiliaModel ailiaModel = null;
 		private AiliaTokenizerModel ailiaTokenizer = null;
 		private AiliaNaturalLanguageProcessingTextEmbedding textEmbedding = new AiliaNaturalLanguageProcessingTextEmbedding();
+		private AiliaSpeechTranslateModel ailia_speech_translate = new AiliaSpeechTranslateModel();
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
@@ -99,6 +110,17 @@ namespace ailiaSDK
 				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "multilingual-e5-base.onnx" });
 				urlList.Add(new ModelDownloadURL() { folder_path = "multilingual-e5", file_name = "sentencepiece.bpe.model" });
 			}
+			if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja){
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-en-ja", file_name = "seq2seq-lm-with-past.onnx", local_name = "fugumt_en_ja_seq2seq-lm-with-past.onnx" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-en-ja", file_name = "source.spm", local_name = "fugumt_en_ja_source.spm" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-en-ja", file_name = "target.spm", local_name = "fugumt_en_ja_target.spm" });
+			}
+			if (modelType == NaturalLanguageProcessingSampleModels.fugumt_ja_en){
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-ja-en", file_name = "encoder_model.onnx", local_name = "fugumt_ja_en_encoder_model.onnx" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-ja-en", file_name = "decoder_model.onnx", local_name = "fugumt_ja_en_decoder_model.onnx" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-ja-en", file_name = "source.spm", local_name = "fugumt_ja_en_source.spm"});
+				urlList.Add(new ModelDownloadURL() { folder_path = "fugumt-ja-en", file_name = "target.spm", local_name = "fugumt_ja_en_target.spm"});
+			}
 
 			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 			{
@@ -108,18 +130,32 @@ namespace ailiaSDK
 				if (modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
 					modelPrepared = ailiaModel.OpenFile(asset_path + "/" + "multilingual-e5-base.onnx.prototxt", asset_path + "/" + "multilingual-e5-base.onnx");
 				}
+				if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja || modelType == NaturalLanguageProcessingSampleModels.fugumt_ja_en){
+					int env_id = ailia_speech_translate.GetEnvironmentId(gpu_mode);
+					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
+					if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja ){
+						modelPrepared = ailia_speech_translate.Open(asset_path + "/" +"fugumt_en_ja_seq2seq-lm-with-past.onnx", null, asset_path + "/" +"fugumt_en_ja_source.spm", asset_path + "/" +"fugumt_en_ja_target.spm", AiliaSpeech.AILIA_SPEECH_POST_PROCESS_TYPE_FUGUMT_EN_JA, env_id, memory_mode);
+					}
+					if (modelType == NaturalLanguageProcessingSampleModels.fugumt_ja_en){
+						modelPrepared = ailia_speech_translate.Open(asset_path + "/" +"fugumt_ja_en_encoder_model.onnx", asset_path + "/" +"fugumt_ja_en_decoder_model.onnx", asset_path + "/" +"fugumt_ja_en_source.spm", asset_path + "/" +"fugumt_ja_en_target.spm", AiliaSpeech.AILIA_SPEECH_POST_PROCESS_TYPE_FUGUMT_JA_EN, env_id, memory_mode);
+					}
+				}
+
 				if (modelPrepared == false){
 					Debug.Log("ailiaModel.OpenFile failed");
 				}
-				if (modelPrepared){
-					modelPrepared = ailiaTokenizer.Create(AiliaTokenizer.AILIA_TOKENIZER_TYPE_XLM_ROBERTA, AiliaTokenizer.AILIA_TOKENIZER_FLAG_NONE);
-					if (modelPrepared == false){
-						Debug.Log("ailiaTokenizer.Create failed");
-					}
+
+				if (modelType == NaturalLanguageProcessingSampleModels.sentence_transformer_japanese || modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
 					if (modelPrepared){
-						modelPrepared = ailiaTokenizer.Open(asset_path + "/sentencepiece.bpe.model");
+						modelPrepared = ailiaTokenizer.Create(AiliaTokenizer.AILIA_TOKENIZER_TYPE_XLM_ROBERTA, AiliaTokenizer.AILIA_TOKENIZER_FLAG_NONE);
 						if (modelPrepared == false){
-							Debug.Log("ailiaTokenizer.Open failed");
+							Debug.Log("ailiaTokenizer.Create failed");
+						}
+						if (modelPrepared){
+							modelPrepared = ailiaTokenizer.Open(asset_path + "/sentencepiece.bpe.model");
+							if (modelPrepared == false){
+								Debug.Log("ailiaTokenizer.Open failed");
+							}
 						}
 					}
 				}
@@ -135,32 +171,19 @@ namespace ailiaSDK
 				return;
 			}
 
-			string query_text = "NNAPIとは何ですか。";
 			string result = "";
-
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			if (chunk_cnt < chunk_text.Length){
-				chunk_embedding.Add(textEmbedding.Embedding(chunk_text[chunk_cnt], ailiaModel, ailiaTokenizer));
-				result = "Embedding : "+chunk_text[chunk_cnt]+"\n";
-				chunk_cnt++;
-			}else{
-				float [] query_embedding = textEmbedding.Embedding(query_text, ailiaModel, ailiaTokenizer);
-				float max_sim = 0.0f;
-				for (int i = 0; i < chunk_cnt; i++){
-					float sim = textEmbedding.CosSimilarity(query_embedding, chunk_embedding[i]);
-					Debug.Log(""+ chunk_text[i]+"/"+sim);
-					if (sim > max_sim){
-						max_sim = sim;
-						result = chunk_text[i];
+			if (modelType == NaturalLanguageProcessingSampleModels.sentence_transformer_japanese || modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
+				if (chunk_cnt < chunk_text.Length){
+					long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+					chunk_embedding.Add(textEmbedding.Embedding(chunk_text[chunk_cnt], ailiaModel, ailiaTokenizer));
+					result = "Embedding : "+chunk_text[chunk_cnt]+"\n";
+					chunk_cnt++;
+					long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+					if (label_text != null)
+					{
+						label_text.text = result+(end_time - start_time).ToString() + "ms\n" + ailiaModel.EnvironmentName();
 					}
 				}
-				result = "Query : "+query_text+"\nResult : "+result+" ("+max_sim+")\n";
-			}
-			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-
-			if (label_text != null)
-			{
-				label_text.text = result+(end_time - start_time).ToString() + "ms\n" + ailiaModel.EnvironmentName();
 			}
 		}
 
@@ -184,6 +207,41 @@ namespace ailiaSDK
 			}
 		}
 
+		public void Submit(){
+			if (!modelPrepared)
+			{
+				return;
+			}
 
+			string query_text = input_field.text;
+			string result = "";
+
+			if (modelType == NaturalLanguageProcessingSampleModels.fugumt_en_ja || modelType == NaturalLanguageProcessingSampleModels.fugumt_ja_en){
+				result = ailia_speech_translate.Translate(query_text);
+				label_text.text = result;
+			}
+
+			if (modelType == NaturalLanguageProcessingSampleModels.sentence_transformer_japanese || modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
+				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				if (chunk_cnt >= chunk_text.Length){
+					float [] query_embedding = textEmbedding.Embedding(query_text, ailiaModel, ailiaTokenizer);
+					float max_sim = 0.0f;
+					for (int i = 0; i < chunk_cnt; i++){
+						float sim = textEmbedding.CosSimilarity(query_embedding, chunk_embedding[i]);
+						Debug.Log(""+ chunk_text[i]+"/"+sim);
+						if (sim > max_sim){
+							max_sim = sim;
+							result = chunk_text[i];
+						}
+					}
+					result = "Query : "+query_text+"\nResult : "+result+" ("+max_sim+")\n";
+				}
+				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				if (label_text != null)
+				{
+					label_text.text = result+(end_time - start_time).ToString() + "ms\n" + ailiaModel.EnvironmentName();
+				}
+			}
+		}
 	}
 }

@@ -12,6 +12,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+using ailiaAudio;
+
 namespace ailiaSDK
 {
 	public class AiliaRvc

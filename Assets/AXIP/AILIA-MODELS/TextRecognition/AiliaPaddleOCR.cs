@@ -11,8 +11,9 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 using System.Drawing;
-
 using System.Text;
+
+using ailia;
 
 namespace ailiaSDK
 {

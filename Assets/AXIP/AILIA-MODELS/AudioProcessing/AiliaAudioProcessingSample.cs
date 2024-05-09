@@ -1,14 +1,17 @@
 /* AILIA Unity Plugin Audio Processing Sample */
-/* Copyright 2023 AXELL CORPORATION */
+/* Copyright 2023 - 2024 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 
 using UnityEngine;
 using UnityEngine.UI;
+
+using ailia;
+using ailiaAudio;
+using ailiaSpeech;
 
 namespace ailiaSDK {
 	public class AiliaAudioProcessingSample : AiliaRenderer {
@@ -17,7 +20,10 @@ namespace ailiaSDK {
 		{
 			silero_vad,
 			rvc,
-			rvc_with_f0
+			rvc_with_f0,
+			whisper_tiny,
+			whisper_small,
+			whisper_medium,
 		}
 
 		[SerializeField]
@@ -29,11 +35,13 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool gpu_mode = false;
 		[SerializeField]
-		private bool f0_gpu_mode = false;
-		[SerializeField]
 		private bool mic_mode = false;
 		[SerializeField]
-		private bool async_mode = false;	// Async Processing
+		private bool rvc_f0_gpu_mode = false;
+		[SerializeField]
+		private bool rvc_async_mode = false;	// Async Processing
+		[SerializeField]
+		private bool whisper_live_transcribe = true;
 
 		//Input Audio Clip
 		public AudioClip audio_clip = null;
@@ -49,27 +57,27 @@ namespace ailiaSDK {
 		private RawImage raw_image = null;
 		private Text label_text = null;
 		private Text mode_text = null;
-		private long rvc_time = 0;
-		private long f0_time = 0;
-
-		//Preview
-		private Texture2D wave_texture = null;
 
 		//AILIA
 		private AiliaSileroVad ailia_vad = new AiliaSileroVad();
 		private AiliaRvc ailia_rvc = new AiliaRvc();
 		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
 		private AiliaSplitAudio ailia_split = new AiliaSplitAudio();
+		private AiliaSpeechModel ailia_speech = new AiliaSpeechModel();
+		private AiliaDisplayAudio ailia_display_audio = new AiliaDisplayAudio();
 
 		//AILIA open file
 		private AiliaDownload ailia_download = new AiliaDownload();
 		private bool FileOpened = false;
-
-		//Crepe
-		private bool crepe_tiny = true;
-
-		//RVC model format
+	
+		//RVC
 		private int rvc_version = 1;
+		private bool crepe_tiny = true;
+		private long rvc_time = 0;
+		private long f0_time = 0;
+
+		//Whisper
+		string content_text = "";
 
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
@@ -130,9 +138,9 @@ namespace ailiaSDK {
 							FileOpened = ailia_rvc.OpenFile(asset_path + "/hubert_base.onnx.prototxt", asset_path + "/hubert_base.onnx", Application.streamingAssetsPath + "/rvc_f0.onnx.prototxt", Application.streamingAssetsPath + "/rvc_f0.onnx", rvc_version, gpu_mode);
 							if (FileOpened == true){
 								if (crepe_tiny){
-									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe_tiny.onnx.prototxt", asset_path + "/crepe_tiny.onnx", f0_gpu_mode);
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe_tiny.onnx.prototxt", asset_path + "/crepe_tiny.onnx", rvc_f0_gpu_mode);
 								}else{
-									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", f0_gpu_mode);
+									FileOpened = ailia_rvc.OpenFileF0(asset_path + "/crepe.onnx.prototxt", asset_path + "/crepe.onnx", rvc_f0_gpu_mode);
 								}
 							}else{
 								Debug.LogError("Please put rvc_f0.onnx and rvc_f0.onnx.prototxt to streaming assets path.");
@@ -141,6 +149,52 @@ namespace ailiaSDK {
 							ailia_rvc.SetTargetSmaplingRate(48000);
 						}
 					}));
+					break;
+				case AudioProcessingModels.whisper_tiny:
+				case AudioProcessingModels.whisper_small:
+				case AudioProcessingModels.whisper_medium:
+					mode_text.text = "whisper";
+
+					string encoder_path = "";
+					string decoder_path = "";
+					string vad_path = "silero_vad.onnx";
+
+					int task = AiliaSpeech.AILIA_SPEECH_TASK_TRANSCRIBE; //AiliaSpeech.AILIA_SPEECH_TASK_TRANSLATE;
+					int flag = AiliaSpeech.AILIA_SPEECH_FLAG_NONE;
+					if (whisper_live_transcribe){
+						flag = AiliaSpeech.AILIA_SPEECH_FLAG_LIVE;
+					}
+					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
+					int env_id = ailia_speech.GetEnvironmentId(gpu_mode);
+					int api_model_type = 0;
+					if (ailiaModelType == AudioProcessingModels.whisper_tiny){
+						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_TINY;
+						encoder_path = "encoder_tiny.opt3.onnx";
+						decoder_path = "decoder_tiny_fix_kv_cache.opt3.onnx";
+					}
+					if (ailiaModelType == AudioProcessingModels.whisper_small){
+						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_SMALL;
+						encoder_path = "encoder_small.opt3.onnx";
+						decoder_path = "decoder_small_fix_kv_cache.opt3.onnx";
+					}
+					if (ailiaModelType == AudioProcessingModels.whisper_medium){
+						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_MEDIUM;
+						encoder_path = "encoder_medium.opt3.onnx";
+						decoder_path = "decoder_medium_fix_kv_cache.opt3.onnx";
+					}
+					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = encoder_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = decoder_path });
+					bool virtual_memory_enable = false;
+					string language = "auto"; // ja
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_speech.Open(asset_path + "/" + encoder_path, asset_path + "/" + decoder_path, env_id, memory_mode, api_model_type, task, flag, language);
+						if (FileOpened) {
+							FileOpened = ailia_speech.OpenVad(asset_path + "/" + vad_path, AiliaSpeech.AILIA_SPEECH_VAD_TYPE_SILERO);
+						}
+					}));
+
 					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
@@ -152,80 +206,8 @@ namespace ailiaSDK {
 		{
 			ailia_vad.Close();
 			ailia_rvc.Close();
+			ailia_speech.Close();
 		}		
-
-		// Display pcm and vad confidence value
-		private float[] displayWaveData = null;
-		private float[] displayConfData = null;
-
-		private void DisplayPreviewPcm(Color32 [] colors, float [] waveData, float [] conf, uint channels){
-			int steps = 10;
-			int w = wave_texture.width;
-			int h = wave_texture.height / 4;
-			int original_h = wave_texture.height;
-			int buf_w = w * steps;
-			int offset_y = 3 * h;
-
-			if (displayWaveData == null){
-				displayWaveData = new float[buf_w];
-				displayConfData = new float[buf_w];
-			}
-
-			int add_data_n = (int)(waveData.Length / channels);
-			int reuse_data_n = buf_w - add_data_n;
-			for (int i = 0; i < reuse_data_n; i++){
-				displayWaveData[i] = displayWaveData[i + (buf_w - reuse_data_n)];
-				displayConfData[i] = displayConfData[i + (buf_w - reuse_data_n)];
-			}
-			for (int i = reuse_data_n; i < buf_w; i++){
-				if (i >= 0){
-					displayWaveData[i] = waveData[(i - reuse_data_n) * channels];
-					displayConfData[i] = conf[(i - reuse_data_n) * channels];
-				}
-			}
-
-			for (int x = 0; x < w ; x++){
-				for (int y = 0; y < original_h ; y++){
-					colors[y*w+x] = new Color32(0,0,0,255);
-				}
-				int y3 = (int)(displayConfData[x * steps] * h);
-				if (y3 >= 0 && y3 < h){
-					for (int y = 0; y < y3 ; y++){
-						colors[(y+offset_y)*w+x] = new Color32(255,0,0,255);
-					}
-				}
-				int y2 = (int)(displayWaveData[x * steps] * h / 2 + h / 2);
-				if (y2 >= 0 && y2 < h){
-					colors[(y2+offset_y)*w+x] = new Color32(0,255,0,255);
-				}
-			}
-		}
-
-		// Display splitted audio clip
-		private void DisplayVadAudioClip(Color32 [] colors, AudioClip clip, int i, int count){
-			float [] buf = new float[clip.channels * clip.samples];
-			clip.GetData(buf, 0);
-
-			int w = wave_texture.width;
-			int div = count;
-			if (div < 3){
-				div = 3;
-			}
-			int h = (wave_texture.height - wave_texture.height/4) / div;
-			int steps = clip.samples / w;
-			if (steps < 1){
-				steps = 1;
-			}
-			int offset_y = 3 * wave_texture.height/4 - (i + 1) * h;
-			int buf_w = w * steps;
-
-			for (int x = 0; x < w ; x++){
-				int y2 = (int)(buf[x * steps] * h / 2 + h / 2);
-				if (y2 >= 0 && y2 < h){
-					colors[(offset_y + y2)*w+x] = new Color32(0,255,0,255);
-				}
-			}
-		}
 
 		// Use this for initialization
 		void Start()
@@ -247,13 +229,8 @@ namespace ailiaSDK {
 			Clear();
 
 			//Get camera image
-			int tex_width = 480;
-			int tex_height = 480;
-			if (wave_texture == null)
-			{
-				wave_texture = new Texture2D(tex_width, tex_height);
-				raw_image.texture = wave_texture;
-			}
+			raw_image.texture = ailia_display_audio.Create();
+
 			
 			// Get Mic Input
 			float[] waveData = null;
@@ -261,6 +238,56 @@ namespace ailiaSDK {
 			uint frequency = 1;
 			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
+			if (ailiaModelType == AudioProcessingModels.whisper_tiny || ailiaModelType == AudioProcessingModels.whisper_small || ailiaModelType == AudioProcessingModels.whisper_medium){
+				WhisperUpdate(waveData, channels, frequency);
+			} else {
+				VadAndRvcUpdate(waveData, channels, frequency);
+			}
+		}
+
+		void WhisperUpdate(float[] waveData, uint channels, uint frequency){
+			// Preview
+			ailia_display_audio.DisplayPcm(waveData, null, channels);
+
+			// Error handle
+			if (ailia_speech.IsError()){
+				return;
+			}
+
+			// Get result
+			WhisperDisplayIntermediateResult();
+			WhisperGetResult();
+
+			// Transcribe request
+			bool complete = ailia_mic.IsComplete();
+			ailia_speech.Transcribe(waveData, frequency, channels, complete);
+		}
+
+		private void WhisperDisplayIntermediateResult(){
+			string intermediateText = ailia_speech.GetIntermediateText();
+			if (content_text != "" || intermediateText != ""){
+				if (intermediateText != ""){
+					label_text.text = "[processing] " + intermediateText + "\n" + content_text;
+				}else{
+					label_text.text = content_text;
+				}
+			} else{
+				if (ailia_speech.IsProcessing()){
+					label_text.text = "[processing]";
+				}
+			}
+		}
+
+		private void WhisperGetResult(){
+			List<string> results = ailia_speech.GetResults();
+			for (uint idx = 0; idx < results.Count; idx++){
+				string text = results[(int)idx];
+				string display_text = text + "\n";
+				content_text = display_text + content_text;
+			}
+		}
+
+		void VadAndRvcUpdate(float[] waveData, uint channels, uint frequency){
 			// VAD
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			AiliaSileroVad.VadResult vad_result = ailia_vad.VAD(waveData, (int)channels, (int)frequency);
@@ -276,25 +303,25 @@ namespace ailiaSDK {
 						label_text.text = "vad time : " + (end_time - start_time) + "ms\n" + ailia_vad.EnvironmentName();
 					}
 				}
-				if (async_mode && ailia_rvc.AsyncProcessing()){
+				if (rvc_async_mode && ailia_rvc.AsyncProcessing()){
 					label_text.text += "\nrvc async processing\n";
 				}
 			}
 
 			// Split
 			ailia_split.Split(vad_result);
-			if (async_mode){
-				GetResultAsync();
+			if (rvc_async_mode){
+				RvcGetResultAsync();
 				if (ailia_split.GetAudioClipCount() > 0){
 					if (!ailia_rvc.AsyncProcessing()){
 						AudioClip clip = ailia_split.PopAudioClip();
-						PushSplitAudioAsync(clip);
+						RvcPushSplitAudioAsync(clip);
 					}
 				}
 			}else{
 				if (ailia_split.GetAudioClipCount() > 0){
 					AudioClip clip = ailia_split.PopAudioClip();
-					PushSplitAudio(clip);
+					RvcPushSplitAudio(clip);
 				}
 			}
 
@@ -306,16 +333,10 @@ namespace ailiaSDK {
 			}
 			
 			// Preview
-			Color32 [] colors = wave_texture.GetPixels32();
-			DisplayPreviewPcm(colors, vad_result.pcm, vad_result.conf, channels);
-			for (int i = 0; i < vad_audio_clip.Count; i++){
-				DisplayVadAudioClip(colors, vad_audio_clip[i], i, vad_audio_clip.Count);
-			}
-			wave_texture.SetPixels32(colors);
-			wave_texture.Apply();
+			ailia_display_audio.DisplayVad(vad_result, vad_audio_clip, channels);
 		}
 
-		private void PushSplitAudio(AudioClip clip)
+		private void RvcPushSplitAudio(AudioClip clip)
 		{
 			if (ailiaModelType == AudioProcessingModels.rvc || ailiaModelType == AudioProcessingModels.rvc_with_f0){
 				clip = ailia_rvc.Process(clip);
@@ -325,7 +346,7 @@ namespace ailiaSDK {
 			vad_audio_clip_play_list.Add(clip);
 		}
 
-		private void PushSplitAudioAsync(AudioClip clip)
+		private void RvcPushSplitAudioAsync(AudioClip clip)
 		{
 			if (ailiaModelType == AudioProcessingModels.rvc || ailiaModelType == AudioProcessingModels.rvc_with_f0){
 				ailia_rvc.AsyncProcess(clip);
@@ -335,7 +356,7 @@ namespace ailiaSDK {
 			}
 		}
 
-		private void GetResultAsync(){
+		private void RvcGetResultAsync(){
 			if (ailia_rvc.AsyncResultExist()){
 				AudioClip clip = ailia_rvc.AsyncGetResult();
 				vad_audio_clip.Add(clip);

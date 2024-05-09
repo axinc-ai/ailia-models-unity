@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK {
 	public class AiliaDetectorsSample : AiliaRenderer {
 		public enum DetectorModels

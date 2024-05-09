@@ -11,6 +11,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaBlazeface
