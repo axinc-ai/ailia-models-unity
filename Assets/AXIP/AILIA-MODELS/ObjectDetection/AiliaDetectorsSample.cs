@@ -29,7 +29,9 @@ namespace ailiaSDK {
 			mobilenet_ssd,
 			yolox_nano,
 			yolox_tiny,
-			yolox_s
+			yolox_s,
+			yolox_tiny_nnapi,
+			yolox_s_nnapi,
 		}
 
 		[SerializeField]
@@ -53,6 +55,7 @@ namespace ailiaSDK {
 
 		//AILIA
 		private AiliaDetectorModel ailia_detector = new AiliaDetectorModel();
+		private AiliaTFLiteYoloxSample ailia_tflite = new AiliaTFLiteYoloxSample();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -78,6 +81,7 @@ namespace ailiaSDK {
 			{
 				ailia_detector.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
+			string base_url = "";
 			switch (modelType)
 			{
 				case DetectorModels.yolov1_tiny:
@@ -375,6 +379,32 @@ namespace ailiaSDK {
 
 					break;
 
+				case DetectorModels.yolox_tiny_nnapi:
+				case DetectorModels.yolox_s_nnapi:
+					if (modelType == DetectorModels.yolox_tiny_nnapi){
+						mode_text.text = "ailia yolox tiny NNAPI Detector";
+					}else{
+						mode_text.text = "ailia yolox s NNAPI Detector";
+					}
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
+					threshold = 0.25f;
+					iou = 0.45f;
+					category_n = 80;
+
+					if (modelType == DetectorModels.yolox_tiny_nnapi){
+						model = "yolox_tiny_full_integer_quant.opt.tflite";
+					}else{
+						model = "yolox_s_full_integer_quant.opt.tflite";
+					}
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = model});
+					base_url = "https://storage.googleapis.com/ailia-models-tflite/";
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_tflite.CreateAiliaTFLite(asset_path + "/" + model);
+					}, base_url));
+					break;
+
 				case DetectorModels.mobilenet_ssd:
 					mode_text.text = "ailia mobilenet_ssd Detector. Pretraine model : " + pretrainedModel;
 					classifierLabel = AiliaClassifierLabel.VOC_CATEGORY;
@@ -412,6 +442,7 @@ namespace ailiaSDK {
 		private void DestroyAiliaDetector()
 		{
 			ailia_detector.Close();
+			ailia_tflite.DestroyAiliaTFLite();
 		}
 
 		// Use this for initialization
@@ -449,19 +480,30 @@ namespace ailiaSDK {
 
 			//Detection
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
-			List<AiliaDetector.AILIADetectorObject> list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
+			List<AiliaDetector.AILIADetectorObject> list = new List<AiliaDetector.AILIADetectorObject>();
+			if (ailiaModelType == DetectorModels.yolox_tiny_nnapi || ailiaModelType == DetectorModels.yolox_s_nnapi){
+				list = ailia_tflite.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
+			}else{
+				list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
+			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 
 			long start_time_class = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			foreach (AiliaDetector.AILIADetectorObject obj in list)
 			{
-				Classifier(obj, camera, tex_width, tex_height);
+				DisplayDetectedResult(obj, camera, tex_width, tex_height);
 			}
 			long end_time_class = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			if (label_text != null)
 			{
-				label_text.text = (end_time - start_time) + (end_time_class - start_time_class) + "ms\n" + ailia_detector.EnvironmentName();
+				string env_name;
+				if (ailiaModelType == DetectorModels.yolox_tiny_nnapi || ailiaModelType == DetectorModels.yolox_s_nnapi){
+					env_name = ailia_tflite.GetDeviceName();
+				}else{
+					env_name = ailia_detector.EnvironmentName();
+				}
+				label_text.text = (end_time - start_time) + (end_time_class - start_time_class) + "ms\n" + env_name;
 			}
 
 			//Apply
@@ -469,7 +511,7 @@ namespace ailiaSDK {
 			preview_texture.Apply();
 		}
 
-		private void Classifier(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
+		private void DisplayDetectedResult(AiliaDetector.AILIADetectorObject box, Color32[] camera, int tex_width, int tex_height)
 		{
 			//Convert to pixel domain
 			int x1 = (int)(box.x * tex_width);
