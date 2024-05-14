@@ -152,8 +152,6 @@ The collection of pre-trained, state-of-the-art models for Unity.
 
 ## Natural Language Processing
 
-This model requires the installation of [ailia Tokenizer](https://axip-console.appspot.com/trial/terms/AILIA-TOKENIZER?lang=en).
-
 | Name | Detail | Exported From | Supported Ailia Version | Blog |
 |:-----------|------------:|:------------:|:------------:|:------------:|
 |[sentence_transformers_japanese](/Assets/AXIP/AILIA-MODELS/NaturalLanguageProcessing/) | [sentence transformers](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2) | Pytorch | 1.2.7 and later | [JP](https://medium.com/axinc/sentencetransformer-%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%81%8B%E3%82%89embedding%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B%E8%A8%80%E8%AA%9E%E5%87%A6%E7%90%86%E3%83%A2%E3%83%87%E3%83%AB-b7d2a9bb2c31) |
