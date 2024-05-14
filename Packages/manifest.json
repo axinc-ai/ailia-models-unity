@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "ai.ailia.ailia": "https://github.com/axinc-ai/ailia-sdk-unity.git#v1.3.0",
+    "ai.ailia.ailia": "https://github.com/axinc-ai/ailia-sdk-unity.git#v1.3.1",
     "ai.ailia.ailia_audio": "https://github.com/axinc-ai/ailia-audio-unity.git#v1.3.0",
     "ai.ailia.ailia_speech": "https://github.com/axinc-ai/ailia-speech-unity.git#v1.2.1",
     "ai.ailia.ailia_tflite": "https://github.com/axinc-ai/ailia-tflite-unity.git#v1.1.13",
