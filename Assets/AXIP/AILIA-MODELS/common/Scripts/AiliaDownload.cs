@@ -158,7 +158,7 @@ namespace ailiaSDK
 			savePath = path + (path[path.Length - 1] == '/' ? "" : "/");
 		}
 
-		public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted)
+		public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted, string base_url = "https://storage.googleapis.com/ailia-models/")
 		{
 			if (urlList.Count == 0) yield break;
 
@@ -198,7 +198,7 @@ namespace ailiaSDK
 				var download_text = "Download model to " + copyPath;
 				Debug.Log(download_text);
 
-				string url = "https://storage.googleapis.com/ailia-models/" + downloadUrl.folder_path + "/" + downloadUrl.file_name;
+				string url = base_url + downloadUrl.folder_path + "/" + downloadUrl.file_name;
 				DownloaderProgressPanel.SetActive(true);
 				using (var www = UnityWebRequest.Get(url))
 				{

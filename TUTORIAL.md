@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Unity 2019.3.15f1 and later
+- Unity 2021.3.10f1 and later
 
 ## Supported platforms
 
