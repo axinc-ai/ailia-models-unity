@@ -5,6 +5,8 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaRenderer : MonoBehaviour
@@ -330,10 +332,7 @@ namespace ailiaSDK
 
 			text_object.SetActive(true);
 			text_object.transform.GetChild(0).GetComponent<Text>().text = text;
-			// if(text_color != default(Color)){
-			// 	text_object.transform.GetChild(0).GetComponent<Text>().color = text_color;
-			// }
-			text_object.transform.GetChild(0).GetComponent<Text>().color = text_color;
+			text_object.transform.GetChild(0).GetComponent<Text>().color = (text_color == default(Color)) ? Color.black : text_color;
 			color.a = alpha;
 			text_object.GetComponent<Image>().color = color;
 			text_object.GetComponent<RectTransform>().anchoredPosition = new Vector2(x * width / tex_width, -y * height / tex_height);
