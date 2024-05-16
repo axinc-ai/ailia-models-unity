@@ -13,6 +13,8 @@ using UnityEngine.Video;
 
 using System.Linq;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaRetinaface
