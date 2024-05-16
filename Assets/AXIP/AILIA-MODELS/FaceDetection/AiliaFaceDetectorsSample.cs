@@ -19,6 +19,7 @@ namespace ailiaSDK {
             blazeface,
             facemesh,
             facemesh_v2,
+			retinaface,
         }
 
 		[SerializeField]
@@ -53,6 +54,7 @@ namespace ailiaSDK {
 		private AiliaBlazeface blaze_face = new AiliaBlazeface();
 		private AiliaFaceMesh face_mesh = new AiliaFaceMesh();
 		private AiliaFaceMeshV2 face_mesh_v2 = new AiliaFaceMeshV2();
+		private AiliaRetinaface retina_face = new AiliaRetinaface();
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -126,6 +128,19 @@ namespace ailiaSDK {
 
 					break;
 
+				case FaceDetectorModels.retinaface:
+					mode_text.text = "ailia retinaface";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "retinaface", file_name = "retinaface_resnet50.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "retinaface", file_name = "retinaface_resnet50.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/retinaface_resnet50.onnx.prototxt", asset_path + "/retinaface_resnet50.onnx");
+					}));
+
+					break;
+
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -182,14 +197,15 @@ namespace ailiaSDK {
 				raw_image.texture = preview_texture;
 			}
 
-			//BlazeFace
-			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
-			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			long detection_time = (end_time - start_time);
-
+			long detection_time = 0;
+			long recognition_time = 0;
 			//Draw result
 			if(ailiaModelType==FaceDetectorModels.blazeface){
+				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
+				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				detection_time = (end_time - start_time);
+
 				for (int i = 0; i < result_detections.Count; i++)
 				{
 					AiliaBlazeface.FaceInfo face = result_detections[i];
@@ -207,11 +223,13 @@ namespace ailiaSDK {
 					}
 				}
 			}
-
-			//Compute facemesh
-			long recognition_time = 0;
 			if(ailiaModelType==FaceDetectorModels.facemesh){
 				//Compute
+				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
+				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				detection_time = (end_time - start_time);
+
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				List<AiliaFaceMesh.FaceMeshInfo> result_facemesh = new List<AiliaFaceMesh.FaceMeshInfo>();
 				result_facemesh = face_mesh.Detection(ailia_face_recognizer, camera, tex_width, tex_height, result_detections, debug);
@@ -227,6 +245,11 @@ namespace ailiaSDK {
 			}
 			if(ailiaModelType==FaceDetectorModels.facemesh_v2){
 				//Compute
+				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
+				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				detection_time = (end_time - start_time);
+
 				long rec_start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				List<AiliaFaceMeshV2.FaceMeshV2Info> result_facemesh_v2 = face_mesh_v2.Detection(ailia_face_recognizer, ailia_face_blendshape, camera, tex_width, tex_height, result_detections, debug);
 				long rec_end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -238,6 +261,38 @@ namespace ailiaSDK {
 					AiliaFaceMeshV2.FaceMeshV2Info face = result_facemesh_v2[i];
 					DrawKeyPoints(face.width, face.height, face.theta, face.center, face.keypoints, AiliaFaceMeshV2.DETECTION_WIDTH, AiliaFaceMeshV2.DETECTION_HEIGHT, tex_width, tex_height);
 					DrawBlendshape(face.blendshape, tex_width, tex_height);
+				}
+			}
+			if(ailiaModelType==FaceDetectorModels.retinaface){
+				//Compute
+				
+				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				List<AiliaRetinaface.FaceInfo> result_detections = retina_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
+				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+				detection_time = (end_time - start_time);
+				
+				//Draw result
+				for (int i = 0; i < result_detections.Count; i++)
+				{
+					AiliaRetinaface.FaceInfo face = result_detections[i];
+
+					int fw = (int)(face.width);
+					int fh = (int)(face.height);
+					int fx = (int)((face.center.x) - face.width / 2);
+					int fy = (int)((face.center.y) - face.height / 2);
+					DrawRect2D(Color.red, fx, fy, fw, fh, tex_width, tex_height, 0.5f);
+					
+					string text = face.score.ToString();
+					float scale = fw * 0.003f;
+					DrawText(Color.white, text, fx, fy, tex_width, tex_height, alpha: 0.0f, scale: scale, text_color: Color.white);
+
+					List<Color> color_list = new List<Color>() {Color.red, Color.yellow, Color.magenta, Color.green, Color.blue};
+					for (int k = 0; k < AiliaRetinaface.NUM_KEYPOINTS; k++)
+					{
+						int x = (int)(face.keypoints[k].x);
+						int y = (int)(face.keypoints[k].y);
+						DrawRect2D(color_list[k], x, y, 1, 1, tex_width, tex_height, 0.5f);
+					}
 				}
 			}
 
