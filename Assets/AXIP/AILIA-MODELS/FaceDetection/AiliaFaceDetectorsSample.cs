@@ -34,6 +34,8 @@ namespace ailiaSDK {
 		private int camera_id = 0;
 		[SerializeField]
 		private bool debug = false;
+		[SerializeField]
+		private bool is_square = true;
 
 		//TestImage
 		public Texture2D image = null;
@@ -160,7 +162,7 @@ namespace ailiaSDK {
 		{
 			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
-			ailia_camera.CreateCamera(camera_id);
+			ailia_camera.CreateCamera(camera_id, is_square);
 		}
 
 		// Update is called once per frame
@@ -195,6 +197,13 @@ namespace ailiaSDK {
 			{
 				preview_texture = new Texture2D(tex_width, tex_height);
 				raw_image.texture = preview_texture;
+				if (!is_square){
+					Vector2 size = raw_image.rectTransform.sizeDelta;
+					float ratio = tex_width / (float)tex_height;
+					raw_image.rectTransform.sizeDelta = new Vector2(ratio * size.y, size.y);
+					size = line_panel.GetComponent<RectTransform>().sizeDelta;
+					line_panel.GetComponent<RectTransform>().sizeDelta = new Vector2(ratio * size.y, size.y);
+				}
 			}
 
 			long detection_time = 0;
