@@ -17,6 +17,7 @@ namespace ailiaSDK {
         public enum FaceDetectorModels
         {
             blazeface,
+            blazeface_back,
             facemesh,
             facemesh_v2,
 			retinaface,
@@ -85,6 +86,19 @@ namespace ailiaSDK {
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 					{
 						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazeface.onnx.prototxt", asset_path + "/blazeface.onnx");
+					}));
+
+					break;
+
+				case FaceDetectorModels.blazeface_back:
+					mode_text.text = "ailia blazeface back camera";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazefaceback.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "blazeface", file_name = "blazefaceback.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_face_detector.OpenFile(asset_path + "/blazefaceback.onnx.prototxt", asset_path + "/blazefaceback.onnx");
 					}));
 
 					break;
@@ -209,7 +223,7 @@ namespace ailiaSDK {
 			long detection_time = 0;
 			long recognition_time = 0;
 			//Draw result
-			if(ailiaModelType==FaceDetectorModels.blazeface){
+			if(ailiaModelType==FaceDetectorModels.blazeface || ailiaModelType==FaceDetectorModels.blazeface_back){
 				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 				List<AiliaBlazeface.FaceInfo> result_detections = blaze_face.Detection(ailia_face_detector, camera, tex_width, tex_height);
 				long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
