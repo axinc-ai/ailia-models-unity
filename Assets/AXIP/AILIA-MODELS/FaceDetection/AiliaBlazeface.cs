@@ -22,6 +22,8 @@ namespace ailiaSDK
 		public const int NUM_KEYPOINTS = 6;
 
 		private float [] input_data_buffer = new float[0];
+		private float[] box_data  = new float[0];
+		private float[] score_data  = new float[0];
 
 		public struct FaceInfo
 		{
@@ -113,8 +115,12 @@ namespace ailiaSDK
 
 					if (box_shape != null && score_shape != null)
 					{
-						float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
-						float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						if (box_data.Length != box_shape.x * box_shape.y * box_shape.z * box_shape.w){
+							box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
+						}
+						if (score_data.Length != score_shape.x * score_shape.y * score_shape.z * score_shape.w){
+							score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						}
 
 						if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
 								ailia_model.GetBlobData(score_data, (int)output_blobs[1]))
