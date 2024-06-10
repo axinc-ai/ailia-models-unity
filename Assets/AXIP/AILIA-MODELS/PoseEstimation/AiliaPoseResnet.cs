@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using static ailiaSDK.AiliaImageUtil;
 
+using ailia;
+
 public class AiliaPoseResnet
 {
     private AiliaDetectorModel ailiaDetection = new AiliaDetectorModel();
