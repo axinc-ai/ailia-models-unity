@@ -11,6 +11,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaBlazeface
@@ -18,8 +20,10 @@ namespace ailiaSDK
 		AiliaBlazefaceAnchors anchors_holder = new AiliaBlazefaceAnchors();
 
 		public const int NUM_KEYPOINTS = 6;
-		public const int DETECTION_WIDTH = 128;
-		public const int DETECTION_HEIGHT = 128;
+
+		private float [] input_data_buffer = new float[0];
+		private float[] box_data  = new float[0];
+		private float[] score_data  = new float[0];
 
 		public struct FaceInfo
 		{
@@ -45,11 +49,20 @@ namespace ailiaSDK
 			}
 
 			//Resize
-			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
-			int w = DETECTION_WIDTH;
-			int h = DETECTION_HEIGHT;
-			float scale = 1.0f * tex_width / w;
 			bool channel_last = (input_shape.x == 3); // facemeshv2
+			int w, h; // 128 (front) or 256 (back)
+			if (channel_last){
+				w = (int)input_shape.y;
+				h = (int)input_shape.z;
+			}else{
+				w = (int)input_shape.x;
+				h = (int)input_shape.y;
+			}
+			if (input_data_buffer.Length != w * h * 3){
+				input_data_buffer = new float[w * h * 3];
+			}
+			float[] data = input_data_buffer;
+			float scale = 1.0f * tex_width / w;
 			for (int y = 0; y < h; y++)
 			{
 				for (int x = 0; x < w; x++)
@@ -102,8 +115,12 @@ namespace ailiaSDK
 
 					if (box_shape != null && score_shape != null)
 					{
-						float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
-						float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						if (box_data.Length != box_shape.x * box_shape.y * box_shape.z * box_shape.w){
+							box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
+						}
+						if (score_data.Length != score_shape.x * score_shape.y * score_shape.z * score_shape.w){
+							score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						}
 
 						if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
 								ailia_model.GetBlobData(score_data, (int)output_blobs[1]))

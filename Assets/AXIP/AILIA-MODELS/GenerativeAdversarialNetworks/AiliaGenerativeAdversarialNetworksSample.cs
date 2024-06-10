@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK {
 	public class AiliaGenerativeAdversarialNetworksSample : AiliaRenderer {
 		public enum AiliaGenerativeAdversarialNetworksModels

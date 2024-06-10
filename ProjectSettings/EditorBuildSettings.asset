@@ -4,4 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/AXIP/AILIA-MODELS/ObjectDetection/ObjectDetectionSample.unity
+    guid: a9df061e44f3ec54bb296866ef9b8100
+  m_configObjects: {}

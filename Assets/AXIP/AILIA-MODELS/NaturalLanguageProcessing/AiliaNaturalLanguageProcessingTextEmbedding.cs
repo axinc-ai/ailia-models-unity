@@ -11,6 +11,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+using ailiaTokenizer;
+
 namespace ailiaSDK
 {
 	public class AiliaNaturalLanguageProcessingTextEmbedding

@@ -158,7 +158,7 @@ namespace ailiaSDK
 			savePath = path + (path[path.Length - 1] == '/' ? "" : "/");
 		}
 
-		public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted)
+		public IEnumerator DownloadWithProgressFromURL(List<ModelDownloadURL> urlList, Action OnCompleted, string base_url = "https://storage.googleapis.com/ailia-models/")
 		{
 			if (urlList.Count == 0) yield break;
 
@@ -170,14 +170,20 @@ namespace ailiaSDK
 
 			foreach (var downloadUrl in urlList)
 			{
-				string toPath = (savePath == null ? Application.temporaryCachePath + "/" : savePath) + (downloadUrl.local_name == null ? downloadUrl.file_name : downloadUrl.local_name);
+				string copyPath = (savePath == null ? Application.temporaryCachePath + "/" : savePath) + (downloadUrl.local_name == null ? downloadUrl.file_name : downloadUrl.local_name);
+				string tempPath = copyPath + ".tmp";
 
-				if (System.IO.File.Exists(toPath) == true)
+				if (System.IO.File.Exists(tempPath) == true)
 				{
-					FileInfo fileInfo = new System.IO.FileInfo(toPath);
+					File.Delete(tempPath);
+				}
+
+				if (System.IO.File.Exists(copyPath) == true)
+				{
+					FileInfo fileInfo = new System.IO.FileInfo(copyPath);
 					if (fileInfo.Length != 0)
 					{
-						var tex = "Already exists : " + toPath + " " + fileInfo.Length;
+						var tex = "Already exists : " + copyPath + " " + fileInfo.Length;
 						content += (tex + "\n");
 						if (ContentsText.cachedTextGenerator.lineCount > 9)
 						{
@@ -189,13 +195,17 @@ namespace ailiaSDK
 					}
 				}
 
-				var download_text = "Download model to " + toPath;
+				var download_text = "Download model to " + copyPath;
 				Debug.Log(download_text);
 
-				string url = "https://storage.googleapis.com/ailia-models/" + downloadUrl.folder_path + "/" + downloadUrl.file_name;
+				string url = base_url + downloadUrl.folder_path + "/" + downloadUrl.file_name;
 				DownloaderProgressPanel.SetActive(true);
 				using (var www = UnityWebRequest.Get(url))
 				{
+					var dh = new DownloadHandlerFile(tempPath);
+					dh.removeFileOnAbort = true;
+					www.downloadHandler = dh;
+
 					www.SendWebRequest();
 					while (true)
 					{
@@ -219,7 +229,7 @@ namespace ailiaSDK
 						// Download is done
 						if (www.isDone)
 						{
-							File.WriteAllBytes(toPath, www.downloadHandler.data);
+							File.Move(tempPath, copyPath);
 							content += download_text + "\n";
 							if (ContentsText.cachedTextGenerator.lineCount > ContentLineCount)
 							{

@@ -5,6 +5,8 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaRenderer : MonoBehaviour

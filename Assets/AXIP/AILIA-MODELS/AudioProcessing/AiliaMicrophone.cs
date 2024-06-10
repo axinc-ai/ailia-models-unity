@@ -140,5 +140,12 @@ namespace ailiaSDK
 
 			return waveData;
 		}
+
+		public bool IsComplete(){
+			if (m_mic_mode == true){
+				return false;
+			}
+			return (input_pointer >= m_AudioClip.samples);
+		}
 	}
 }
