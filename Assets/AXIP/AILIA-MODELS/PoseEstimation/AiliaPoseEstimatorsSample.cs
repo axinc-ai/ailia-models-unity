@@ -182,28 +182,20 @@ namespace ailiaSDK
 				camera = test_image.GetPixels32(); //入力画像を変更
 			}
 
-
-
-
-
 			//Pose estimation
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
 			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
-<<<<<<< HEAD
 			}
 			else if (ailiaModelType == PoseEstimatorModels.mediapipe_pose_world_landmarks)
             {
 				pose = ailia_mediapipepose.RunPoseEstimation(camera, tex_width, tex_height);
 			}
-			else{
-=======
-			}else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
+			else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
 				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
 			}else{
->>>>>>> master
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;

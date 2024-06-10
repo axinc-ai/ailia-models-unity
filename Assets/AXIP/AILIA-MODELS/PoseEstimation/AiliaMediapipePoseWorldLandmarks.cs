@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 
+using ailia;
+
 public class AiliaMediapipePoseWorldLandmarks : IDisposable
 {
     AiliaMediapipePoseWorldLandmarksAnchors anchors_holder = new AiliaMediapipePoseWorldLandmarksAnchors();
