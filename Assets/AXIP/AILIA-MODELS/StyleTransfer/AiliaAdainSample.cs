@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaAdainSample : MonoBehaviour

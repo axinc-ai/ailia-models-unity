@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaFeatureExtractorSample : AiliaRenderer
@@ -307,7 +309,7 @@ namespace ailiaSDK
 			int y2 = (int)fy;
 			float xa = 1.0f - (fx - x2);
 			float xb = 1.0f - xa;
-			float ya = 1.0f - (fx - x2);
+			float ya = 1.0f - (fy - y2);
 			float yb = 1.0f - ya;
 			Color32 c1 = face[y2 * w + x2];
 			Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;

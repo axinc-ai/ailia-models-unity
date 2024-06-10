@@ -24,6 +24,7 @@ namespace ailiaSDK
 
 		// Texture buffer
 		private Color32[] image = new Color32[0];
+		private Color32[] crop = new Color32[0];
 		private int crop_width = 16;
 		private int crop_height = 16;
 		private bool square = true;
@@ -119,7 +120,9 @@ namespace ailiaSDK
 			int angle = GetAngle();
 			bool rotate90 = (angle == 90 || angle == 270);
 
-			Color32[] crop = new Color32[crop_width * crop_height];
+			if (crop.Length != crop_width * crop_height){
+				crop = new Color32[crop_width * crop_height];
+			}
 			int x_offset = (webcamTexture.width - crop_width) / 2;
 			int y_offset = (webcamTexture.height - crop_height) / 2;
 

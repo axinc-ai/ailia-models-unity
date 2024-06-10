@@ -11,6 +11,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaFaceMesh
@@ -44,8 +46,8 @@ namespace ailiaSDK
 				int fy = (int)(face.center.y * tex_height);
 				const int RIGHT_EYE=0;
 				const int LEFT_EYE=1;
-				float theta_x = (float)(face.keypoints[LEFT_EYE].x - face.keypoints[RIGHT_EYE].x);
-				float theta_y = (float)(face.keypoints[LEFT_EYE].y - face.keypoints[RIGHT_EYE].y);
+				float theta_x = (float)(face.keypoints[LEFT_EYE].x - face.keypoints[RIGHT_EYE].x) * tex_width;
+				float theta_y = (float)(face.keypoints[LEFT_EYE].y - face.keypoints[RIGHT_EYE].y) * tex_height;
 				float theta = (float)System.Math.Atan2(theta_y,theta_x);
 
 				//extract data

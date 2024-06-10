@@ -11,6 +11,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaBlazeface
@@ -18,8 +20,10 @@ namespace ailiaSDK
 		AiliaBlazefaceAnchors anchors_holder = new AiliaBlazefaceAnchors();
 
 		public const int NUM_KEYPOINTS = 6;
-		public const int DETECTION_WIDTH = 128;
-		public const int DETECTION_HEIGHT = 128;
+
+		private float [] input_data_buffer = new float[0];
+		private float[] box_data  = new float[0];
+		private float[] score_data  = new float[0];
 
 		public struct FaceInfo
 		{
@@ -33,10 +37,31 @@ namespace ailiaSDK
 		// Update is called once per frame
 		public List<FaceInfo> Detection(AiliaModel ailia_model, Color32[] camera, int tex_width, int tex_height)
 		{
-			//リサイズ
-			float[] data = new float[DETECTION_WIDTH * DETECTION_HEIGHT * 3];
-			int w = DETECTION_WIDTH;
-			int h = DETECTION_HEIGHT;
+			//Get input shape
+			uint[] input_blobs = ailia_model.GetInputBlobList();
+			Ailia.AILIAShape input_shape = null;
+			if (input_blobs != null)
+			{
+				input_shape = ailia_model.GetBlobShape((int)input_blobs[0]);
+				if (input_shape == null){
+					Debug.Log("Failed GetBlobShape");
+				}
+			}
+
+			//Resize
+			bool channel_last = (input_shape.x == 3); // facemeshv2
+			int w, h; // 128 (front) or 256 (back)
+			if (channel_last){
+				w = (int)input_shape.y;
+				h = (int)input_shape.z;
+			}else{
+				w = (int)input_shape.x;
+				h = (int)input_shape.y;
+			}
+			if (input_data_buffer.Length != w * h * 3){
+				input_data_buffer = new float[w * h * 3];
+			}
+			float[] data = input_data_buffer;
 			float scale = 1.0f * tex_width / w;
 			for (int y = 0; y < h; y++)
 			{
@@ -46,24 +71,35 @@ namespace ailiaSDK
 					int x2 = (int)(1.0 * x * scale);
 					if (x2 < 0 || y2 < 0 || x2 >= tex_width || y2 >= tex_height)
 					{
-						data[(y * w + x) + 0 * w * h] = 0;
-						data[(y * w + x) + 1 * w * h] = 0;
-						data[(y * w + x) + 2 * w * h] = 0;
+						if (channel_last){
+							data[(y * w + x) + 0 * w * h] = 0;
+							data[(y * w + x) + 1 * w * h] = 0;
+							data[(y * w + x) + 2 * w * h] = 0;
+						}else{
+							data[(y * w + x) * 3 + 0] = 0;
+							data[(y * w + x) * 3 + 1] = 0;
+							data[(y * w + x) * 3 + 2] = 0;
+						}
 						continue;
 					}
-					data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 255.0);
-					data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 255.0);
-					data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 255.0);
+					if (channel_last){
+						data[(y * w + x) * 3 + 0] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
+						data[(y * w + x) * 3 + 1] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
+						data[(y * w + x) * 3 + 2] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
+					}else{
+						data[(y * w + x) + 0 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].r) / 127.5 - 1.0);
+						data[(y * w + x) + 1 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].g) / 127.5 - 1.0);
+						data[(y * w + x) + 2 * w * h] = (float)((camera[(tex_height - 1 - y2) * tex_width + x2].b) / 127.5 - 1.0);
+					}
 				}
 			}
 
-			uint[] input_blobs = ailia_model.GetInputBlobList();
 			if (input_blobs != null)
 			{
 				bool success = ailia_model.SetInputBlobData(data, (int)input_blobs[0]);
 				if (!success)
 				{
-					Debug.Log("Can not SetInputBlobData");
+					Debug.Log("Failed SetInputBlobData");
 				}
 
 				long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
@@ -79,8 +115,12 @@ namespace ailiaSDK
 
 					if (box_shape != null && score_shape != null)
 					{
-						float[] box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
-						float[] score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						if (box_data.Length != box_shape.x * box_shape.y * box_shape.z * box_shape.w){
+							box_data = new float[box_shape.x * box_shape.y * box_shape.z * box_shape.w];
+						}
+						if (score_data.Length != score_shape.x * score_shape.y * score_shape.z * score_shape.w){
+							score_data = new float[score_shape.x * score_shape.y * score_shape.z * score_shape.w];
+						}
 
 						if (ailia_model.GetBlobData(box_data, (int)output_blobs[0]) &&
 								ailia_model.GetBlobData(score_data, (int)output_blobs[1]))

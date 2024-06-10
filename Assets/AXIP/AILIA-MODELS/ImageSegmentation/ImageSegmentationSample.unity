@@ -434,6 +434,15 @@ MonoBehaviour:
   UICanvas: {fileID: 1813464803}
   camera_mode: 0
   camera_id: 0
+  image_source_hrnet: {fileID: 2800000, guid: 63c0c01290d845d4a9dfd96093b90cf2, type: 3}
+  image_source_hair_segmentation: {fileID: 2800000, guid: 0ca8d0424f610794186e7fc331c1f30a,
+    type: 3}
+  image_source_pspnet_hair_segmentation: {fileID: 2800000, guid: 4dcdd304d65cd9b45ad6903650f8fe7b,
+    type: 3}
+  image_source_deeplabv3: {fileID: 2800000, guid: 6605c54dc8074844995ca66b7edc95a5,
+    type: 3}
+  image_source_u2net: {fileID: 2800000, guid: 60ee68d0cfa5740ac935476a1abe2487, type: 3}
+  image_source_modnet: {fileID: 2800000, guid: 07969a7367f3946018a387a290e62885, type: 3}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0

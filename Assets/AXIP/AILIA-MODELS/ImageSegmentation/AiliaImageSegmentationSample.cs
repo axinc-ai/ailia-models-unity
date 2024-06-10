@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaImageSegmentationSample : MonoBehaviour
@@ -55,7 +57,13 @@ namespace ailiaSDK
 
 		// Input source
 		AiliaImageSource AiliaImageSource;
-
+		public Texture2D image_source_hrnet = null;
+		public Texture2D image_source_hair_segmentation = null;
+		public Texture2D image_source_pspnet_hair_segmentation = null;
+		public Texture2D image_source_deeplabv3 = null;
+		public Texture2D image_source_u2net = null;
+		public Texture2D image_source_modnet = null;
+		
 		// Pre-and-Post processing Shader
 		Material blendMaterial;
 		int mainTexId;
@@ -417,22 +425,22 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.HRNetV2_W18_Small_v2:
 				case ImageSegmentaionModels.HRNetV2_W18_Small_v1:
 				case ImageSegmentaionModels.HRNetV2_W48:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/road.png");
+					ailiaImageSource.CreateSource(image_source_hrnet);
 					break;
 				case ImageSegmentaionModels.hair_segmentation:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/hair.jpg");
+					ailiaImageSource.CreateSource(image_source_hair_segmentation);
 					break;
 				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/hair2.jpg");
+					ailiaImageSource.CreateSource(image_source_pspnet_hair_segmentation);
 					break;
 				case ImageSegmentaionModels.deeplabv3:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/couple.jpg");
+					ailiaImageSource.CreateSource(image_source_deeplabv3);
 					break;
 				case ImageSegmentaionModels.u2net:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/girl.png");
+					ailiaImageSource.CreateSource(image_source_u2net);
 					break;
 				case ImageSegmentaionModels.modnet:
-					ailiaImageSource.CreateSource("file://" + Application.dataPath + "/AXIP/AILIA-MODELS/ImageSegmentation/SampleImage/modnet.jpg");
+					ailiaImageSource.CreateSource(image_source_modnet);
 					break;
 
 			}

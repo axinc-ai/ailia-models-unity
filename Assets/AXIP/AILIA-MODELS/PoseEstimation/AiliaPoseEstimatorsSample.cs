@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+using ailia;
+
 namespace ailiaSDK
 {
 	public class AiliaPoseEstimatorsSample : AiliaRenderer
@@ -11,7 +13,8 @@ namespace ailiaSDK
 		{
 			lightweight_human_pose_estimation,
 			blazepose_fullbody,
-			mediapipe_pose_world_landmarks
+			mediapipe_pose_world_landmarks,
+			pose_resnet
 		}
 
 		[SerializeField]
@@ -42,6 +45,7 @@ namespace ailiaSDK
 		private Texture2D textureBlazepose;
 		[SerializeField]
 		private ComputeShader computeShaderBlazepose;
+		private AiliaPoseResnet ailia_pose_resnet;
 
 		private AiliaMediapipePoseWorldLandmarks ailia_mediapipepose;
 		[SerializeField]
@@ -112,6 +116,22 @@ namespace ailiaSDK
 					}));
 
 					break;
+				case PoseEstimatorModels.pose_resnet:
+					var pose_folder_path = "pose_resnet";
+					var pose_model_name = "pose_resnet_50_256x192";
+					var detect_folder_path = "yolov3";
+					var detect_model_name = "yolov3.opt2";
+					urlList.Add(new ModelDownloadURL() { folder_path = pose_folder_path, file_name = pose_model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = pose_folder_path, file_name = pose_model_name + ".onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = detect_folder_path, file_name = detect_model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = detect_folder_path, file_name = detect_model_name + ".onnx.prototxt" });
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						ailia_pose_resnet = new AiliaPoseResnet(gpu_mode, asset_path);
+						FileOpened = true;
+					}));
+
+					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -172,12 +192,18 @@ namespace ailiaSDK
 			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
+<<<<<<< HEAD
 			}
 			else if (ailiaModelType == PoseEstimatorModels.mediapipe_pose_world_landmarks)
             {
 				pose = ailia_mediapipepose.RunPoseEstimation(camera, tex_width, tex_height);
 			}
 			else{
+=======
+			}else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
+				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
+			}else{
+>>>>>>> master
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
