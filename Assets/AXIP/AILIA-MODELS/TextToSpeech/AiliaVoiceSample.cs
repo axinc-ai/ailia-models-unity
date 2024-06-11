@@ -46,16 +46,21 @@ public class AiliaVoiceSample : MonoBehaviour
 	// Start is called before the first frame update
 	void Start()
 	{
+		UISetup();
 		LoadModel();
 	}
 
-	private void SafeCreateDirectory( string path )
+	void UISetup()
 	{
-		if ( Directory.Exists( path ) )
-		{
-			return;
-		}
-		Directory.CreateDirectory( path );
+		Debug.Assert (UICanvas != null, "UICanvas is null");
+
+		Text label_text = UICanvas.transform.Find("LabelText").GetComponent<Text>();
+		label_text.text = "";
+
+		Text mode_text = UICanvas.transform.Find("ModeLabel").GetComponent<Text>();
+		mode_text.text = "ailia Voice Synthesis Sample";
+
+		UICanvas.transform.Find("RawImage").GetComponent<RawImage>().gameObject.SetActive(false);
 	}
 
 	void LoadModel(){
