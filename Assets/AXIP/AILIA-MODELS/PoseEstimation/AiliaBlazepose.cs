@@ -171,13 +171,48 @@ public class AiliaBlazepose : IDisposable
         public float[] array;
     }
 
+    private bool EnvironmentWithoutFP16(AiliaModel model, int type)
+    {
+        int count = model.GetEnvironmentCount();
+        if (count == -1)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            Ailia.AILIAEnvironment env = model.GetEnvironment(i);
+            if (env == null)
+            {
+                return false;
+            }
+
+            if (env.type == type)
+            {
+                if ((env.props & Ailia.AILIA_ENVIRONMENT_PROPERTY_FP16) != 0)
+                {
+                    continue;
+                }
+                if (!model.SelectEnvironment(i))
+                {
+                    return false;
+                }
+                if (env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_CUDA || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_VULKAN)
+                {
+                    return true;    //優先
+                }
+            }
+        }
+        return true;
+    }
+
     public AiliaBlazepose(bool gpuMode, string assetPath, string jsonPath)
     {
         bool status;
 
         if (gpuMode)
         {
-            ailiaPoseDetection.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+            EnvironmentWithoutFP16(ailiaPoseDetection, Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
         }
         string modelName = "pose_detection";
         status = ailiaPoseDetection.OpenFile($"{assetPath}/{modelName}.onnx.prototxt", $"{assetPath}/{modelName}.onnx");
@@ -191,7 +226,7 @@ public class AiliaBlazepose : IDisposable
 
         if (gpuMode)
         {
-            ailiaPoseEstimation.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
+            EnvironmentWithoutFP16(ailiaPoseEstimation, Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
         }
         modelName = "pose_landmark_heavy";
         status = ailiaPoseEstimation.OpenFile($"{assetPath}/{modelName}.onnx.prototxt", $"{assetPath}/{modelName}.onnx");
@@ -755,4 +790,7 @@ public class AiliaBlazepose : IDisposable
     }
     #endregion
 
+    public string EnvironmentName(){
+        return ailiaPoseDetection.EnvironmentName();
+    }
 }

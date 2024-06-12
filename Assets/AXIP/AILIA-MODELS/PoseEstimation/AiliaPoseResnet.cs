@@ -361,4 +361,8 @@ public class AiliaPoseResnet
         pose.num_valid_points = num_valid_points;
         return pose;
     }
+
+    public string EnvironmentName(){
+        return ailiaDetection.EnvironmentName();
+    }
 }
