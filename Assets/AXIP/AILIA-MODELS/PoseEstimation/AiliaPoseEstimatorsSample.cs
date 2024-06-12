@@ -185,6 +185,7 @@ namespace ailiaSDK
 			//Pose estimation
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
+			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose_world=null;
 			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
@@ -192,6 +193,7 @@ namespace ailiaSDK
 			else if (ailiaModelType == PoseEstimatorModels.mediapipe_pose_world_landmarks)
             {
 				pose = ailia_mediapipepose.RunPoseEstimation(camera, tex_width, tex_height);
+				pose_world = ailia_mediapipepose.GetResult(true);
 			}
 			else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
 				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
@@ -260,6 +262,7 @@ namespace ailiaSDK
 					DrawBone(new Color(248.0f / 255, 123.0f / 255, 0.0f, 1.0f), tex_width, tex_height, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_ANKLE_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_KNEE_RIGHT, r, false);
 
 					//3次元landmarkの描画
+					obj = pose_world[i];
 					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_NOSE, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 
 					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_LEFT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 
 					DrawBone3D(Color.white, obj, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_RIGHT, AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_SHOULDER_CENTER); 

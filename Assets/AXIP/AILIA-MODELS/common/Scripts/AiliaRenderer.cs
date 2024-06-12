@@ -408,14 +408,14 @@ namespace ailiaSDK
 			}
 
 			//追加
-			float from_x = obj.points[from].x_local;
-			float from_y = obj.points[from].y_local;
+			float from_x = obj.points[from].x;
+			float from_y = obj.points[from].y;
 			float from_z = obj.points[from].z_local;
-			float to_x = obj.points[to].x_local;
-			float to_y = obj.points[to].y_local;
+			float to_x = obj.points[to].x;
+			float to_y = obj.points[to].y;
 			float to_z = obj.points[to].z_local;
-			float origin_x = (obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT].x_local + obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT].x_local) / 2.0f;
-			float origin_y = (obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT].y_local + obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT].y_local) / 2.0f;
+			float origin_x = (obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT].x + obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT].x) / 2.0f;
+			float origin_y = (obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT].y + obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT].y) / 2.0f;
 			float origin_z = (obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_LEFT].z_local + obj.points[AiliaPoseEstimator.AILIA_POSE_ESTIMATOR_POSE_KEYPOINT_HIP_RIGHT].z_local) / 2.0f;
 
 			//腰の中点を原点に変える
@@ -545,8 +545,8 @@ namespace ailiaSDK
 			float y_min = 1.0f;
 			for (int i = 0; i < obj.points.Length; i++)
 			{
-				abs_max = Mathf.Max(abs_max, Math.Abs(obj.points[i].x_local), Math.Abs(obj.points[i].y_local), Math.Abs(obj.points[i].z_local));
-				y_min = Mathf.Min(y_min, obj.points[i].y_local);
+				abs_max = Mathf.Max(abs_max, Math.Abs(obj.points[i].x), Math.Abs(obj.points[i].y), Math.Abs(obj.points[i].z_local));
+				y_min = Mathf.Min(y_min, obj.points[i].y);
 			}
 			scale = abs_max + 0.1f;
 

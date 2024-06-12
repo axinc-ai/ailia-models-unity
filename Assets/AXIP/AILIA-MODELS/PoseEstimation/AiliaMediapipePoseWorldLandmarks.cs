@@ -334,7 +334,7 @@ public class AiliaMediapipePoseWorldLandmarks : IDisposable
 
         RunEstimationModel(detection);
 
-        return GetResult();
+        return GetResult(false);
     }
 
     private Texture2D RunDetectionModel(Texture2D inputTexture)
@@ -573,7 +573,7 @@ public class AiliaMediapipePoseWorldLandmarks : IDisposable
         //Debug.Log(landmarks.Count);//デバック->33
     }
 
-    public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult()
+    public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult(bool world_cordinate)
     {
         List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> result_list = new List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose>();
         int[] keypoint_list ={
@@ -628,10 +628,13 @@ public class AiliaMediapipePoseWorldLandmarks : IDisposable
                 conf = Math.Min(Math.Min(landmarks[(int)BodyPartIndex.LeftHip].confidence, landmarks[(int)BodyPartIndex.RightHip].confidence), Math.Min(landmarks[(int)BodyPartIndex.LeftShoulder].confidence, landmarks[(int)BodyPartIndex.RightShoulder].confidence));
             }
             AiliaPoseEstimator.AILIAPoseEstimatorKeypoint keypoint = new AiliaPoseEstimator.AILIAPoseEstimatorKeypoint();
-            keypoint.x = ((pos.x - 0.5f) * cs + (pos.y - 0.5f) * ss) * affine_scale + affine_xc;
-            keypoint.y = ((pos.x - 0.5f) * -ss + (pos.y - 0.5f) * cs) * affine_scale + affine_yc;
-            keypoint.x_local = pos.x; //追加
-            keypoint.y_local = pos.y; //追加
+            if (world_cordinate){
+                keypoint.x = pos.x;
+                keypoint.y = pos.y;
+            }else{
+                keypoint.x = ((pos.x - 0.5f) * cs + (pos.y - 0.5f) * ss) * affine_scale + affine_xc;
+                keypoint.y = ((pos.x - 0.5f) * -ss + (pos.y - 0.5f) * cs) * affine_scale + affine_yc;
+            }
             keypoint.z_local = pos.z;
             keypoint.score = conf;
             one_pose.points[i] = keypoint;
