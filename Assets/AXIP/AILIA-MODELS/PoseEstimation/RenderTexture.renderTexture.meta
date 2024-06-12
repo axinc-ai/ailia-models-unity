@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/AXIP/AILIA-MODELS/PoseEstimation/RenderTexture.renderTexture.meta
+guid: 934253b210fbf49ef974cb4d043c0039
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+========
+guid: 9c1574179dada4e01ba17d8e9e542397
+folderAsset: yes
+DefaultImporter:
+  externalObjects: {}
+>>>>>>>> master:Assets/AXIP/AILIA-MODELS/AudioProcessing.meta
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
