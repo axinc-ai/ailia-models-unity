@@ -171,11 +171,18 @@ namespace ailiaSDK
 			//Capture
 			int tex_width = ailia_camera.GetWidth();
 			int tex_height = ailia_camera.GetHeight();
+
+			if (!video_mode) {
+				tex_width = test_image.width;
+				tex_height = test_image.height;
+			}
+
 			if (preview_texture == null)
 			{
 				preview_texture = new Texture2D(tex_width, tex_height);
 				raw_image.texture = preview_texture;
 			}
+
 			Color32[] camera = ailia_camera.GetPixels32();
 
 			if (!video_mode) {
