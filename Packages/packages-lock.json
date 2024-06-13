@@ -5,14 +5,14 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "5dfb43053f8c213fed8915eb228fa5494a843f50"
+      "hash": "133ad5724a6581f9d07b28577b3d89fc838ca936"
     },
     "ai.ailia.ailia_audio": {
       "version": "https://github.com/axinc-ai/ailia-audio-unity.git",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "bf2bc02fec706916ab9d3231ed222886ddaca4f9"
+      "hash": "2f58476ccb2922f4e55258cfe779753c347abc10"
     },
     "ai.ailia.ailia_speech": {
       "version": "https://github.com/axinc-ai/ailia-speech-unity.git",
@@ -39,10 +39,8 @@
       "version": "https://github.com/axinc-ai/ailia-voice-unity.git",
       "depth": 0,
       "source": "git",
-      "dependencies": {
-        "ai.ailia.ailia": "1.3.0"
-      },
-      "hash": "4b012d4398c56f13439751466ff3eaeae6a2ded9"
+      "dependencies": {},
+      "hash": "ccf4c90e2da4503dbd35d4763f575f957b967833"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
