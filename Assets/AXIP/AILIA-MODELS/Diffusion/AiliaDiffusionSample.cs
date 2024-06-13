@@ -21,7 +21,7 @@ namespace ailiaSDK
 		public DiffusionModels diffusionModels = DiffusionModels.Inpainting;
 		public bool gpu_mode = false;
 		public GameObject UICanvas = null;
-		public string prompt = "a photograph of an astronaut riding a hors";
+		public string prompt = "a photograph of an astronaut riding a horse";
 
 		//Result
 		RawImage raw_image = null;
