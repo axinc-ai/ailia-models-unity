@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using ailia;
+using ailiaTokenizer;
 
 namespace ailiaSDK
 {
@@ -18,6 +19,7 @@ namespace ailiaSDK
 		private AiliaModel diffusionOutModel = new AiliaModel();
 		private AiliaModel aeModel = new AiliaModel();
 		private AiliaModel clipModel = new AiliaModel();
+		private AiliaTokenizerModel tokenizerModel = new AiliaTokenizerModel();
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -52,25 +54,30 @@ namespace ailiaSDK
 		private bool legacy;
 
 		// Tokens
+		private static int max_prompt_size = 77;
+
+		private static float SOP = 49406;
+		private static float EOP = 49407;
+
 		private static float [] empty_tokens = {
-				49406, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+				SOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP};
 
 		private static float [] prompt_tokens = {
-				49406,   320,  8853,   539,   550, 18376,  6765,   320,  4558, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+				SOP,   320,  8853,   539,   550, 18376,  6765,   320,  4558, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP};
 
 		public bool Open(
 			string diffusion_emb_model_path, string diffusion_emb_weight_path,
@@ -123,6 +130,8 @@ namespace ailiaSDK
 				}
 			}
 
+			tokenizerModel.Create(AiliaTokenizer.AILIA_TOKENIZER_TYPE_CLIP, AiliaTokenizer.AILIA_TOKENIZER_FLAG_UTF8_SAFE);
+
 			return modelPrepared;
 		}
 
@@ -148,6 +157,48 @@ namespace ailiaSDK
 			AeOutputChannel = 3;
 
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
+		}
+
+		private void SetPromptTokens(float[] promptTokens)
+		{
+			if (promptTokens == null)
+			{
+				string errorMessage = "Received null promptTokens";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			if (promptTokens.Length == 0)
+			{
+				string errorMessage = "Received empty promptTokens";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			if (promptTokens[0] != SOP)
+			{
+				string errorMessage = $"First prompt token should be {SOP} (received {promptTokens[0]})";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			for (int i = 0; i < max_prompt_size; ++i)
+			{
+				if (i >= promptTokens.Length)
+				{
+					prompt_tokens[i] = EOP;
+				}
+				else
+				{
+					prompt_tokens[i] = promptTokens[i];
+				}
+			}
+		}
+
+		public void SetPrompt(string prompt)
+		{
+			int[] tokens = tokenizerModel.Encode(prompt);
+			SetPromptTokens(Array.ConvertAll<int, float>(tokens, Convert.ToSingle));
 		}
 
 		private float [] Tokenize(float [] tokens){
