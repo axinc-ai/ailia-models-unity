@@ -1462,7 +1462,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e60b661389324f0ca1d2cb4809bf1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  modelType: 2
+  modelType: 1
   UICanvas: {fileID: 1813464803}
   clip: {fileID: 0}
   ref_clip: {fileID: 8300000, guid: 22457647c5322425eba2f1a8f16670f1, type: 3}
