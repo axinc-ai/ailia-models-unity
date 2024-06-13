@@ -21,6 +21,7 @@ namespace ailiaSDK
 		public DiffusionModels diffusionModels = DiffusionModels.Inpainting;
 		public bool gpu_mode = false;
 		public GameObject UICanvas = null;
+		public string prompt = "a photograph of an astronaut riding a hors";
 
 		//Result
 		RawImage raw_image = null;
@@ -325,6 +326,7 @@ namespace ailiaSDK
 								asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
 								gpu_mode);
 						}
+						stable_diffusion.SetPrompt(prompt);
 						break;
 				}
 			}));
