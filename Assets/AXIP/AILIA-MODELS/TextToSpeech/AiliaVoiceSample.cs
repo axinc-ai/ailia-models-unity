@@ -17,7 +17,6 @@ public class AiliaVoiceSample : MonoBehaviour
 	public enum TextToSpeechSampleModels
 	{
 		tacotron2_english,
-		tacotron2_japanese,
 		gpt_sovits_japanese
 	}
 
@@ -90,13 +89,6 @@ public class AiliaVoiceSample : MonoBehaviour
 		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "sys.dic" });
 		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "unk.dic" });
 
-
-		if (modelType == TextToSpeechSampleModels.tacotron2_japanese){
-			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "encoder.onnx", local_name = "tsukuyomi_encoder.onnx" });
-			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "decoder_iter.onnx", local_name = "tsukuyomi_decoder_iter.onnx" });
-			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "postnet.onnx", local_name = "tsukuyomi_postnet.onnx" });
-			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "waveglow.onnx", local_name = "tsukuyomi_waveglow.onnx" });
-		}
 		if (modelType == TextToSpeechSampleModels.tacotron2_english){
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "encoder.onnx", local_name = "nivdia_encoder.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "decoder_iter.onnx", local_name = "nivdia_decoder_iter.onnx" });
@@ -123,9 +115,6 @@ public class AiliaVoiceSample : MonoBehaviour
 			}
 
 			switch(modelType){
-			case TextToSpeechSampleModels.tacotron2_japanese:
-				status = voice.OpenModel(path+"tsukuyomi_encoder.onnx", path+"tsukuyomi_decoder_iter.onnx", path+"tsukuyomi_postnet.onnx", path+"tsukuyomi_waveglow.onnx", null, AiliaVoice.AILIA_VOICE_MODEL_TYPE_TACOTRON2, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
-				break;
 			case TextToSpeechSampleModels.tacotron2_english:
 				Debug.Log(path+"nivdia_encoder.onnx");
 				status = voice.OpenModel(path+"nivdia_encoder.onnx", path+"nivdia_decoder_iter.onnx", path+"nivdia_postnet.onnx", path+"nivdia_waveglow.onnx", null, AiliaVoice.AILIA_VOICE_MODEL_TYPE_TACOTRON2, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
@@ -144,9 +133,6 @@ public class AiliaVoiceSample : MonoBehaviour
 	}
 
 	private void Infer(string text){
-		if (modelType == TextToSpeechSampleModels.tacotron2_japanese){
-			text = voice.G2P(text, AiliaVoice.AILIA_VOICE_TEXT_POST_PROCESS_APPEND_ACCENT | AiliaVoice.AILIA_VOICE_TEXT_POST_PROCESS_APPEND_PUNCTUATION | AiliaVoice.AILIA_VOICE_TEXT_POST_PROCESS_REMOVE_SPACE);
-		}
 		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese){
 			text = voice.G2P(text, AiliaVoice.AILIA_VOICE_TEXT_POST_PROCESS_APPEND_PUNCTUATION);
 			if (ref_clip.name != before_ref_clip_name){
