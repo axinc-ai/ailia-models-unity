@@ -153,13 +153,17 @@ namespace ailiaSDK
 			//Pose estimation
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> pose=null;
+			string env_name = "";
 			if (ailiaModelType == PoseEstimatorModels.blazepose_fullbody)
 			{
 				pose = ailia_blazepose.RunPoseEstimation(camera, tex_width, tex_height);
+				env_name = ailia_blazepose.EnvironmentName();
 			}else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
 				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
+				env_name = ailia_pose_resnet.EnvironmentName();
 			}else{
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
+				env_name = ailia_pose.EnvironmentName();
 			}
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 
@@ -202,7 +206,7 @@ namespace ailiaSDK
 
 			if (label_text != null)
 			{
-				label_text.text = "" + (end_time - start_time) + "ms\n" + ailia_pose.EnvironmentName();
+				label_text.text = "" + (end_time - start_time) + "ms\n" + env_name;
 			}
 		}
 
