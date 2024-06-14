@@ -20,7 +20,9 @@ namespace ailiaSDK
 		//Settings
 		public DiffusionModels diffusionModels = DiffusionModels.Inpainting;
 		public bool gpu_mode = false;
+		public bool live_preview = false;
 		public GameObject UICanvas = null;
+		public string prompt = "a photograph of an astronaut riding a horse";
 
 		//Result
 		RawImage raw_image = null;
@@ -173,6 +175,7 @@ namespace ailiaSDK
 				Color32[] inputMaskResize = null;
 
 				// Diffusion loop
+				bool image_decode = (live_preview || step == ddim_num_steps - 1);
 				Color32[] outputImage = null;
 				switch (diffusionModels)
 				{
@@ -180,14 +183,14 @@ namespace ailiaSDK
 					inputImage = AiliaImageSource.GetPixels32(rect, true);
 					inputMask = AiliaImageSourceMask.GetPixels32(rect, true);
 					inputMaskResize = AiliaImageSourceMaskResize.GetPixels32(rect, true);
-					outputImage = inpainting.Predict(inputImage, inputMask, inputMaskResize, step, ddim_num_steps);
+					outputImage = inpainting.Predict(inputImage, inputMask, inputMaskResize, step, ddim_num_steps, image_decode);
 					break;
 				case DiffusionModels.SuperResolution:
 					inputImage = AiliaImageSource.GetPixels32(rect, true);
-					outputImage = super_resolution.Predict(inputImage, step, ddim_num_steps);
+					outputImage = super_resolution.Predict(inputImage, step, ddim_num_steps, image_decode);
 					break;
 				case DiffusionModels.StableDiffusion:
-					outputImage = stable_diffusion.Predict(step, ddim_num_steps);
+					outputImage = stable_diffusion.Predict(step, ddim_num_steps, image_decode);
 					break;
 				}
 
@@ -325,6 +328,7 @@ namespace ailiaSDK
 								asset_path + "/" + "ViT-L14-encode_text.onnx.prototxt", asset_path + "/" + "ViT-L14-encode_text.onnx",
 								gpu_mode);
 						}
+						stable_diffusion.SetPrompt(prompt);
 						break;
 				}
 			}));

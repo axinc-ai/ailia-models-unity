@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using ailia;
+using ailiaTokenizer;
 
 namespace ailiaSDK
 {
@@ -18,6 +19,7 @@ namespace ailiaSDK
 		private AiliaModel diffusionOutModel = new AiliaModel();
 		private AiliaModel aeModel = new AiliaModel();
 		private AiliaModel clipModel = new AiliaModel();
+		private AiliaTokenizerModel tokenizerModel = new AiliaTokenizerModel();
 
 		// Sampler
 		private AiliaDiffusionDdim ddim = new AiliaDiffusionDdim();
@@ -37,6 +39,7 @@ namespace ailiaSDK
 		private int AeOutputChannel;
 
 		// Buffers
+		private float[] ae_input;
 		private float[] ae_output;
 		private float [] diffusion_img;
 		private float [] context;
@@ -52,25 +55,30 @@ namespace ailiaSDK
 		private bool legacy;
 
 		// Tokens
+		private static int max_prompt_size = 77;
+
+		private static float SOP = 49406;
+		private static float EOP = 49407;
+
 		private static float [] empty_tokens = {
-				49406, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+				SOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP};
 
 		private static float [] prompt_tokens = {
-				49406,   320,  8853,   539,   550, 18376,  6765,   320,  4558, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407, 49407,
-				49407, 49407, 49407, 49407, 49407, 49407, 49407};
+				SOP,   320,  8853,   539,   550, 18376,  6765,   320,  4558, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP, EOP,
+				EOP, EOP, EOP, EOP, EOP, EOP, EOP};
 
 		public bool Open(
 			string diffusion_emb_model_path, string diffusion_emb_weight_path,
@@ -123,6 +131,8 @@ namespace ailiaSDK
 				}
 			}
 
+			tokenizerModel.Create(AiliaTokenizer.AILIA_TOKENIZER_TYPE_CLIP, AiliaTokenizer.AILIA_TOKENIZER_FLAG_UTF8_SAFE);
+
 			return modelPrepared;
 		}
 
@@ -140,6 +150,8 @@ namespace ailiaSDK
 			CondInputHeight = 64;
 			CondInputChannel = 4;
 
+			ae_input = new float[CondInputChannel * CondInputWidth * CondInputHeight];
+
 			SequenceWidth = 768;
 			SequenceHeight = 77;
 
@@ -148,6 +160,48 @@ namespace ailiaSDK
 			AeOutputChannel = 3;
 
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
+		}
+
+		private void SetPromptTokens(float[] promptTokens)
+		{
+			if (promptTokens == null)
+			{
+				string errorMessage = "Received null promptTokens";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			if (promptTokens.Length == 0)
+			{
+				string errorMessage = "Received empty promptTokens";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			if (promptTokens[0] != SOP)
+			{
+				string errorMessage = $"First prompt token should be {SOP} (received {promptTokens[0]})";
+				Debug.Log(errorMessage);
+				return;
+			}
+
+			for (int i = 0; i < max_prompt_size; ++i)
+			{
+				if (i >= promptTokens.Length)
+				{
+					prompt_tokens[i] = EOP;
+				}
+				else
+				{
+					prompt_tokens[i] = promptTokens[i];
+				}
+			}
+		}
+
+		public void SetPrompt(string prompt)
+		{
+			int[] tokens = tokenizerModel.Encode(prompt);
+			SetPromptTokens(Array.ConvertAll<int, float>(tokens, Convert.ToSingle));
 		}
 
 		private float [] Tokenize(float [] tokens){
@@ -180,23 +234,17 @@ namespace ailiaSDK
 			return z;
 		}
 
-		private void SetInputShape(bool preview){
+		private void SetInputShape(){
 			Ailia.AILIAShape shape=new Ailia.AILIAShape();
-			if (preview){
-				shape.x = (uint)CondInputWidth / 4;
-				shape.y = (uint)CondInputHeight / 4;
-				shape.z = (uint)CondInputChannel;
-			}else{
-				shape.x = (uint)CondInputWidth;
-				shape.y = (uint)CondInputHeight;
-				shape.z = (uint)CondInputChannel;
-			}
+			shape.x = (uint)CondInputWidth;
+			shape.y = (uint)CondInputHeight;
+			shape.z = (uint)CondInputChannel;
 			shape.w = 1;
 			shape.dim = 4;
 			aeModel.SetInputBlobShape(shape, (int)aeModel.GetInputBlobList()[0]);
 		}
 
-		public Color32[] Predict(int step, int ddim_num_steps)
+		public Color32[] Predict(int step, int ddim_num_steps, bool image_decode)
 		{
 			// Initial diffusion image
 			if (step == 0){
@@ -250,35 +298,28 @@ namespace ailiaSDK
 			long end_time3 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// AutoEncoder
-			bool preview = false;//(step < ddim_num_steps - 1);
-			float [] ae_input = new float[CondInputChannel * CondInputWidth * CondInputHeight];
-			for (int c = 0; c < CondInputChannel; c++){
-				for (int y = 0; y < CondInputHeight; y++){
-					for (int x = 0; x < CondInputWidth; x++){
-						int i = y * CondInputWidth + x + c * CondInputWidth * CondInputHeight;
-						int j = i;
-						if (preview){
-							j = (y / 4) * (CondInputWidth / 4) + (x / 4) + c * (CondInputWidth / 4) * (CondInputHeight / 4);
-						}
-						float scale_factor = 0.18215f;
-						ae_input[j] = diffusion_img[i] / scale_factor;
-					}
-				}
-			}
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			SetInputShape(preview);
-			aeModel.SetInputBlobData(ae_input , (int)aeModel.GetInputBlobList()[0]);
-			result = aeModel.Update();
-			if (!result){
-				Debug.Log("ae failed");
-				return outputImage;
+			if (image_decode){
+				for (int i = 0; i < CondInputChannel * CondInputHeight * CondInputWidth; i++){
+					const float scale_factor = 0.18215f;
+					ae_input[i] = diffusion_img[i] / scale_factor;
+				}
+				SetInputShape();
+				aeModel.SetInputBlobData(ae_input , (int)aeModel.GetInputBlobList()[0]);
+				result = aeModel.Update();
+				if (!result){
+					Debug.Log("ae failed");
+					return outputImage;
+				}
+				aeModel.GetBlobData(ae_output, (int)aeModel.GetOutputBlobList()[0]);
 			}
-			aeModel.GetBlobData(ae_output, (int)aeModel.GetOutputBlobList()[0]);
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// convert result to image
 			long start_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			OutputDataProcessing(ae_output, outputImage, preview);
+			if (image_decode){
+				OutputDataProcessing(ae_output, outputImage);
+			}
 			long end_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// profile
@@ -388,7 +429,7 @@ namespace ailiaSDK
 			return profile_text;
 		}
 
-		private void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer, bool preview)
+		private void OutputDataProcessing(float[] outputData, Color32[] pixelBuffer)
 		{
 			Debug.Log("outputData" + outputData.Length);
 			Debug.Log("pixelBuffer" + pixelBuffer.Length);
@@ -399,10 +440,6 @@ namespace ailiaSDK
 					int i = y * AeOutputWidth + x;
 					int j = i;
 					int stride = AeOutputWidth * AeOutputHeight;
-					if (preview){
-						i = (y / 4) * (AeOutputWidth / 4) + (x / 4);
-						stride = (AeOutputWidth / 4) * (AeOutputHeight / 4);
-					}
 					pixelBuffer[j].r = (byte)Mathf.Clamp((outputData[i + 0 * stride] + 1.0f) / 2.0f * 255, 0, 255);
 					pixelBuffer[j].g = (byte)Mathf.Clamp((outputData[i + 1 * stride] + 1.0f) / 2.0f * 255, 0, 255);
 					pixelBuffer[j].b = (byte)Mathf.Clamp((outputData[i + 2 * stride] + 1.0f) / 2.0f * 255, 0, 255);

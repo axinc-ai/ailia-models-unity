@@ -76,7 +76,7 @@ namespace ailiaSDK
 			ae_output = new float[AeOutputWidth * AeOutputHeight * AeOutputChannel];
 		}
 
-		public Color32[] Predict(Color32[] inputImage, int step, int ddim_num_steps)
+		public Color32[] Predict(Color32[] inputImage, int step, int ddim_num_steps, bool image_decode)
 		{
 			// Initial diffusion image
 			if (step == 0){
@@ -143,14 +143,18 @@ namespace ailiaSDK
 
 			// AutoEncoder
 			long start_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			aeModel.SetInputBlobData(diffusion_img , (int)aeModel.GetInputBlobList()[0]);
-			result = aeModel.Update();
-			aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
+			if (image_decode){
+				aeModel.SetInputBlobData(diffusion_img , (int)aeModel.GetInputBlobList()[0]);
+				result = aeModel.Update();
+				aeModel.GetBlobData(ae_output , (int)aeModel.GetOutputBlobList()[0]);
+			}
 			long end_time4 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// convert result to image
 			long start_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			OutputDataProcessing(ae_output, outputImage);
+			if (image_decode){
+				OutputDataProcessing(ae_output, outputImage);
+			}
 			long end_time5 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// profile
