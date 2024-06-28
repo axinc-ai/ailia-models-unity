@@ -17,7 +17,8 @@ public class AiliaVoiceSample : MonoBehaviour
 	public enum TextToSpeechSampleModels
 	{
 		tacotron2_english,
-		gpt_sovits_japanese
+		gpt_sovits_japanese,
+		gpt_sovits_english
 	}
 
 	// Settings
@@ -79,23 +80,33 @@ public class AiliaVoiceSample : MonoBehaviour
 
 		var urlList = new List<ModelDownloadURL>();
 
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "char.bin" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "COPYING" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "left-id.def" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "matrix.bin" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "pos-id.def" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "rewrite.def" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "right-id.def" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "sys.dic" });
-		urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "unk.dic" });
-
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese || modelType == TextToSpeechSampleModels.gpt_sovits_english){
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "char.bin" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "COPYING" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "left-id.def" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "matrix.bin" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "pos-id.def" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "rewrite.def" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "right-id.def" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "sys.dic" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "open_jtalk/open_jtalk_dic_utf_8-1.11", file_name = "unk.dic" });
+		}
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_english){
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "averaged_perceptron_tagger_classes.txt" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "averaged_perceptron_tagger_tagdict.txt" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "averaged_perceptron_tagger_weights.txt" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "cmudict" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "g2p_decoder.onnx" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "g2p_encoder.onnx" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "g2p_en", file_name = "homographs.en" });
+		}
 		if (modelType == TextToSpeechSampleModels.tacotron2_english){
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "encoder.onnx", local_name = "nivdia_encoder.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "decoder_iter.onnx", local_name = "nivdia_decoder_iter.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "postnet.onnx", local_name = "nivdia_postnet.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "tacotron2", file_name = "waveglow.onnx", local_name = "nivdia_waveglow.onnx" });
 		}
-		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese){
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese || modelType == TextToSpeechSampleModels.gpt_sovits_english){
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_encoder.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_fsdec.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_sdec.opt.onnx" });
@@ -108,10 +119,19 @@ public class AiliaVoiceSample : MonoBehaviour
 
 		StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 		{
-			status = voice.OpenDictionary(path, AiliaVoice.AILIA_VOICE_DICTIONARY_TYPE_OPEN_JTALK);
-			if (status == false){
-				Debug.Log("OpenDictionary failed");
-				return;
+			if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese || modelType == TextToSpeechSampleModels.gpt_sovits_english){
+				status = voice.OpenDictionary(path, AiliaVoice.AILIA_VOICE_DICTIONARY_TYPE_OPEN_JTALK);
+				if (status == false){
+					Debug.Log("OpenDictionary failed");
+					return;
+				}
+			}
+			if (modelType == TextToSpeechSampleModels.gpt_sovits_english){
+				status = voice.OpenDictionary(path, AiliaVoice.AILIA_VOICE_DICTIONARY_TYPE_G2P_EN);
+				if (status == false){
+					Debug.Log("OpenDictionary failed");
+					return;
+				}
 			}
 
 			switch(modelType){
@@ -120,6 +140,7 @@ public class AiliaVoiceSample : MonoBehaviour
 				status = voice.OpenModel(path+"nivdia_encoder.onnx", path+"nivdia_decoder_iter.onnx", path+"nivdia_postnet.onnx", path+"nivdia_waveglow.onnx", null, AiliaVoice.AILIA_VOICE_MODEL_TYPE_TACOTRON2, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
 				break;
 			case TextToSpeechSampleModels.gpt_sovits_japanese:
+			case TextToSpeechSampleModels.gpt_sovits_english:
 				status = voice.OpenModel(path+"t2s_encoder.onnx", path+"t2s_fsdec.onnx", path+"t2s_sdec.opt.onnx", path+"vits.onnx", path+"cnhubert.onnx", AiliaVoice.AILIA_VOICE_MODEL_TYPE_GPT_SOVITS, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
 				break;
 			}
@@ -133,8 +154,7 @@ public class AiliaVoiceSample : MonoBehaviour
 	}
 
 	private void Infer(string text){
-		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese){
-			text = voice.G2P(text, AiliaVoice.AILIA_VOICE_TEXT_POST_PROCESS_APPEND_PUNCTUATION);
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese || modelType == TextToSpeechSampleModels.gpt_sovits_english){
 			if (ref_clip.name != before_ref_clip_name){
 				string label = "水をマレーシアから買わなくてはならない。";
 				Debug.Log("Label : " + label);
@@ -142,6 +162,12 @@ public class AiliaVoiceSample : MonoBehaviour
 				voice.SetReference(ref_clip, ref_text);
 				before_ref_clip_name = ref_clip.name;
 			}
+		}
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese){
+			text = voice.G2P(text, AiliaVoice.AILIA_VOICE_G2P_TYPE_GPT_SOVITS_JA);
+		}
+		if (modelType == TextToSpeechSampleModels.gpt_sovits_english){
+			text = voice.G2P(text, AiliaVoice.AILIA_VOICE_G2P_TYPE_GPT_SOVITS_EN);
 		}
 
 		Debug.Log("Features : "+ text);
