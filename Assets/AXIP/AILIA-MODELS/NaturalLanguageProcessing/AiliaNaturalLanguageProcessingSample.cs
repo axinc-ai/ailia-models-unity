@@ -53,6 +53,7 @@ namespace ailiaSDK
 
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			UISetup();
 
 			// for Processing

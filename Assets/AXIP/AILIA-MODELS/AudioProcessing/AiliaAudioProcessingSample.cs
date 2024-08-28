@@ -212,6 +212,7 @@ namespace ailiaSDK {
 		// Use this for initialization
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			ailia_mic.InitializeMic(mic_mode, audio_clip);
 			SetUIProperties();
 			CreateAiliaNetwork(ailiaModelType);

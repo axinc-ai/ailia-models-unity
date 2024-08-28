@@ -67,6 +67,7 @@ namespace ailiaSDK
 
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			UISetup();
 
 			rawImageSize = raw_image.rectTransform.sizeDelta;

@@ -194,6 +194,7 @@ namespace ailiaSDK
 
         void Start()
         {
+			AiliaLicense.CheckAndDownloadLicense();
             SetUIProperties();
             CreateAiliaTextRecognizer();
             ailia_camera.CreateCamera(camera_id, false);

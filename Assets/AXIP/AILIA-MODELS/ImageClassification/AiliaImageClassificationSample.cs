@@ -128,6 +128,7 @@ namespace ailiaSDK
 
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			mode_text.text = "ailia Classifier";
 			SetUIProperties();
 			CreateAilia();
