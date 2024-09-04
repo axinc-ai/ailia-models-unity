@@ -46,6 +46,7 @@ public class AiliaVoiceSample : MonoBehaviour
 	// Start is called before the first frame update
 	void Start()
 	{
+			AiliaLicense.CheckAndDownloadLicense();
 		UISetup();
 		LoadModel();
 	}

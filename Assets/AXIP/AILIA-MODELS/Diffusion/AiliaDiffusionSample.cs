@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using ailia;
 
 namespace ailiaSDK
 {
@@ -67,6 +68,7 @@ namespace ailiaSDK
 
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			UISetup();
 
 			rawImageSize = raw_image.rectTransform.sizeDelta;

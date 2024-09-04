@@ -448,6 +448,7 @@ namespace ailiaSDK {
 		// Use this for initialization
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			SetUIProperties();
 			CreateAiliaDetector(ailiaModelType);
 			ailia_camera.CreateCamera(camera_id);

@@ -80,6 +80,7 @@ namespace ailiaSDK
 
         void Start()
         {
+			AiliaLicense.CheckAndDownloadLicense();
             UISetup();
 
             AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();

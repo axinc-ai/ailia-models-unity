@@ -128,6 +128,8 @@ namespace ailiaSDK {
 		// Use this for initialization
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
+
 			if(ailiaModelType==AiliaGenerativeAdversarialNetworksModels.lipgan){
 				image = image_lipgan;
 			}

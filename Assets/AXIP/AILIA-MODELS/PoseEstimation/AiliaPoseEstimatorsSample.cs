@@ -118,6 +118,7 @@ namespace ailiaSDK
 		// Use this for initialization
 		void Start()
 		{
+			AiliaLicense.CheckAndDownloadLicense();
 			mode_text.text = "ailia PoseEstimator";
 			SetUIProperties();
 			CreateAiliaPoseEstimator();
