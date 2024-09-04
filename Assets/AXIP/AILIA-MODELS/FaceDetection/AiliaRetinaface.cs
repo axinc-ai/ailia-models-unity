@@ -63,9 +63,9 @@ namespace ailiaSDK
 			{
 				for (int x = 0; x < w; x++)
 				{
-					data[(y * w + x) + 0 * w * h] = (float)(((camera[(tex_height - 1 - y) * tex_width + x].r) - 123.0f));
+					data[(y * w + x) + 2 * w * h] = (float)(((camera[(tex_height - 1 - y) * tex_width + x].r) - 123.0f));
                     data[(y * w + x) + 1 * w * h] = (float)(((camera[(tex_height - 1 - y) * tex_width + x].g) - 117.0f));
-                    data[(y * w + x) + 2 * w * h] = (float)(((camera[(tex_height - 1 - y) * tex_width + x].b) - 104.0f));
+                    data[(y * w + x) + 0 * w * h] = (float)(((camera[(tex_height - 1 - y) * tex_width + x].b) - 104.0f));
 				}
 			}
 
