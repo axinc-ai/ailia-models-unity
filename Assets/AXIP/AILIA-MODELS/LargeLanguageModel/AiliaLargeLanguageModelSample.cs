@@ -57,7 +57,8 @@ namespace ailiaSDK
 			label_text = UICanvas.transform.Find("LabelText").GetComponent<Text>();
 			mode_text = UICanvas.transform.Find("ModeLabel").GetComponent<Text>();
 
-			mode_text.text = "ailia Natural Processing Sample";
+			mode_text.text = "ailia Large Language Model Sample";
+			label_text.text = "Please input query.";
 
 			UICanvas.transform.Find("RawImage").GetComponent<RawImage>().gameObject.SetActive(false);
 		}
@@ -67,7 +68,6 @@ namespace ailiaSDK
 			// Create Ailia
 			CreateAiliaNet(modelType, gpu_mode);
 		}
-
 
 		// Download models and Create ailiaModel
 		void CreateAiliaNet(LargeLanguageModelSampleModels modelType, bool gpu_mode = true)
@@ -84,9 +84,9 @@ namespace ailiaSDK
 
 			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 			{
-				mode_text.text = urlList[0].file_name;
+				llm = new AiliaLLMModel();
 				llm.Create();
-				llm.Open(Application.streamingAssetsPath + "/gemma-2-2b-it-Q4_K_M.gguf");
+				modelPrepared = llm.Open(Application.streamingAssetsPath + "/gemma-2-2b-it-Q4_K_M.gguf");
 				if (modelPrepared == false){
 					Debug.Log("ailiaModel.OpenFile failed");
 				}
@@ -94,7 +94,7 @@ namespace ailiaSDK
 				// System Prompt
 				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
 				message.role = "system";
-				message.content = "語尾に「だわん」をつけてください。";
+				message.content = "あなたは可愛いくまのキャラクターです。発言の語尾に「くま」をつけてください。";
 				messages.Add(message);
 			}));
 		}
