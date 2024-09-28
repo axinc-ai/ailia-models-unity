@@ -736,8 +736,8 @@ MonoBehaviour:
   m_OnSubmit:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: 
+      - m_Target: {fileID: 1393556305}
+        m_TargetAssemblyTypeName: ailiaSDK.AiliaLargeLanguageModelSample, Assembly-CSharp
         m_MethodName: Submit
         m_Mode: 1
         m_Arguments:

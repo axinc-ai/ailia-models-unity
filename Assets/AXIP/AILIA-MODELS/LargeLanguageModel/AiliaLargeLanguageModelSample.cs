@@ -86,7 +86,7 @@ namespace ailiaSDK
 			{
 				llm = new AiliaLLMModel();
 				llm.Create();
-				modelPrepared = llm.Open(Application.streamingAssetsPath + "/gemma-2-2b-it-Q4_K_M.gguf");
+				modelPrepared = llm.Open(asset_path + "/gemma-2-2b-it-Q4_K_M.gguf");
 				if (modelPrepared == false){
 					Debug.Log("ailiaModel.OpenFile failed");
 				}
@@ -133,6 +133,8 @@ namespace ailiaSDK
 			generate_text = generate_text + deltaText;
 			label_text.text = generate_text;
 
+			//Debug.Log(generate_text);
+
 			if (done){
 				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
 				message.role = "assistant";
@@ -150,7 +152,6 @@ namespace ailiaSDK
 			}
 
 			string query_text = input_field.text;
-			string result = "";
 
 			AiliaLLMChatMessage message = new AiliaLLMChatMessage();
 			message.role = "user";
