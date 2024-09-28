@@ -1023,6 +1023,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1393556304}
+  - component: {fileID: 1393556305}
   m_Layer: 0
   m_Name: LargeLanguageModelController
   m_TagString: Untagged
@@ -1045,6 +1046,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1393556305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1393556303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa07a79e2a6874d3caeaf60c53cc24dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  input_field: {fileID: 993168876}
+  modelType: 0
+  gpu_mode: 0
+  UICanvas: {fileID: 1828548551}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1149,3 +1166,9 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
+--- !u!1 &1828548551 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1813464802}
+  m_PrefabAsset: {fileID: 0}

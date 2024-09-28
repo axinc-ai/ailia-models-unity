@@ -34,10 +34,12 @@ namespace ailiaSDK
 
 		// AILIA
 		private AiliaLLMModel llm = null;
-    	private List<AiliaLLMChatMessage> messages = new List<AiliaLLMChatMessage>();
+		private List<AiliaLLMChatMessage> messages = new List<AiliaLLMChatMessage>(); // Chat History
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
+		bool done = true;
+		string generate_text = "";
 
 		void Start()
 		{
@@ -77,21 +79,23 @@ namespace ailiaSDK
 			var urlList = new List<ModelDownloadURL>();
 
 			if (modelType == LargeLanguageModelSampleModels.gemma2_2b){
-				urlList.Add(new ModelDownloadURL() { folder_path = "gemma2", file_name = "gemma-2-2b-it-Q4_K_M.gguf" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-2-2b-it-Q4_K_M.gguf" });
 			}
 
 			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 			{
+				mode_text.text = urlList[0].file_name;
 				llm.Create();
 				llm.Open(Application.streamingAssetsPath + "/gemma-2-2b-it-Q4_K_M.gguf");
+				if (modelPrepared == false){
+					Debug.Log("ailiaModel.OpenFile failed");
+				}
 
+				// System Prompt
 				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
 				message.role = "system";
 				message.content = "語尾に「だわん」をつけてください。";
 				messages.Add(message);
-				if (modelPrepared == false){
-					Debug.Log("ailiaModel.OpenFile failed");
-				}
 			}));
 		}
 
@@ -102,20 +106,7 @@ namespace ailiaSDK
 				return;
 			}
 
-			string result = "";
-			if (modelType == NaturalLanguageProcessingSampleModels.sentence_transformer_japanese || modelType == NaturalLanguageProcessingSampleModels.multilingual_e5){
-				if (chunk_cnt < chunk_text.Length){
-					long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-					chunk_embedding.Add(textEmbedding.Embedding(chunk_text[chunk_cnt], ailiaModel, ailiaTokenizer));
-					result = "Embedding : "+chunk_text[chunk_cnt]+"\n";
-					chunk_cnt++;
-					long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-					if (label_text != null)
-					{
-						label_text.text = result+(end_time - start_time).ToString() + "ms\n" + ailiaModel.EnvironmentName();
-					}
-				}
-			}
+			Generate();
 		}
 
 		void OnApplicationQuit()
@@ -130,12 +121,31 @@ namespace ailiaSDK
 
 		private void DestroyAilia()
 		{
-        	llm.Close();
+			llm.Close();
+		}
+
+		private void Generate(){
+			if (done == true){
+				return;
+			}
+			llm.Generate(ref done);
+			string deltaText = llm.GetDeltaText();
+			generate_text = generate_text + deltaText;
+			label_text.text = generate_text;
+
+			if (done){
+				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
+				message.role = "assistant";
+				message.content = generate_text;
+				messages.Add(message);
+			}
 		}
 
 		public void Submit(){
-			if (!modelPrepared)
-			{
+			if (!modelPrepared) {
+				return;
+			}
+			if (done == false) {
 				return;
 			}
 
@@ -146,26 +156,12 @@ namespace ailiaSDK
 			message.role = "user";
 			message.content = query_text;
 			messages.Add(message);
-			inputFiled.text = "";
+
+			input_field.text = "";
+			generate_text = "";
 
 			llm.SetPrompt(messages);
-			bool done = false;
-			string text = "";
-			while (true){
-				llm.Generate(ref done);
-				if (done == true){
-					break;
-				}
-				string deltaText = llm.GetDeltaText();
-				text = text + deltaText;
-				label_text.text = text;
-			}
-			label_text.text = text;
-
-			message = new AiliaLLMChatMessage();
-			message.role = "assistant";
-			message.content = text;
-			messages.Add(message);
+			done = false;
 		}
 	}
 }
