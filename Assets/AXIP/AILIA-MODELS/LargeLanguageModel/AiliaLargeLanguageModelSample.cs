@@ -137,7 +137,12 @@ namespace ailiaSDK
 			if (done == true){
 				return;
 			}
-			llm.Generate(ref done);
+			bool status = llm.Generate(ref done);
+			if (status == false){
+				// context size full
+				done = true;
+				return;
+			}
 			string deltaText = llm.GetDeltaText();
 			generate_text = generate_text + deltaText;
 			label_text.text = generate_text;
