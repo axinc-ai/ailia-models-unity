@@ -100,12 +100,15 @@ namespace ailiaSDK
 					Debug.Log("ailiaModel.OpenFile failed");
 				}
 
-				// System Prompt
-				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
-				message.role = "system";
-				message.content = "あなたは可愛いくまのキャラクターです。発言の語尾に「くま」をつけてください。";
-				messages.Add(message);
+				SetSystemPrompt();
 			}));
+		}
+
+		private void SetSystemPrompt(){
+			AiliaLLMChatMessage message = new AiliaLLMChatMessage();
+			message.role = "system";
+			message.content = "あなたは可愛いくまのキャラクターです。発言の語尾に「くま」をつけてください。";
+			messages.Add(message);
 		}
 
 		void Update()
@@ -137,17 +140,17 @@ namespace ailiaSDK
 			if (done == true){
 				return;
 			}
+
 			bool status = llm.Generate(ref done);
 			if (status == false){
 				// context size full
 				done = true;
 				return;
 			}
+
 			string deltaText = llm.GetDeltaText();
 			generate_text = generate_text + deltaText;
 			label_text.text = generate_text;
-
-			//Debug.Log(generate_text);
 
 			if (done){
 				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
@@ -166,6 +169,11 @@ namespace ailiaSDK
 			}
 
 			string query_text = input_field.text;
+
+			if (llm.ContextFull()){
+				messages = new List<AiliaLLMChatMessage>();
+				SetSystemPrompt();
+			}
 
 			AiliaLLMChatMessage message = new AiliaLLMChatMessage();
 			message.role = "user";
