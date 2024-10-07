@@ -98,7 +98,7 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_LightingSettings: {fileID: 4890085278179872738, guid: 3a9de8832a77447ef9fdde66d7c89d23,
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 4b756f91e893f427fb56b31400ba3d48,
     type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -737,7 +737,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1393556305}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: ailiaSDK.AiliaLargeLanguageModelSample, Assembly-CSharp
         m_MethodName: Submit
         m_Mode: 1
         m_Arguments:
@@ -965,7 +965,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1393556305}
-        m_TargetAssemblyTypeName: 
+        m_TargetAssemblyTypeName: ailiaSDK.AiliaLargeLanguageModelSample, Assembly-CSharp
         m_MethodName: Submit
         m_Mode: 1
         m_Arguments:
@@ -1025,7 +1025,7 @@ GameObject:
   - component: {fileID: 1393556304}
   - component: {fileID: 1393556305}
   m_Layer: 0
-  m_Name: NaturalLanguageProcessingController
+  m_Name: LargeLanguageModelController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1055,14 +1055,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1393556303}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0eae1caae84546b69e08ea03d62aec7, type: 3}
+  m_Script: {fileID: 11500000, guid: aa07a79e2a6874d3caeaf60c53cc24dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   input_field: {fileID: 993168876}
   modelType: 0
   gpu_mode: 0
-  UICanvas: {fileID: 1813464803}
-  database: {fileID: 4900000, guid: befcc31acdaae481da229bd8c9517b1f, type: 3}
+  UICanvas: {fileID: 1828548551}
 --- !u!1001 &1813464802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1167,7 +1166,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b13fba7fbe84549eaad325ff3431cb6f, type: 3}
---- !u!1 &1813464803 stripped
+--- !u!1 &1828548551 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1716708668608742, guid: b13fba7fbe84549eaad325ff3431cb6f,
     type: 3}
