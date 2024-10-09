@@ -251,7 +251,7 @@ namespace ailiaSDK {
 			uint frequency = 1;
 			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
-			if (ailiaModelType == AudioProcessingModels.whisper_tiny || ailiaModelType == AudioProcessingModels.whisper_small || ailiaModelType == AudioProcessingModels.whisper_medium){
+			if (ailiaModelType == AudioProcessingModels.whisper_tiny || ailiaModelType == AudioProcessingModels.whisper_small || ailiaModelType == AudioProcessingModels.whisper_medium || ailiaModelType == AudioProcessingModels.whisper_turbo){
 				WhisperUpdate(waveData, channels, frequency);
 			} else {
 				VadAndRvcUpdate(waveData, channels, frequency);
