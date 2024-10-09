@@ -188,7 +188,7 @@ namespace ailiaSDK {
 					if (ailiaModelType == AudioProcessingModels.whisper_turbo){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_LARGE_V3;
 						encoder_path = "encoder_turbo.onnx";
-						pb_path = "decoder_turbo.pb";
+						pb_path = "encoder_turbo_weights.pb";
 						decoder_path = "decoder_turbo_fix_kv_cache.onnx";
 					}
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
