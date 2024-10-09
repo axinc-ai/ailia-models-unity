@@ -24,6 +24,7 @@ namespace ailiaSDK {
 			whisper_tiny,
 			whisper_small,
 			whisper_medium,
+			whisper_turbo
 		}
 
 		[SerializeField]
@@ -153,10 +154,12 @@ namespace ailiaSDK {
 				case AudioProcessingModels.whisper_tiny:
 				case AudioProcessingModels.whisper_small:
 				case AudioProcessingModels.whisper_medium:
+				case AudioProcessingModels.whisper_turbo:
 					mode_text.text = "whisper";
 
 					string encoder_path = "";
 					string decoder_path = "";
+					string pb_path = "";
 					string vad_path = "silero_vad.onnx";
 
 					int task = AiliaSpeech.AILIA_SPEECH_TASK_TRANSCRIBE; //AiliaSpeech.AILIA_SPEECH_TASK_TRANSLATE;
@@ -182,9 +185,18 @@ namespace ailiaSDK {
 						encoder_path = "encoder_medium.opt3.onnx";
 						decoder_path = "decoder_medium_fix_kv_cache.opt3.onnx";
 					}
+					if (ailiaModelType == AudioProcessingModels.whisper_turbo){
+						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_LARGE_V3;
+						encoder_path = "encoder_turbo.onnx";
+						pb_path = "decoder_turbo.pb";
+						decoder_path = "decoder_turbo_fix_kv_cache.onnx";
+					}
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
 					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = encoder_path });
 					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = decoder_path });
+					if (pb_path != ""){
+						urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = pb_path });
+					}
 					bool virtual_memory_enable = false;
 					string language = "auto"; // ja
 					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
