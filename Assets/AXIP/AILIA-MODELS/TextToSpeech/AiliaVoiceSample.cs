@@ -110,7 +110,7 @@ public class AiliaVoiceSample : MonoBehaviour
 		if (modelType == TextToSpeechSampleModels.gpt_sovits_japanese || modelType == TextToSpeechSampleModels.gpt_sovits_english){
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_encoder.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_fsdec.onnx" });
-			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_sdec.opt.onnx" });
+			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "t2s_sdec.opt3.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "vits.onnx" });
 			urlList.Add(new ModelDownloadURL() { folder_path = "gpt-sovits", file_name = "cnhubert.onnx" });
 		}
@@ -142,7 +142,7 @@ public class AiliaVoiceSample : MonoBehaviour
 				break;
 			case TextToSpeechSampleModels.gpt_sovits_japanese:
 			case TextToSpeechSampleModels.gpt_sovits_english:
-				status = voice.OpenModel(path+"t2s_encoder.onnx", path+"t2s_fsdec.onnx", path+"t2s_sdec.opt.onnx", path+"vits.onnx", path+"cnhubert.onnx", AiliaVoice.AILIA_VOICE_MODEL_TYPE_GPT_SOVITS, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
+				status = voice.OpenModel(path+"t2s_encoder.onnx", path+"t2s_fsdec.onnx", path+"t2s_sdec.opt3.onnx", path+"vits.onnx", path+"cnhubert.onnx", AiliaVoice.AILIA_VOICE_MODEL_TYPE_GPT_SOVITS, AiliaVoice.AILIA_VOICE_CLEANER_TYPE_BASIC);
 				break;
 			}
 			if (status == false){
