@@ -11,7 +11,6 @@ using UnityEngine.UI;
 
 using ailia;
 using ailiaAudio;
-using ailiaSpeech;
 
 namespace ailiaSDK {
 	public class AiliaAudioProcessingSample : AiliaRenderer {
@@ -20,11 +19,7 @@ namespace ailiaSDK {
 		{
 			silero_vad,
 			rvc,
-			rvc_with_f0,
-			whisper_tiny,
-			whisper_small,
-			whisper_medium,
-			whisper_turbo
+			rvc_with_f0
 		}
 
 		[SerializeField]
@@ -42,7 +37,6 @@ namespace ailiaSDK {
 		[SerializeField]
 		private bool rvc_async_mode = false;	// Async Processing
 		[SerializeField]
-		private bool whisper_live_transcribe = true;
 
 		//Input Audio Clip
 		public AudioClip audio_clip = null;
@@ -64,7 +58,6 @@ namespace ailiaSDK {
 		private AiliaRvc ailia_rvc = new AiliaRvc();
 		private AiliaMicrophone ailia_mic = new AiliaMicrophone();
 		private AiliaSplitAudio ailia_split = new AiliaSplitAudio();
-		private AiliaSpeechModel ailia_speech = new AiliaSpeechModel();
 		private AiliaDisplayAudio ailia_display_audio = new AiliaDisplayAudio();
 
 		//AILIA open file
@@ -76,9 +69,6 @@ namespace ailiaSDK {
 		private bool crepe_tiny = true;
 		private long rvc_time = 0;
 		private long f0_time = 0;
-
-		//Whisper
-		string content_text = "";
 
 		private void CreateAiliaNetwork(AudioProcessingModels modelType)
 		{
@@ -151,63 +141,6 @@ namespace ailiaSDK {
 						}
 					}));
 					break;
-				case AudioProcessingModels.whisper_tiny:
-				case AudioProcessingModels.whisper_small:
-				case AudioProcessingModels.whisper_medium:
-				case AudioProcessingModels.whisper_turbo:
-					mode_text.text = "whisper";
-
-					string encoder_path = "";
-					string decoder_path = "";
-					string pb_path = "";
-					string vad_path = "silero_vad.onnx";
-
-					int task = AiliaSpeech.AILIA_SPEECH_TASK_TRANSCRIBE; //AiliaSpeech.AILIA_SPEECH_TASK_TRANSLATE;
-					int flag = AiliaSpeech.AILIA_SPEECH_FLAG_NONE;
-					if (whisper_live_transcribe){
-						flag = AiliaSpeech.AILIA_SPEECH_FLAG_LIVE;
-					}
-					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
-					int env_id = ailia_speech.GetEnvironmentId(gpu_mode);
-					int api_model_type = 0;
-					if (ailiaModelType == AudioProcessingModels.whisper_tiny){
-						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_TINY;
-						encoder_path = "encoder_tiny.opt3.onnx";
-						decoder_path = "decoder_tiny_fix_kv_cache.opt3.onnx";
-					}
-					if (ailiaModelType == AudioProcessingModels.whisper_small){
-						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_SMALL;
-						encoder_path = "encoder_small.opt3.onnx";
-						decoder_path = "decoder_small_fix_kv_cache.opt3.onnx";
-					}
-					if (ailiaModelType == AudioProcessingModels.whisper_medium){
-						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_MEDIUM;
-						encoder_path = "encoder_medium.opt3.onnx";
-						decoder_path = "decoder_medium_fix_kv_cache.opt3.onnx";
-					}
-					if (ailiaModelType == AudioProcessingModels.whisper_turbo){
-						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_LARGE_V3;
-						encoder_path = "encoder_turbo.onnx";
-						pb_path = "encoder_turbo_weights.pb";
-						decoder_path = "decoder_turbo_fix_kv_cache.onnx";
-					}
-					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
-					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = encoder_path });
-					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = decoder_path });
-					if (pb_path != ""){
-						urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = pb_path });
-					}
-					bool virtual_memory_enable = false;
-					string language = "auto"; // ja
-					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
-					{
-						FileOpened = ailia_speech.Open(asset_path + "/" + encoder_path, asset_path + "/" + decoder_path, env_id, memory_mode, api_model_type, task, flag, language);
-						if (FileOpened) {
-							FileOpened = ailia_speech.OpenVad(asset_path + "/" + vad_path, AiliaSpeech.AILIA_SPEECH_VAD_TYPE_SILERO);
-						}
-					}));
-
-					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -218,7 +151,6 @@ namespace ailiaSDK {
 		{
 			ailia_vad.Close();
 			ailia_rvc.Close();
-			ailia_speech.Close();
 		}		
 
 		// Use this for initialization
@@ -251,53 +183,7 @@ namespace ailiaSDK {
 			uint frequency = 1;
 			waveData = ailia_mic.GetPcm(ref channels, ref frequency);
 
-			if (ailiaModelType == AudioProcessingModels.whisper_tiny || ailiaModelType == AudioProcessingModels.whisper_small || ailiaModelType == AudioProcessingModels.whisper_medium || ailiaModelType == AudioProcessingModels.whisper_turbo){
-				WhisperUpdate(waveData, channels, frequency);
-			} else {
-				VadAndRvcUpdate(waveData, channels, frequency);
-			}
-		}
-
-		void WhisperUpdate(float[] waveData, uint channels, uint frequency){
-			// Preview
-			ailia_display_audio.DisplayPcm(waveData, null, channels);
-
-			// Error handle
-			if (ailia_speech.IsError()){
-				return;
-			}
-
-			// Get result
-			WhisperDisplayIntermediateResult();
-			WhisperGetResult();
-
-			// Transcribe request
-			bool complete = ailia_mic.IsComplete();
-			ailia_speech.Transcribe(waveData, frequency, channels, complete);
-		}
-
-		private void WhisperDisplayIntermediateResult(){
-			string intermediateText = ailia_speech.GetIntermediateText();
-			if (content_text != "" || intermediateText != ""){
-				if (intermediateText != ""){
-					label_text.text = "[processing] " + intermediateText + "\n" + content_text;
-				}else{
-					label_text.text = content_text;
-				}
-			} else{
-				if (ailia_speech.IsProcessing()){
-					label_text.text = "[processing]";
-				}
-			}
-		}
-
-		private void WhisperGetResult(){
-			List<string> results = ailia_speech.GetResults();
-			for (uint idx = 0; idx < results.Count; idx++){
-				string text = results[(int)idx];
-				string display_text = text + "\n";
-				content_text = display_text + content_text;
-			}
+			VadAndRvcUpdate(waveData, channels, frequency);
 		}
 
 		void VadAndRvcUpdate(float[] waveData, uint channels, uint frequency){
