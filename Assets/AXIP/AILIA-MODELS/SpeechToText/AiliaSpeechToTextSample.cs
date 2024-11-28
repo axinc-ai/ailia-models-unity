@@ -42,9 +42,6 @@ namespace ailiaSDK {
 		//Input Audio Clip
 		public AudioClip audio_clip = null;
 
-		//Output Audio Source
-		public AudioSource audio_source = null;
-
 		//Result
 		private RawImage raw_image = null;
 		private Text label_text = null;
@@ -180,7 +177,7 @@ namespace ailiaSDK {
 
 		void WhisperUpdate(float[] waveData, uint channels, uint frequency){
 			// Preview
-			ailia_display_audio.DisplayPcm(waveData, null, channels);
+			ailia_display_audio.DisplayPcm(waveData, null, channels, isRecording);
 
 			// Error handle
 			if (ailia_speech.IsError()){

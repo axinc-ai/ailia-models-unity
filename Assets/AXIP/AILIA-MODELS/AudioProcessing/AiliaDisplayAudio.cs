@@ -32,7 +32,7 @@ namespace ailiaSDK
 			return wave_texture;
 		}
 
-		private void DisplayPreviewPcm(Color32 [] colors, float [] waveData, float [] conf, uint channels){
+		private void DisplayPreviewPcm(Color32 [] colors, float [] waveData, float [] conf, uint channels, Color32 color){
 			int steps = 10;
 			int w = wave_texture.width;
 			int h = wave_texture.height / 4;
@@ -74,7 +74,7 @@ namespace ailiaSDK
 				}
 				int y2 = (int)(displayWaveData[x * steps] * h / 2 + h / 2);
 				if (y2 >= 0 && y2 < h){
-					colors[(y2+offset_y)*w+x] = new Color32(0,255,0,255);
+					colors[(y2+offset_y)*w+x] = color;
 				}
 			}
 		}
@@ -105,9 +105,13 @@ namespace ailiaSDK
 			}
 		}
 
-		public void DisplayPcm(float [] waveData, float [] conf, uint channels){
+		public void DisplayPcm(float [] waveData, float [] conf, uint channels, bool active){
 			Color32 [] colors = wave_texture.GetPixels32();
-			DisplayPreviewPcm(colors, waveData, conf, channels);
+			Color32 color = new Color32(0,255,0,255);
+			if (active == false){
+				color =  new Color32(255,0,0,255);
+			}
+			DisplayPreviewPcm(colors, waveData, conf, channels, color);
 			wave_texture.SetPixels32(colors);
 			wave_texture.Apply();
 		}
@@ -115,7 +119,8 @@ namespace ailiaSDK
 		public void DisplayVad(AiliaSileroVad.VadResult vad_result, List<AudioClip> vad_audio_clip, uint channels){
 
 			Color32 [] colors = wave_texture.GetPixels32();
-			DisplayPreviewPcm(colors, vad_result.pcm, vad_result.conf, channels);
+			Color32 color = new Color32(0,255,0,255);
+			DisplayPreviewPcm(colors, vad_result.pcm, vad_result.conf, channels, color);
 			for (int i = 0; i < vad_audio_clip.Count; i++){
 				DisplayVadAudioClip(colors, vad_audio_clip[i], i, vad_audio_clip.Count);
 			}
