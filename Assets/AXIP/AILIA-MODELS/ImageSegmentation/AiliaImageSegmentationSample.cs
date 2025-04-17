@@ -92,7 +92,8 @@ namespace ailiaSDK
 
 		// Segment Anything Model
 		private SegmentAnythingModel samModel;
-
+		private bool isDraggingForBox = false;
+		private Rect boxRect = new ();
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
@@ -181,12 +182,15 @@ namespace ailiaSDK
 			raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
 			raw_image.gameObject.SetActive(false);
 
-			mode_text.text = "ailia Image Segmentation\nSpace key down to original image";
+			mode_text.text = "ailia Image Segmentation\n" +
+                "Left/Right click: positive/negative point\n" +
+				"Middle click: drag to define border box\n" +
+                "Space key down to original image";
 		}
 
 		async void Update()
 		{
-            HandleClick(Input.GetMouseButtonDown(0), Input.GetMouseButtonDown(1));
+            HandleClick(Input.GetMouseButton(0), Input.GetMouseButton(1), Input.GetMouseButton(2));
 
             if (AiliaImageSource == null || !AiliaImageSource.IsPrepared || !modelPrepared)
 			{
@@ -735,9 +739,9 @@ namespace ailiaSDK
 			}	 
 		}
 
-		void HandleClick(bool leftClick, bool rightClick)
+		void HandleClick(bool leftClick, bool rightClick, bool middleClick)
 		{
-			if (!(leftClick || rightClick))
+			if (!raw_image.isActiveAndEnabled || raw_image.texture == null)
 			{
 				return;
 			}
@@ -754,22 +758,97 @@ namespace ailiaSDK
 
             Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
 
+            float widthRatio = raw_image.texture.width / rawImageRect.width;
+            float heightRatio = raw_image.texture.height / rawImageRect.height;
+
+            int x = Mathf.Clamp(Mathf.RoundToInt((mousePos.x - rawImageRect.x) * widthRatio), 0, raw_image.texture.width - 1);
+            int y = raw_image.texture.height - 1 - Mathf.Clamp(Mathf.RoundToInt((mousePos.y - rawImageRect.y) * heightRatio), 0, raw_image.texture.height - 1);
+
             if (rawImageRect.Contains(mousePos))
             {
-				float widthRatio = raw_image.texture.width / rawImageRect.width;
-				float heightRatio = raw_image.texture.height/ rawImageRect.height;
+                if (leftClick || rightClick)
+                {
+                    samModel?.AddClickPoint(x, y, rightClick);
+                    oneshot = true;
 
-                int x = Mathf.Clamp(Mathf.RoundToInt((mousePos.x - rawImageRect.x) * widthRatio), 0, raw_image.texture.width - 1);
-                int y = raw_image.texture.height - 1 - Mathf.Clamp(Mathf.RoundToInt((mousePos.y - rawImageRect.y) * heightRatio), 0, raw_image.texture.height - 1);
-				
-                samModel?.AddClickPoint(x, y, rightClick);
+                    Debug.Log($"Click registered at: {x}, {y}");
+                }
+
+                if (middleClick && !isDraggingForBox)
+                {
+                    isDraggingForBox = true;
+                    boxRect.xMin = x;
+                    boxRect.yMin = y;
+                }
+            }
+
+            if (!middleClick && isDraggingForBox)
+            {
+                isDraggingForBox = false;
+
+                float firstX = boxRect.xMin;
+                float firstY = boxRect.yMin;
+
+                boxRect.xMin = Math.Min(firstX, x);
+                boxRect.yMin = Math.Min(firstY, y);
+                boxRect.xMax = Math.Max(firstX, x);
+                boxRect.yMax = Math.Max(firstY, y);
+
+                samModel.SetBoxCoords(boxRect);
 				oneshot = true;
-
-				Debug.Log($"Click registered at: {x}, {y}");
             }
         }
 
-		void OnApplicationQuit()
+        private void OnGUI()
+        {
+            if (!raw_image.isActiveAndEnabled || raw_image.texture == null)
+            {
+                return;
+            }
+            
+			if (boxRect.width > 0 && boxRect.height > 0 || isDraggingForBox)
+			{
+                Vector3[] corners = new Vector3[4];
+                raw_image.rectTransform.GetWorldCorners(corners);
+
+                Rect rawImageRect = new Rect(
+                    corners[0].x,
+                    Screen.height - corners[2].y,
+                    corners[2].x - corners[0].x,
+                    corners[2].y - corners[0].y
+                );
+
+                float widthRatio = raw_image.texture.width / rawImageRect.width;
+                float heightRatio = raw_image.texture.height / rawImageRect.height;
+
+				int xMin = (int)(boxRect.xMin / widthRatio + rawImageRect.x);
+                int yMin = (int)(boxRect.yMin / heightRatio + rawImageRect.y);
+                int xMax = ((int)(isDraggingForBox ? Input.mousePosition.x : (boxRect.xMax / widthRatio + rawImageRect.x)));
+                int yMax = ((int)(isDraggingForBox ? (Screen.height - Input.mousePosition.y) : (boxRect.yMax / heightRatio + rawImageRect.y)));
+
+                float thickness = 2; 
+				Rect lineArea = new Rect();
+                lineArea.xMin = xMin;
+                lineArea.yMin = yMin;
+                lineArea.xMax = xMax;
+                lineArea.yMax = yMax;
+
+                lineArea.y = yMin - thickness; //Bottom
+                lineArea.height = thickness; //Top line
+                GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+
+                lineArea.y = yMax - thickness; //Bottom
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+
+				lineArea.height = yMin - yMax;
+				lineArea.width = thickness; //Left
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+				lineArea.x = xMax - thickness;//Right
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+			}
+        }
+
+        void OnApplicationQuit()
 		{
 			DestroyAiliaDetector();
 		}

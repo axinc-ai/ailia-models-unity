@@ -23,6 +23,8 @@ public class SegmentAnythingModel
     private const uint DecoderMaskInputSize = 256;
     private List<Vector2Int> clickPoints = new();
     private List<Boolean> clickPointLabels = new();
+    private Rect boxCoords = new();
+    private bool addBoxCoords => boxCoords.width > 0 && boxCoords.height > 0;
     private int targetSize = 1024;
     private AiliaImageSource imageSource;
     private ailia.AiliaModel encoder;
@@ -45,6 +47,13 @@ public class SegmentAnythingModel
     // Visualization-related fields
     public Texture2D visualizedResult { get; private set; }
     private readonly Color32 MaskColor = new Color32(255, 0, 0, 255);
+
+    public void SetBoxCoords(Rect box)
+    {
+        boxCoords = box;
+
+        Debug.Log($"boxCoords set to {box.xMin},{box.yMin} {box.xMax},{box.yMax}");
+    }
 
     public void AddClickPoint(int x, int y, bool negativePoint = false)
     {
@@ -138,7 +147,7 @@ public class SegmentAnythingModel
 
     public float[,] GetClickPoints(int imageHeight)
     {
-        float[,] points = new float[clickPoints.Count, 2];
+        float[,] points = new float[clickPoints.Count + (addBoxCoords ? 2 : 0), 2];
         int i = 0;
 
         foreach (var point in clickPoints)
@@ -149,12 +158,33 @@ public class SegmentAnythingModel
             i += 1;
         }
 
+        if (addBoxCoords)
+        {
+            points[clickPoints.Count, 0] = boxCoords.xMin;
+            points[clickPoints.Count, 1] = imageHeight - 1 - boxCoords.yMin;
+            points[clickPoints.Count + 1, 0] = boxCoords.xMax;
+            points[clickPoints.Count + 1, 1] = imageHeight - 1 - boxCoords.yMax;
+        }
+
         return points;
     }
 
     private float[] GetPointLabels()
     {
-        return clickPointLabels.Select(l => l ? 1f : -1f).ToArray();
+        float[] labels = new float[clickPoints.Count + (addBoxCoords ? 2 : 0)];
+        
+        for (int i = 0; i < clickPoints.Count; ++i)
+        {
+            labels[i] = (clickPointLabels[i] ? 1f : -1f);
+        }
+
+        if (addBoxCoords)
+        {
+            labels[clickPoints.Count] = 2;
+            labels[clickPoints.Count] = 3;
+        }
+
+        return labels;
     }
 
     // Run inference with AiliaSDK
@@ -551,6 +581,11 @@ public class SegmentAnythingModel
 
         for (int i = 0; i < numPoints; i++)
         {
+            if (labels[i] >= 2)
+            {
+                continue;
+            }
+
             int px = Mathf.Clamp((int)coords[i, 0], 0, image.width - 1);
             int origY = (int)coords[i, 1];
 
