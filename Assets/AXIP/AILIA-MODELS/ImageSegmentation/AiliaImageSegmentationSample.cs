@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using ailia;
+using System.Threading.Tasks;
 
 namespace ailiaSDK
 {
@@ -22,7 +23,8 @@ namespace ailiaSDK
 			pspnet_hair_segmentation,
 			deeplabv3,
 			u2net,
-			modnet
+			modnet,
+			segment_anything1
 		}
 
 		// Settings
@@ -62,10 +64,11 @@ namespace ailiaSDK
 		public Texture2D image_source_pspnet_hair_segmentation = null;
 		public Texture2D image_source_deeplabv3 = null;
 		public Texture2D image_source_u2net = null;
-		public Texture2D image_source_modnet = null;
-		
-		// Pre-and-Post processing Shader
-		Material blendMaterial;
+        public Texture2D image_source_modnet = null;
+        public Texture2D image_source_sam1 = null;
+
+        // Pre-and-Post processing Shader
+        Material blendMaterial;
 		int mainTexId;
 		int blendTexId;
 		int blendFlagId;
@@ -87,15 +90,19 @@ namespace ailiaSDK
 		Color32[] outputImage;
 		Color32[] colorPalette = AiliaImageUtil.CreatePalette(256, 127);
 
+		// Segment Anything Model
+		private SegmentAnythingModel samModel;
+
+
 		bool modelPrepared = false;
 		bool modelAllocated = false;
 
-		void Start()
+		async void Start()
 		{
 			AiliaLicense.CheckAndDownloadLicense();
 			UISetup();
-
-			AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();
+            
+            AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();
 
 			// for Rendering 
 			blendMaterial = new Material(Shader.Find("Ailia/AlphaBlending2Tex"));
@@ -123,7 +130,7 @@ namespace ailiaSDK
 			}
 
 			// for Processing
-			AiliaInit();
+			await AiliaInit();
 
 			// for Camera
 			if(camera_mode){
@@ -132,10 +139,11 @@ namespace ailiaSDK
 			}
 		}
 
-		void AiliaInit()
+		async Task AiliaInit()
 		{
 			// Create Ailia
 			ailiaModel = CreateAiliaNet(imageSegmentaionModels, gpu_mode);
+            
 			// Load sample image
 			LoadImage(imageSegmentaionModels, AiliaImageSource);
 		}
@@ -152,8 +160,16 @@ namespace ailiaSDK
 			labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
 			AiliaImageSource.Resize(InputWidth, InputHeight);
 			input = new float[InputWidth * InputHeight * InputChannel];
-			output = new float[OutputWidth * OutputHeight * OutputChannel];
-			outputImage = new Color32[OutputWidth * OutputHeight];
+
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+                output = new float[InputWidth * InputHeight];
+                outputImage = new Color32[InputWidth * InputHeight];
+            } else
+			{
+                output = new float[OutputWidth * OutputHeight * OutputChannel];
+                outputImage = new Color32[OutputWidth * OutputHeight];
+            }
 		}
 
 		void UISetup()
@@ -168,9 +184,11 @@ namespace ailiaSDK
 			mode_text.text = "ailia Image Segmentation\nSpace key down to original image";
 		}
 
-		void Update()
+		async void Update()
 		{
-			if (!AiliaImageSource.IsPrepared || !modelPrepared)
+            HandleClick(Input.GetMouseButtonDown(0), Input.GetMouseButtonDown(1));
+
+            if (AiliaImageSource == null || !AiliaImageSource.IsPrepared || !modelPrepared)
 			{
 				return;
 			}
@@ -227,7 +245,13 @@ namespace ailiaSDK
 
 			// Predict
 			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			bool result = ailiaModel.Predict(output, input);
+			bool result = await Predict(output, input);
+
+			if (!result)
+			{
+				oneshot = false;
+				return;
+			}
 
 			// convert result to image
 			if (imageSegmentaionModels == ImageSegmentaionModels.hair_segmentation)
@@ -235,7 +259,11 @@ namespace ailiaSDK
 			else if (imageSegmentaionModels == ImageSegmentaionModels.pspnet_hair_segmentation)
 				LabelPaintPspnet(output, outputImage, Color.red);
 			else if (imageSegmentaionModels == ImageSegmentaionModels.u2net || imageSegmentaionModels == ImageSegmentaionModels.modnet)
-				LabelPaintU2netModnet(output, outputImage, Color.green); 
+				LabelPaintU2netModnet(output, outputImage, Color.green);
+			else if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+				outputImage = samModel.visualizedResult.GetPixels32();
+			}
 			else
 				LabelPaint(output, outputImage, OutputChannel, colorPalette);
 
@@ -337,14 +365,32 @@ namespace ailiaSDK
 
 			AiliaDownload ailia_download = new AiliaDownload();
 			ailia_download.DownloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel").gameObject;
-			var urlList = new List<ModelDownloadURL>();
-			urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = prototxtName });
-			urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = onnxName });
+			List<ModelDownloadURL> urlList = null;
 
-			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
-				modelPrepared = ailiaModel.OpenFile(asset_path + "/" + prototxtName, asset_path + "/" + onnxName);
-			}));
+				samModel = new SegmentAnythingModel();
+				urlList = samModel.GetModelURLs();
+			}
+			else
+			{
+                urlList = new List<ModelDownloadURL>();
+                urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = prototxtName });
+                urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = onnxName });
+            }
+
+            StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, async () =>
+            {
+                if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+                {
+                    await samModel.InitializeModelsAsync(System.Threading.CancellationToken.None, gpu_mode);
+                    modelPrepared = samModel.modelsInitialized;
+                }
+                else
+                {
+                    modelPrepared = ailiaModel.OpenFile(asset_path + "/" + prototxtName, asset_path + "/" + onnxName);
+                }
+            }));
 
 			return ailiaModel;
 		}
@@ -396,27 +442,35 @@ namespace ailiaSDK
 					OutputChannel = (int)shape.z;
 					break;
 
-				case ImageSegmentaionModels.modnet:
-					shape = new Ailia.AILIAShape();
-					shape.x = (uint)AiliaImageSource.Width/32*32;
-					shape.y = (uint)AiliaImageSource.Height/32*32;
-					shape.z = 3;
-					shape.w = 1;
-					shape.dim = 4;
-					ailiaModel.SetInputShape(shape);
-					InputWidth = AiliaImageSource.Width/32*32;
-					InputHeight = AiliaImageSource.Height/32*32;
-					InputChannel = 3;
-					shape = ailiaModel.GetOutputShape();
-					OutputWidth = (int)shape.x;
-					OutputHeight = (int)shape.y;
-					OutputChannel = (int)shape.z;
-					Debug.Log(""+OutputChannel+"/"+OutputWidth+"/"+OutputHeight);
-					//OutputWidth = AiliaImageSource.Width/32*32;
-					//OutputHeight = AiliaImageSource.Height/32*32;
-					//OutputChannel = 1;
-					break;
-			}
+                case ImageSegmentaionModels.modnet:
+                    shape = new Ailia.AILIAShape();
+                    shape.x = (uint)AiliaImageSource.Width / 32 * 32;
+                    shape.y = (uint)AiliaImageSource.Height / 32 * 32;
+                    shape.z = 3;
+                    shape.w = 1;
+                    shape.dim = 4;
+                    ailiaModel.SetInputShape(shape);
+                    InputWidth = AiliaImageSource.Width / 32 * 32;
+                    InputHeight = AiliaImageSource.Height / 32 * 32;
+                    InputChannel = 3;
+                    shape = ailiaModel.GetOutputShape();
+                    OutputWidth = (int)shape.x;
+                    OutputHeight = (int)shape.y;
+                    OutputChannel = (int)shape.z;
+                    Debug.Log("" + OutputChannel + "/" + OutputWidth + "/" + OutputHeight);
+                    //OutputWidth = AiliaImageSource.Width/32*32;
+                    //OutputHeight = AiliaImageSource.Height/32*32;
+                    //OutputChannel = 1;
+                    break;
+
+                case ImageSegmentaionModels.segment_anything1:
+                    (InputWidth, InputHeight) = samModel.GetInputSize(AiliaImageSource);
+                    InputChannel = 3;
+					OutputWidth = InputWidth;
+                    OutputHeight = InputHeight;
+                    OutputChannel = 1;
+                    break;
+            }
 		}
 
 		void LoadImage(ImageSegmentaionModels imageSegmentaionModels, AiliaImageSource ailiaImageSource)
@@ -440,11 +494,13 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.u2net:
 					ailiaImageSource.CreateSource(image_source_u2net);
 					break;
-				case ImageSegmentaionModels.modnet:
-					ailiaImageSource.CreateSource(image_source_modnet);
-					break;
-
-			}
+                case ImageSegmentaionModels.modnet:
+                    ailiaImageSource.CreateSource(image_source_modnet);
+                    break;
+                case ImageSegmentaionModels.segment_anything1:
+                    ailiaImageSource.CreateSource(image_source_sam1);
+                    break;
+            }
 		}
 
 		Color32 [] ResizeImage(Color32[] inputImage, int tex_width, int tex_height, int InputWidth, int InputHeight){
@@ -594,6 +650,36 @@ namespace ailiaSDK
 			cbuffer.GetData(processedInputBuffer);
 		}
 
+		async Task<bool> Predict(float[] output, float[] input)
+		{
+            bool result = false;
+
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+				try
+				{
+					if (samModel.GetClickPoints(0).Length == 0)
+					{
+                        samModel.AddClickPoint(AiliaImageSource.Width / 4, AiliaImageSource.Height / 4 + 30);
+                    }
+
+                    await samModel.ProcessFrameAsync(System.Threading.CancellationToken.None, AiliaImageSource);
+                    result = samModel.success;
+                }
+				catch (Exception e)
+				{
+					Debug.LogError($"Error while predicting image segmentation: {e.Message}\n{e.StackTrace}");
+					return false;
+				}
+            }
+			else
+			{
+				result = ailiaModel.Predict(output, input);
+            }
+
+			return result;
+        }
+
 		void LabelPaint(float[] labelData, Color32[] pixelBuffer, int channel, Color32[] palette)
 		{
 			Debug.Assert(palette.Length >= channel, "wrong palette size");
@@ -649,6 +735,40 @@ namespace ailiaSDK
 			}	 
 		}
 
+		void HandleClick(bool leftClick, bool rightClick)
+		{
+			if (!(leftClick || rightClick))
+			{
+				return;
+			}
+
+            Vector3[] corners = new Vector3[4];
+            raw_image.rectTransform.GetWorldCorners(corners);
+
+            Rect rawImageRect = new Rect(
+                corners[0].x,
+                Screen.height - corners[2].y,
+                corners[2].x - corners[0].x,
+                corners[2].y - corners[0].y
+            );
+
+            Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+
+            if (rawImageRect.Contains(mousePos))
+            {
+				float widthRatio = raw_image.texture.width / rawImageRect.width;
+				float heightRatio = raw_image.texture.height/ rawImageRect.height;
+
+                int x = Mathf.Clamp(Mathf.RoundToInt((mousePos.x - rawImageRect.x) * widthRatio), 0, raw_image.texture.width - 1);
+                int y = raw_image.texture.height - 1 - Mathf.Clamp(Mathf.RoundToInt((mousePos.y - rawImageRect.y) * heightRatio), 0, raw_image.texture.height - 1);
+				
+                samModel?.AddClickPoint(x, y, rightClick);
+				oneshot = true;
+
+				Debug.Log($"Click registered at: {x}, {y}");
+            }
+        }
+
 		void OnApplicationQuit()
 		{
 			DestroyAiliaDetector();
@@ -661,8 +781,8 @@ namespace ailiaSDK
 
 		private void DestroyAiliaDetector()
 		{
-			ailiaModel.Close();
-			if (cbuffer != null) cbuffer.Release();
+			ailiaModel?.Close();
+			cbuffer?.Release();
 		}
 	}
 }
