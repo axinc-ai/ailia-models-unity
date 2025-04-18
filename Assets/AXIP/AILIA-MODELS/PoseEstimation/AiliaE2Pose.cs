@@ -106,41 +106,47 @@ public class AiliaE2Pose : IDisposable
         modelHeight = poseHeight;
 
         inputArray = new float[modelWidth * modelHeight * modelChannel];
-        /*
-        rawBoxesOutput = new float[BLAZEPOSE_DETECTOR_TENSOR_COUNT * BLAZEPOSE_DETECTOR_TENSOR_SIZE];
-        rawScoresOutput = new float[BLAZEPOSE_DETECTOR_TENSOR_COUNT];
-        estimationScoreBuffer = new float[1];
-        estimationInputArray = new float[BLAZEPOSE_ESTIMATOR_INPUT_RESOLUTION * BLAZEPOSE_ESTIMATOR_INPUT_RESOLUTION * BLAZEPOSE_DETECTOR_INPUT_CHANNEL_COUNT];
-        estimationOutputBuffer = new float[BLAZEPOSE_ESTIMATOR_TENSOR_COUNT * BLAZEPOSE_ESTIMATOR_TENSOR_SIZE];
-        */
     }
 
     private float[] inputArray;
     private float[] rawBoxesOutput;
     private float[] rawScoresOutput;
-    /*
-    private List<Box> boxes;
-    private Box? poseDetectionBox;
-    RenderTexture preprocessBuffer;
-    */
+
+    private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
+    {
+        int x2 = (int)fx;
+        int y2 = (int)fy;
+        float xa = 1.0f - (fx - x2);
+        float xb = 1.0f - xa;
+        float ya = 1.0f - (fy - y2);
+        float yb = 1.0f - ya;
+        Color32 c1 = face[y2 * w + x2];
+        Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
+        Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
+        Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
+        byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
+        byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
+        byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
+        return new Color32(r, g, b, 255);
+    }
 
     private void Preprocess(Color32 [] camera, int tex_width, int tex_height)
     {
-        int factor = 1;
-        for (int heightIndex = 0; heightIndex < modelHeight; heightIndex++)
+        for (int y = 0; y < modelHeight; y++)
         {
-            for (int widthIndex = 0; widthIndex < modelWidth; widthIndex++)
+            for (int x = 0; x < modelWidth; x++)
             {
-                int index = (int) (((heightIndex * modelWidth) + widthIndex) * modelChannel);
-				Color32 value = camera[(modelHeight - heightIndex - 1) * modelWidth + widthIndex];
-
-				inputArray[index + 0] = value.r * factor;
-				inputArray[index + 1] = value.g * factor;
-				inputArray[index + 2] = value.b * factor;
+                float fx = x * tex_width / modelWidth;
+                float fy = y * tex_height / modelHeight;
+                Color32 v = Bilinear(camera, tex_width, tex_height, fx, fy);
+                int index = (modelHeight - 1 - y) * modelWidth + x; // camera is B2T
+				inputArray[index + 0] = v.b;
+				inputArray[index + 1] = v.g;
+				inputArray[index + 2] = v.r;
 			}
         }
     }
-
+    
     public List<List<E2PoseLandmark>> landmarks = new List<List<E2PoseLandmark>>();
 
 
@@ -190,6 +196,7 @@ public class AiliaE2Pose : IDisposable
 
         Ailia.AILIAShape scoreShape = new Ailia.AILIAShape();
         scoreShape = ailiaPoseEstimation.GetBlobShape(outputBlobIndex);
+        Debug.Log("scoreShape " + scoreShape.x + "/" + scoreShape.y + "/" + scoreShape.z + "/" + scoreShape.w);
 
         float[] scoreBuffer = new float[scoreShape.x * scoreShape.y * scoreShape.z * scoreShape.w];
         status = ailiaPoseEstimation.GetBlobData(scoreBuffer, outputBlobIndex);
@@ -203,6 +210,8 @@ public class AiliaE2Pose : IDisposable
 
         Ailia.AILIAShape posShape = new Ailia.AILIAShape();
         posShape = ailiaPoseEstimation.GetBlobShape(outputBlobIndex);
+
+        Debug.Log("posShape " + posShape.x + "/" + posShape.y + "/" + posShape.z + "/" + posShape.w);
 
         float[] posBuffer = new float[posShape.x * posShape.y * posShape.z * posShape.w];
         status = ailiaPoseEstimation.GetBlobData(posBuffer, outputBlobIndex);
@@ -220,10 +229,15 @@ public class AiliaE2Pose : IDisposable
 
     private void DecodeAndProcessLandmarks(float [] scoreBuffer, float [] posBuffer)
     {
+        float maxScore = 0.0f;
+
         landmarks = new List<List<E2PoseLandmark>>();
-        for (int j = 0; j < posBuffer.Length; j++){
-            float score = posBuffer[j];
+        for (int j = 0; j < scoreBuffer.Length; j++){
+            float score = scoreBuffer[j];
             float th = 0.5f;
+            if (maxScore < score){
+                maxScore = score;
+            }
             if (score < th){
                 continue;
             }
@@ -232,11 +246,9 @@ public class AiliaE2Pose : IDisposable
 
             for (int i = 0; i < E2PoseKeyPointN; ++i)
             {
-                float c = scoreBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 0];
-                float x = scoreBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 1] * modelWidth;
-                float y = scoreBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 2] * modelHeight;
-                //float visibility = scoreBuffer[i * 5 + 3];
-                //float presence = scoreBuffer[i * 5 + 4];
+                float c = posBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 0] * 2;
+                float x = posBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 1];// * modelWidth;
+                float y = posBuffer[j * E2PoseKeyPointN * 3 + i * 3 + 2];// * modelHeight;
 
                 landmark.Add(new E2PoseLandmark
                 {
@@ -247,6 +259,8 @@ public class AiliaE2Pose : IDisposable
 
             landmarks.Add(landmark);
         }
+
+        //Debug.Log("maxScore : " + maxScore);
     }
 
     public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult(){
@@ -269,6 +283,8 @@ public class AiliaE2Pose : IDisposable
             (int)E2PoseBodyPartIndex.RightKnee,
             (int)E2PoseBodyPartIndex.LeftAnkle,
             (int)E2PoseBodyPartIndex.RightAnkle};
+
+        Debug.Log("detected : " + landmarks.Count);
 
         for (int j = 0; j < landmarks.Count; j++){
             List<E2PoseLandmark> landmark = landmarks[j];
