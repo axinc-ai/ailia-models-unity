@@ -13,7 +13,8 @@ namespace ailiaSDK
 		{
 			lightweight_human_pose_estimation,
 			blazepose_fullbody,
-			pose_resnet
+			pose_resnet,
+			e2pose
 		}
 
 		[SerializeField]
@@ -41,6 +42,7 @@ namespace ailiaSDK
 		[SerializeField]
 		private ComputeShader computeShaderBlazepose;
 		private AiliaPoseResnet ailia_pose_resnet;
+		private AiliaE2Pose ailia_e2pose;
 
 		// AILIA open file(model file)
 		private bool FileOpened = false;
@@ -104,6 +106,24 @@ namespace ailiaSDK
 					}));
 
 					break;
+				case PoseEstimatorModels.e2pose:
+					var e2pose_folder_path = "e2pose";
+					//var e2pose_model_name = "COCO_ResNet50_320x320";
+					var e2pose_model_name = "COCO_ResNet101_512x512";
+					//var e2pose_model_name = "COCO_ResNet152_448x448";
+					//var e2pose_model_name = "COCO_MobileNetV2_320x320";
+					//var e2pose_model_name = "COCO_MobileNetV2_448x512";
+					var pose_width = 512;
+					var pose_height = 512;
+					urlList.Add(new ModelDownloadURL() { folder_path = e2pose_folder_path, file_name = e2pose_model_name + ".onnx" });
+					urlList.Add(new ModelDownloadURL() { folder_path = e2pose_folder_path, file_name = e2pose_model_name + ".onnx.prototxt" });
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						ailia_e2pose = new AiliaE2Pose(gpu_mode, asset_path + "/" + e2pose_model_name + ".onnx.prototxt", asset_path + "/" + e2pose_model_name + ".onnx", pose_width, pose_height);
+						FileOpened = true;
+					}));
+
+					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -162,6 +182,9 @@ namespace ailiaSDK
 			}else if (ailiaModelType == PoseEstimatorModels.pose_resnet){
 				pose = ailia_pose_resnet.RunPoseEstimation(camera, tex_width, tex_height);
 				env_name = ailia_pose_resnet.EnvironmentName();
+			}else if (ailiaModelType == PoseEstimatorModels.e2pose){
+				pose = ailia_e2pose.RunPoseEstimation(camera, tex_width, tex_height);
+				env_name = ailia_e2pose.EnvironmentName();
 			}else{
 				pose = ailia_pose.ComputePoseFromImageB2T(camera, tex_width, tex_height);
 				env_name = ailia_pose.EnvironmentName();
