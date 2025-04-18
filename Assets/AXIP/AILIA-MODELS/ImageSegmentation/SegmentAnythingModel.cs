@@ -35,6 +35,7 @@ public class SegmentAnythingModel
     public bool success { get; private set; } = false; 
     private bool gpuMode = false;
     private bool showClickPoints = true;
+    private bool useLowResMasks = false;
 
     // Normalization constants (ImageNet)
     private readonly float[] Mean = { 0.485f, 0.456f, 0.406f };
@@ -175,13 +176,13 @@ public class SegmentAnythingModel
         
         for (int i = 0; i < clickPoints.Count; ++i)
         {
-            labels[i] = (clickPointLabels[i] ? 1f : -1f);
+            labels[i] = (clickPointLabels[i] ? 1f : 0f);
         }
 
         if (addBoxCoords)
         {
             labels[clickPoints.Count] = 2;
-            labels[clickPoints.Count] = 3;
+            labels[clickPoints.Count + 1] = 3;
         }
 
         return labels;
@@ -396,27 +397,8 @@ public class SegmentAnythingModel
             }
 
             // Identify mask and score blobs
-            int masksBlobIndex = -1;
-            int scoresBlobIndex = -1;
-
-            if (outputBlobs != null)
-            {
-                for (int i = 0; i < outputBlobs.Length; i++)
-                {
-                    if (cancellationToken.IsCancellationRequested || decoder == null)
-                    {
-                        return (new bool[0][,], new float[0]);
-                    }
-
-                    uint blobIdx = outputBlobs[i];
-                    ailia.Ailia.AILIAShape outShape = decoder.GetBlobShape(blobIdx);
-
-                    if (outShape.dim == 4)
-                        masksBlobIndex = (int)blobIdx;   // 4D tensor is mask
-                    else if (outShape.dim == 2)
-                        scoresBlobIndex = (int)blobIdx;  // 2D tensor is score
-                }
-            }
+            int masksBlobIndex = decoder.FindBlobIndexByName(useLowResMasks ? "low_res_masks" : "masks");
+            int scoresBlobIndex = decoder.FindBlobIndexByName("iou_predictions");
 
             if (masksBlobIndex < 0 || scoresBlobIndex < 0)
             {
@@ -480,7 +462,13 @@ public class SegmentAnythingModel
 
                 float[,,,] maskTensor = ReshapeToTensor(maskOutput, i, maskHeight, maskWidth, maskArea);
 
-                masks[i] = PostprocessMask(maskTensor, inputSize.Item1, inputSize.Item2, imgHeight, imgWidth);
+                if (useLowResMasks)
+                {
+                    masks[i] = PostprocessLowResMask(maskTensor, inputSize.Item1, inputSize.Item2, imgHeight, imgWidth);
+                } else
+                {
+                    masks[i] = PostprocessMask(maskTensor, imgHeight, imgWidth);
+                }
             }
 
             return (masks, scoreOutput);
@@ -699,7 +687,7 @@ public class SegmentAnythingModel
     }
 
     // Post-process mask outputs
-    private bool[,] PostprocessMask(float[,,,] mask, int inputHeight, int inputWidth, int origHeight, int origWidth)
+    private bool[,] PostprocessLowResMask(float[,,,] mask, int inputHeight, int inputWidth, int origHeight, int origWidth)
     {
         int maskHeight = mask.GetLength(2);
         int maskWidth = mask.GetLength(3);
@@ -767,7 +755,25 @@ public class SegmentAnythingModel
 
         return finalMask;
     }
+    
+    private bool[,] PostprocessMask(float[,,,] mask, int origHeight, int origWidth)
+    {
+        int maskHeight = mask.GetLength(2);
+        int maskWidth = mask.GetLength(3);
 
+        // First resize to targetSize
+        bool[,] finalMask = new bool[origHeight, origWidth];
+        for (int y = 0; y < origHeight; y++)
+        {
+            for (int x = 0; x < origWidth; x++)
+            {
+                // Bilinear interpolation
+                finalMask[y, x] = mask[0, 0, y, x] > 0;
+            }
+        }
+
+        return finalMask;
+    }
 
     // Process the current video frame
     public async Task ProcessFrameAsync(CancellationToken cancellationToken, AiliaImageSource imageSource)
@@ -786,6 +792,13 @@ public class SegmentAnythingModel
             // Set up point coords for inference
             float[,] coords = GetClickPoints(imageSource.Height);
             float[] labels = GetPointLabels();
+
+            string coordsLog = $"Points input ({labels.Length}): ";
+            for (int i = 0; i < labels.Length; i += 1)
+            {
+                coordsLog += $"({coords[i, 0]},{-coords[i, 1] - imageSource.Height + 1})[{labels[i]}]";
+            }
+            Debug.Log(coordsLog);
 
             var (masks, scores) = await RunInferenceAsync(coords, labels, cancellationToken);
 
@@ -822,6 +835,8 @@ public class SegmentAnythingModel
                     visualizedResult = DrawClickPoints(coords, labels, visualizedResult);
                 }
 
+                SaveFrameAsPNG(visualizedResult);
+
                 success = true;
             }
             else
@@ -843,6 +858,62 @@ public class SegmentAnythingModel
         finally
         {
             isProcessing = false;
+        }
+    }
+
+    private string CreateOutputDirectory()
+    {
+        try
+        {
+            // Create base directory using Application.persistentDataPath for cross-platform support
+            string directory = System.IO.Path.Combine(Application.persistentDataPath, "ailiaSAM1");
+
+            if (!System.IO.Directory.Exists(directory))
+            {
+                System.IO.Directory.CreateDirectory(directory);
+                Debug.Log($"Created output directory: {directory}");
+            }
+
+            return directory;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to create output directory: {e.Message}");
+        }
+
+        return Application.persistentDataPath;
+    }
+    private void SaveFrameAsPNG(Texture2D texture)
+    {
+        try
+        {
+            string fileNamePrefix = "output";
+            // Create path to output directory
+            string directory = System.IO.Path.Combine(Application.persistentDataPath, CreateOutputDirectory());
+
+            // Ensure directory exists
+            if (!System.IO.Directory.Exists(directory))
+            {
+                System.IO.Directory.CreateDirectory(directory);
+            }
+
+            // Generate filename with frame number and optional timestamp
+            string fileName = $"{fileNamePrefix}.png";
+
+            // Full path to file
+            string filePath = System.IO.Path.Combine(directory, fileName);
+
+            // Convert texture to PNG bytes
+            byte[] bytes = texture.EncodeToPNG();
+
+            // Save synchronously to ensure completion
+            System.IO.File.WriteAllBytes(filePath, bytes);
+
+            Debug.Log($"Saved output to {fileName}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error saving output: {e.Message}\n{e.StackTrace}");
         }
     }
 
