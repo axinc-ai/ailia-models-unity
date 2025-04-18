@@ -47,43 +47,6 @@ public class AiliaE2Pose : IDisposable
     private int modelHeight = 0;
     const int E2PoseKeyPointN = 17;
 
-    /*
-    private bool EnvironmentWithoutFP16(AiliaModel model, int type)
-    {
-        int count = model.GetEnvironmentCount();
-        if (count == -1)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < count; i++)
-        {
-            Ailia.AILIAEnvironment env = model.GetEnvironment(i);
-            if (env == null)
-            {
-                return false;
-            }
-
-            if (env.type == type)
-            {
-                if ((env.props & Ailia.AILIA_ENVIRONMENT_PROPERTY_FP16) != 0)
-                {
-                    continue;
-                }
-                if (!model.SelectEnvironment(i))
-                {
-                    return false;
-                }
-                if (env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_CUDA || env.backend == Ailia.AILIA_ENVIRONMENT_BACKEND_VULKAN)
-                {
-                    return true;    //優先
-                }
-            }
-        }
-        return true;
-    }
-    */
-
     public AiliaE2Pose(bool gpuMode, string protoPath, string weightPath, int poseWidth, int poseHeight)
     {
         bool status;
@@ -139,7 +102,7 @@ public class AiliaE2Pose : IDisposable
                 float fx = x * tex_width / modelWidth;
                 float fy = y * tex_height / modelHeight;
                 Color32 v = Bilinear(camera, tex_width, tex_height, fx, fy);
-                int index = (modelHeight - 1 - y) * modelWidth + x; // camera is B2T
+                int index = ((modelHeight - 1 - y) * modelWidth + x) * modelChannel; // camera is B2T
 				inputArray[index + 0] = v.b;
 				inputArray[index + 1] = v.g;
 				inputArray[index + 2] = v.r;
@@ -196,7 +159,7 @@ public class AiliaE2Pose : IDisposable
 
         Ailia.AILIAShape scoreShape = new Ailia.AILIAShape();
         scoreShape = ailiaPoseEstimation.GetBlobShape(outputBlobIndex);
-        Debug.Log("scoreShape " + scoreShape.x + "/" + scoreShape.y + "/" + scoreShape.z + "/" + scoreShape.w);
+        //Debug.Log("scoreShape " + scoreShape.x + "/" + scoreShape.y + "/" + scoreShape.z + "/" + scoreShape.w);
 
         float[] scoreBuffer = new float[scoreShape.x * scoreShape.y * scoreShape.z * scoreShape.w];
         status = ailiaPoseEstimation.GetBlobData(scoreBuffer, outputBlobIndex);
@@ -211,7 +174,7 @@ public class AiliaE2Pose : IDisposable
         Ailia.AILIAShape posShape = new Ailia.AILIAShape();
         posShape = ailiaPoseEstimation.GetBlobShape(outputBlobIndex);
 
-        Debug.Log("posShape " + posShape.x + "/" + posShape.y + "/" + posShape.z + "/" + posShape.w);
+        //Debug.Log("posShape " + posShape.x + "/" + posShape.y + "/" + posShape.z + "/" + posShape.w);
 
         float[] posBuffer = new float[posShape.x * posShape.y * posShape.z * posShape.w];
         status = ailiaPoseEstimation.GetBlobData(posBuffer, outputBlobIndex);
@@ -259,8 +222,6 @@ public class AiliaE2Pose : IDisposable
 
             landmarks.Add(landmark);
         }
-
-        //Debug.Log("maxScore : " + maxScore);
     }
 
     public List<AiliaPoseEstimator.AILIAPoseEstimatorObjectPose> GetResult(){
@@ -283,8 +244,6 @@ public class AiliaE2Pose : IDisposable
             (int)E2PoseBodyPartIndex.RightKnee,
             (int)E2PoseBodyPartIndex.LeftAnkle,
             (int)E2PoseBodyPartIndex.RightAnkle};
-
-        Debug.Log("detected : " + landmarks.Count);
 
         for (int j = 0; j < landmarks.Count; j++){
             List<E2PoseLandmark> landmark = landmarks[j];
