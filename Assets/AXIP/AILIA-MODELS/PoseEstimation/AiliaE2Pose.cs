@@ -184,7 +184,7 @@ public class AiliaE2Pose : IDisposable
             Debug.LogError(ailiaPoseEstimation.GetErrorDetail());
         }
 
-        // Poset process
+        // Post process
         DecodeAndProcessLandmarks(scoreBuffer, posBuffer);
 
         return GetResult();
