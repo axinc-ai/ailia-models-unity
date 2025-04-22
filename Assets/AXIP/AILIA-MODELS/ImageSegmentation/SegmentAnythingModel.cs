@@ -96,10 +96,10 @@ public class SegmentAnythingModel
             await Task.Yield();
             cancellationToken.ThrowIfCancellationRequested();
 
-            string encPath = System.IO.Path.Combine(Application.streamingAssetsPath, encoderWeightPath);
-            string decPath = System.IO.Path.Combine(Application.streamingAssetsPath, decoderWeightPath);
-            string encProtoPath = System.IO.Path.Combine(Application.streamingAssetsPath, encoderProtoPath);
-            string decProtoPath = System.IO.Path.Combine(Application.streamingAssetsPath, decoderProtoPath);
+            string encPath = System.IO.Path.Combine(Application.temporaryCachePath, encoderWeightPath);
+            string decPath = System.IO.Path.Combine(Application.temporaryCachePath, decoderWeightPath);
+            string encProtoPath = System.IO.Path.Combine(Application.temporaryCachePath, encoderProtoPath);
+            string decProtoPath = System.IO.Path.Combine(Application.temporaryCachePath, decoderProtoPath);
 
             encoder = new ailia.AiliaModel();
             decoder = new ailia.AiliaModel();
