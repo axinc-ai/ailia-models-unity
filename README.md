@@ -76,6 +76,7 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | [hair_segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [hair segmentation in mobile device](https://github.com/thangtran480/hair-segmentation) | Keras | 1.2.1 and later ||
 | [pspnet-hair-segmentation](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [pytorch-hair-segmentation](https://github.com/YBIGTA/pytorch-hair-segmentation) | Pytorch | 1.2.2 and later ||
 | [U2net](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection](https://github.com/xuebinqin/U-2-Net) | Pytorch | 1.2.2 and later | [EN](https://medium.com/axinc-ai/u2net-a-machine-learning-model-that-performs-object-cropping-in-a-single-shot-48adfc158483) [JP](https://medium.com/axinc/u2net-%E3%82%B7%E3%83%B3%E3%82%B0%E3%83%AB%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88%E3%81%A7%E7%89%A9%E4%BD%93%E3%81%AE%E5%88%87%E3%82%8A%E6%8A%9C%E3%81%8D%E3%82%92%E8%A1%8C%E3%81%86%E6%A9%9F%E6%A2%B0%E5%AD%A6%E7%BF%92%E3%83%A2%E3%83%87%E3%83%AB-e346f2787cdb) |
+| [segment-anything](/Assets/AXIP/AILIA-MODELS/ImageSegmentation/) | [Segment Anything](https://github.com/facebookresearch/segment-anything) | Pytorch | 1.2.16 and later |
 
 ## Image manipulation
 
