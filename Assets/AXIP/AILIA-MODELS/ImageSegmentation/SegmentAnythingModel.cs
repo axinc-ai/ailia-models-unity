@@ -1,3 +1,6 @@
+/* AILIA Unity Plugin Segment Anything Sample */
+/* Copyright 2025 AXELL CORPORATION and ax Inc. */
+
 using ailia;
 using ailiaSDK;
 using System;
@@ -87,15 +90,12 @@ public class SegmentAnythingModel
     }
 
     // Initialize Ailia models
-    public async Task InitializeModelsAsync(CancellationToken cancellationToken, bool gpuMode)
+    public void InitializeModels(bool gpuMode)
     {
         if (modelsInitialized) return;
 
         try
         {
-            await Task.Yield();
-            cancellationToken.ThrowIfCancellationRequested();
-
             string encPath = System.IO.Path.Combine(Application.temporaryCachePath, encoderWeightPath);
             string decPath = System.IO.Path.Combine(Application.temporaryCachePath, decoderWeightPath);
             string encProtoPath = System.IO.Path.Combine(Application.temporaryCachePath, encoderProtoPath);
@@ -118,15 +118,8 @@ public class SegmentAnythingModel
             bool encOpened = false;
             bool decOpened = false;
 
-            await Task.Run(() => {
-                if (cancellationToken.IsCancellationRequested) return;
-                encOpened = encoder.OpenFile(encProtoPath, encPath);
-
-                if (cancellationToken.IsCancellationRequested) return;
-                decOpened = decoder.OpenFile(decProtoPath, decPath);
-            }, cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
+            encOpened = encoder.OpenFile(encProtoPath, encPath);
+            decOpened = decoder.OpenFile(decProtoPath, decPath);
 
             if (!encOpened || !decOpened)
             {
@@ -134,10 +127,6 @@ public class SegmentAnythingModel
             }
 
             modelsInitialized = true;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (Exception e)
         {
@@ -189,9 +178,9 @@ public class SegmentAnythingModel
     }
 
     // Run inference with AiliaSDK
-    private async Task<(bool[][,], float[])> RunInferenceAsync(float[,] pointCoords, float[] pointLabels, CancellationToken cancellationToken)
+    private (bool[][,], float[]) RunInference(float[,] pointCoords, float[] pointLabels)
     {
-        if (isQuitting || cancellationToken.IsCancellationRequested || !modelsInitialized || encoder == null || decoder == null)
+        if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
         {
             return (new bool[0][,], new float[0]);
         }
@@ -204,8 +193,6 @@ public class SegmentAnythingModel
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             int imgIndex = encoder.FindBlobIndexByName("img");
 
             // Set encoder input shape (1x3x1024x1024)
@@ -234,7 +221,6 @@ public class SegmentAnythingModel
             // Run encoder
             bool encResult = encoder.Update();
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || encoder == null || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -267,7 +253,6 @@ public class SegmentAnythingModel
                 flattenedCoords[i * 2 + 1] = scaledCoords[i, 1];
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -349,7 +334,6 @@ public class SegmentAnythingModel
                 return (new bool[0][,], new float[0]);
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -375,7 +359,6 @@ public class SegmentAnythingModel
             // Run decoder
             bool decResult = decoder.Update();
             
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -390,7 +373,6 @@ public class SegmentAnythingModel
             // Get output blobs
             uint[] outputBlobs = decoder.GetOutputBlobList();
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -406,7 +388,6 @@ public class SegmentAnythingModel
                 return (new bool[0][,], new float[0]);
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -429,7 +410,6 @@ public class SegmentAnythingModel
             float[] maskOutput = new float[totalMaskSize];
             float[] scoreOutput = new float[numMasks];
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -445,21 +425,11 @@ public class SegmentAnythingModel
                 return (new bool[0][,], new float[0]);
             }
 
-            // Allow UI thread to process
-            await Task.Yield();
-
-            cancellationToken.ThrowIfCancellationRequested();
-
             // Convert masks to proper format
             bool[][,] masks = new bool[numMasks][,];
 
             for (int i = 0; i < numMasks; i++)
             {
-                if (cancellationToken.IsCancellationRequested || isQuitting)
-                {
-                    return (new bool[0][,], new float[0]);
-                }
-
                 float[,,,] maskTensor = ReshapeToTensor(maskOutput, i, maskHeight, maskWidth, maskArea);
 
                 if (useLowResMasks)
@@ -472,10 +442,6 @@ public class SegmentAnythingModel
             }
 
             return (masks, scoreOutput);
-        }
-        catch (OperationCanceledException)
-        {
-            return (new bool[0][,], new float[0]);
         }
         catch (Exception e)
         {
@@ -776,7 +742,7 @@ public class SegmentAnythingModel
     }
 
     // Process the current video frame
-    public async Task ProcessFrameAsync(CancellationToken cancellationToken, AiliaImageSource imageSource)
+    public void ProcessFrame(AiliaImageSource imageSource)
     {
         if (!modelsInitialized || isProcessing || isQuitting)
         {
@@ -800,9 +766,9 @@ public class SegmentAnythingModel
             }
             Debug.Log(coordsLog);
 
-            var (masks, scores) = await RunInferenceAsync(coords, labels, cancellationToken);
+            var (masks, scores) = RunInference(coords, labels);
 
-            if (isQuitting || cancellationToken.IsCancellationRequested)
+            if (isQuitting)
             {
                 return;
             }

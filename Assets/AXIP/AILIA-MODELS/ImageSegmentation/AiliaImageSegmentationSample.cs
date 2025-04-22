@@ -7,7 +7,6 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using ailia;
-using System.Threading.Tasks;
 
 namespace ailiaSDK
 {
@@ -131,7 +130,7 @@ namespace ailiaSDK
 			}
 
 			// for Processing
-			await AiliaInit();
+			AiliaInit();
 
 			// for Camera
 			if(camera_mode){
@@ -140,7 +139,7 @@ namespace ailiaSDK
 			}
 		}
 
-		async Task AiliaInit()
+		void AiliaInit()
 		{
 			// Create Ailia
 			ailiaModel = CreateAiliaNet(imageSegmentaionModels, gpu_mode);
@@ -249,7 +248,7 @@ namespace ailiaSDK
 
 			// Predict
 			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			bool result = await Predict(output, input);
+			bool result = Predict(output, input);
 
 			if (!result)
 			{
@@ -383,11 +382,11 @@ namespace ailiaSDK
                 urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = onnxName });
             }
 
-            StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, async () =>
+            StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
             {
                 if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
                 {
-                    await samModel.InitializeModelsAsync(System.Threading.CancellationToken.None, gpu_mode);
+                    samModel.InitializeModels(gpu_mode);
                     modelPrepared = samModel.modelsInitialized;
                 }
                 else
@@ -654,27 +653,19 @@ namespace ailiaSDK
 			cbuffer.GetData(processedInputBuffer);
 		}
 
-		async Task<bool> Predict(float[] output, float[] input)
+		bool Predict(float[] output, float[] input)
 		{
             bool result = false;
 
 			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
-				try
+				if (samModel.GetClickPoints(0).Length == 0)
 				{
-					if (samModel.GetClickPoints(0).Length == 0)
-					{
-                        samModel.AddClickPoint(AiliaImageSource.Width / 4, AiliaImageSource.Height / 4 + 30);
-                    }
-
-                    await samModel.ProcessFrameAsync(System.Threading.CancellationToken.None, AiliaImageSource);
-                    result = samModel.success;
-                }
-				catch (Exception e)
-				{
-					Debug.LogError($"Error while predicting image segmentation: {e.Message}\n{e.StackTrace}");
-					return false;
+					samModel.AddClickPoint(AiliaImageSource.Width / 4, AiliaImageSource.Height / 4 + 30);
 				}
+
+				samModel.ProcessFrame(AiliaImageSource);
+				result = samModel.success;
             }
 			else
 			{
