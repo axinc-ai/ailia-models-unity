@@ -29,7 +29,6 @@ namespace ailiaSDK
 		// Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
 		public bool gpu_mode = false;
-		public ComputeShader inputDataProcessingShader = null;
 		public GameObject UICanvas = null;
 		public bool camera_mode = true;
 		public int camera_id = 0;
@@ -114,20 +113,6 @@ namespace ailiaSDK
 			raw_image.material = blendMaterial;
 
 			rawImageSize = raw_image.rectTransform.sizeDelta;
-
-			if (inputDataProcessingShader != null)
-			{
-				computeShaderWeightId = Shader.PropertyToID("weight");
-				computeShaderBiasId = Shader.PropertyToID("bias");
-				computeShaderWidthId = Shader.PropertyToID("width");
-				computeShaderHeightId = Shader.PropertyToID("height");
-				computeShaderTextureId = Shader.PropertyToID("texure");
-				computeShaderResultId = Shader.PropertyToID("result_buffer");
-				channelLastKernel = inputDataProcessingShader.FindKernel("ChannelLast");
-				channelLastUpsideDownKernel = inputDataProcessingShader.FindKernel("ChannelLastUpsideDown");
-				channelFirstKernel = inputDataProcessingShader.FindKernel("ChannelFirst");
-				channelFirstUpsideDownKernel = inputDataProcessingShader.FindKernel("ChannelFirstUpsideDown");
-			}
 
 			// for Processing
 			AiliaInit();
@@ -225,30 +210,47 @@ namespace ailiaSDK
 			Rect rect = new Rect(0, 0, InputWidth, InputHeight);
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			Color32[] inputImage = null;
+			int inputImageWidth = 0;
+			int inputImageHeight = 0;
 			if(camera_mode){
-				int tex_width = ailia_camera.GetWidth();
-				int tex_height = ailia_camera.GetHeight();
+				inputImageWidth = ailia_camera.GetWidth();
+				inputImageHeight = ailia_camera.GetHeight();
 				inputImage = ailia_camera.GetPixels32(); // Bottom2Top format
-				inputImage = ResizeImage(inputImage, tex_width, tex_height, InputWidth, InputHeight);	// Convert to Top2Bottom format
-				InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
+				inputImage = ResizeImage(inputImage, inputImageWidth, inputImageHeight, InputWidth, InputHeight);	// Convert to Top2Bottom format
 			}else{
 				bool convert_to_top2bottom = true;	// Convert to Top2Bottom format
-				if (!gpu_mode || inputDataProcessingShader == null)
-				{
-					inputImage = AiliaImageSource.GetPixels32(rect, convert_to_top2bottom);
-					InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
-				}
-				else
-				{
-					originalTexture = AiliaImageSource.GetTexture(rect);
-					InputDataProcessing(imageSegmentaionModels, originalTexture, input, convert_to_top2bottom);
-				}
+				inputImageWidth = InputWidth;
+				inputImageHeight = InputHeight;
+				inputImage = AiliaImageSource.GetPixels32(rect, convert_to_top2bottom);
 			}
+
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Predict
 			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			bool result = Predict(output, input);
+
+			bool result = false;
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+				if (samModel.GetClickPoints(0).Length == 0)
+				{
+					samModel.AddClickPoint(InputWidth / 4, InputHeight / 4 + 30);
+				}
+
+				samModel.ProcessFrame(inputImage, inputImageWidth, inputImageHeight);
+				result = samModel.success;
+            }
+			else
+			{
+				if(camera_mode){
+					InputDataProcessing(imageSegmentaionModels, inputImage, input);
+				} else {
+					InputDataProcessing(imageSegmentaionModels, inputImage, input);
+				}
+
+				result = ailiaModel.Predict(output, input);
+            }
+
 
 			if (!result)
 			{
@@ -278,14 +280,11 @@ namespace ailiaSDK
 			}
 
 			// for viewer
-			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
-			{
-				if(originalTexture == null){
-					originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
-				}
-				originalTexture.SetPixels32(inputImage);
-				originalTexture.Apply();
+			if(originalTexture == null){
+				originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
 			}
+			originalTexture.SetPixels32(inputImage);
+			originalTexture.Apply();
 			raw_image.texture = originalTexture;
 			blendMaterial.SetTexture(mainTexId, originalTexture);
 
@@ -293,14 +292,7 @@ namespace ailiaSDK
 			labelTexture.Apply();
 			blendMaterial.SetTexture(blendTexId, labelTexture);
 
-			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
-			{
-				blendMaterial.SetFloat(mainVFlipId, 1);	//originalTexture is Top2Bottom
-			}
-			else
-			{
-				blendMaterial.SetFloat(mainVFlipId, 0);	//originalTexture is Bottom2Top
-			}
+			blendMaterial.SetFloat(mainVFlipId, 1);	//originalTexture is Top2Bottom
 			blendMaterial.SetFloat(blendVFlipId, 1);	//outputImage is Top2Bottom
 
 			raw_image.gameObject.SetActive(true);
@@ -518,7 +510,7 @@ namespace ailiaSDK
 			return outputImage;
 		}
 
-		void InputDataProcessingCPU(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
+		void InputDataProcessing(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
 		{
 			float weight = 1f / 255f;
 			float bias = 0;
@@ -529,7 +521,7 @@ namespace ailiaSDK
 					rgbRepeats = true;
 					break;
 				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
+					InputDataProcessing_PSP(inputImage, processedInputBuffer);
 					return;
 				case ImageSegmentaionModels.deeplabv3:
 					weight = 1f / 127.5f;
@@ -566,7 +558,7 @@ namespace ailiaSDK
 			}
 		}
 
-		void InputDataProcessingCPU_PSP(Color32[] inputImage, float[] processedInputBuffer)
+		void InputDataProcessing_PSP(Color32[] inputImage, float[] processedInputBuffer)
 		{
 			for (int i = 0; i < inputImage.Length; i++)
 			{
@@ -576,104 +568,6 @@ namespace ailiaSDK
 				processedInputBuffer[i + inputImage.Length * 2] = (inputImage[i].b * (1f / 255f) - 0.406f) * (1f / 0.225f);
 			}
 		}
-
-		ComputeBuffer cbuffer;
-		void InputDataProcessing(ImageSegmentaionModels imageSegmentaionModels, Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
-		{
-			float weight = 1;
-			float bias = 0;
-			bool rgbRepeats = false;
-			switch (imageSegmentaionModels)
-			{
-				case ImageSegmentaionModels.hair_segmentation:
-					rgbRepeats = true;
-					break;
-				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataProcessingPSP(inputImage, processedInputBuffer, upsideDown);
-					return;
-				case ImageSegmentaionModels.deeplabv3:
-					weight = 2;
-					bias = -1;
-					break;
-				case ImageSegmentaionModels.u2net:
-					weight = 2;
-					break;
-				case ImageSegmentaionModels.modnet:
-					weight = 2;
-					bias = -1;
-					break;
-				default:
-					break;
-			}
-
-			if (cbuffer == null || cbuffer.count != processedInputBuffer.Length)
-			{
-				if (cbuffer != null) cbuffer.Release();
-				cbuffer = new ComputeBuffer(processedInputBuffer.Length, sizeof(float));
-			}
-
-			int kernelIndex;
-			if (rgbRepeats)
-			{
-				if (upsideDown) kernelIndex = channelLastUpsideDownKernel;
-				else kernelIndex = channelLastKernel;
-			}
-			else
-			{
-				if (upsideDown) kernelIndex = channelFirstUpsideDownKernel;
-				else kernelIndex = channelFirstKernel;
-			}
-			inputDataProcessingShader.SetFloat(computeShaderWeightId, weight);
-			inputDataProcessingShader.SetFloat(computeShaderBiasId, bias);
-			inputDataProcessingShader.SetInt(computeShaderWidthId, inputImage.width);
-			inputDataProcessingShader.SetInt(computeShaderHeightId, inputImage.height);
-			inputDataProcessingShader.SetTexture(kernelIndex, computeShaderTextureId, inputImage);
-			inputDataProcessingShader.SetBuffer(kernelIndex, computeShaderResultId, cbuffer);
-			inputDataProcessingShader.Dispatch(kernelIndex, inputImage.width / 32 + 1, inputImage.height / 32 + 1, 1);
-			cbuffer.GetData(processedInputBuffer);
-		}
-
-		void InputDataProcessingPSP(Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
-		{
-			if (cbuffer == null || cbuffer.count != processedInputBuffer.Length)
-			{
-				if (cbuffer != null) cbuffer.Release();
-				cbuffer = new ComputeBuffer(processedInputBuffer.Length, sizeof(float));
-			}
-			int kernelIndex = 0;
-			if (upsideDown)
-				kernelIndex = inputDataProcessingShader.FindKernel("ImageNetChannelFirstUpsideDown");
-			else
-				kernelIndex = inputDataProcessingShader.FindKernel("ImageNetChannelFirst");
-			inputDataProcessingShader.SetInt(computeShaderWidthId, inputImage.width);
-			inputDataProcessingShader.SetInt(computeShaderHeightId, inputImage.height);
-			inputDataProcessingShader.SetTexture(kernelIndex, computeShaderTextureId, inputImage);
-			inputDataProcessingShader.SetBuffer(kernelIndex, computeShaderResultId, cbuffer);
-			inputDataProcessingShader.Dispatch(kernelIndex, inputImage.width / 32 + 1, inputImage.height / 32 + 1, 1);
-			cbuffer.GetData(processedInputBuffer);
-		}
-
-		bool Predict(float[] output, float[] input)
-		{
-            bool result = false;
-
-			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
-			{
-				if (samModel.GetClickPoints(0).Length == 0)
-				{
-					samModel.AddClickPoint(AiliaImageSource.Width / 4, AiliaImageSource.Height / 4 + 30);
-				}
-
-				samModel.ProcessFrame(AiliaImageSource);
-				result = samModel.success;
-            }
-			else
-			{
-				result = ailiaModel.Predict(output, input);
-            }
-
-			return result;
-        }
 
 		void LabelPaint(float[] labelData, Color32[] pixelBuffer, int channel, Color32[] palette)
 		{
@@ -852,7 +746,6 @@ namespace ailiaSDK
 		private void DestroyAiliaDetector()
 		{
 			ailiaModel?.Close();
-			cbuffer?.Release();
 		}
 	}
 }

@@ -29,7 +29,6 @@ public class SegmentAnythingModel
     private Rect boxCoords = new();
     private bool addBoxCoords => boxCoords.width > 0 && boxCoords.height > 0;
     private int targetSize = 1024;
-    private AiliaImageSource imageSource;
     private ailia.AiliaModel encoder;
     private ailia.AiliaModel decoder;
 
@@ -67,9 +66,9 @@ public class SegmentAnythingModel
 
     public (int, int) GetInputSize(AiliaImageSource imageSource)
     {
-        float scale = (float)targetSize / Math.Max(imageSource.Width, imageSource.Height);
-
-        return (((int)(scale * imageSource.Width)), ((int)(scale * imageSource.Height)));
+        //float scale = (float)targetSize / Math.Max(imageSource.Width, imageSource.Height);
+        //return (((int)(scale * imageSource.Width)), ((int)(scale * imageSource.Height)));
+        return (targetSize, targetSize);
     }
     public Ailia.AILIAShape GetOutputShape()
     {
@@ -178,18 +177,18 @@ public class SegmentAnythingModel
     }
 
     // Run inference with AiliaSDK
-    private (bool[][,], float[]) RunInference(float[,] pointCoords, float[] pointLabels)
+    private (bool[][,], float[]) RunInference(Color32 [] image, int scaledWidth, int scaledHeight, float[,] pointCoords, float[] pointLabels)
     {
         if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
         {
             return (new bool[0][,], new float[0]);
         }
 
-        int imgHeight = imageSource.Height;
-        int imgWidth = imageSource.Width;
+        int imgHeight = scaledWidth;
+        int imgWidth = scaledHeight;
 
         // Preprocess image
-        var (inputData, inputSize) = PreprocessImage(imageSource);
+        var (inputData, inputSize) = PreprocessImage(image, scaledWidth, scaledHeight);
 
         try
         {
@@ -345,7 +344,7 @@ public class SegmentAnythingModel
             bool setLabelsResult = decoder.SetInputBlobData(pointLabels, (uint)pointLabelsIndex);
             float[] maskInput = new float[1 * 1 * DecoderMaskInputSize * DecoderMaskInputSize]; // 1x1x64x64
             float[] hasMaskInput = new float[1] { 0 }; // 1
-            float[] origImSizeInput = new float[2] { imageSource.Height, imageSource.Width }; // 2
+            float[] origImSizeInput = new float[2] { scaledHeight, scaledWidth }; // 2
             bool maskInputResult = decoder.SetInputBlobData(maskInput, (uint)maskInputIndex);
             bool hasMaskInputResult = decoder.SetInputBlobData(hasMaskInput, (uint)hasMaskInputIndex);
             bool origImSizeResult = decoder.SetInputBlobData(origImSizeInput, (uint)origImSizeIndex);
@@ -484,14 +483,12 @@ public class SegmentAnythingModel
     }
 
     // Overlay mask on original image
-    private Texture2D CreateMaskedImage(bool[,] mask, AiliaImageSource imageSource)
+    private Texture2D CreateMaskedImage(bool[,] mask, Color32 [] pixels, int scaledWidth, int scaledHeight)
     {
-        int imageWidth = imageSource.Width;
-        int imageHeight = imageSource.Height;
+        int imageWidth = scaledWidth;
+        int imageHeight = scaledHeight;
         Texture2D result = new Texture2D(imageWidth, imageHeight, TextureFormat.ARGB32, false);
         
-        Color32[] pixels = imageSource.GetPixels32(new Rect(0, 0, imageSource.Width, imageSource.Height), true);
-
         int maskHeight = mask.GetLength(0);
         int maskWidth = mask.GetLength(1);
 
@@ -576,52 +573,27 @@ public class SegmentAnythingModel
         return result;
     }
 
-    // Preprocess image for model input
-    private (float[], ValueTuple<int, int>) PreprocessImage(AiliaImageSource imageSource)
+    private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
     {
-        int imgHeight = imageSource.Height;
-        int imgWidth = imageSource.Width;
+        int x2 = (int)fx;
+        int y2 = (int)fy;
+        float xa = 1.0f - (fx - x2);
+        float xb = 1.0f - xa;
+        float ya = 1.0f - (fy - y2);
+        float yb = 1.0f - ya;
+        Color32 c1 = face[y2 * w + x2];
+        Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
+        Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
+        Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
+        byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
+        byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
+        byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
+        return new Color32(r, g, b, 255);
+    }
 
-        Texture2D image = new Texture2D(imgWidth, imgHeight, TextureFormat.ARGB32, false);
-        image.SetPixels32(imageSource.GetPixels32(new Rect(0, 0, imgWidth, imgHeight), true));
-        image.Apply();
-
-        
-
-        // Scale to fit in target size while maintaining aspect ratio
-        float scale = (float)targetSize / Math.Max(imgHeight, imgWidth);
-        int scaledWidth = (int)(imgWidth * scale);
-        int scaledHeight = (int)(imgHeight * scale);
-
-        // Use persistent RenderTexture to avoid allocation
-        RenderTexture rt = RenderTexture.GetTemporary(scaledWidth, scaledHeight, 0, RenderTextureFormat.ARGB32);
-        Graphics.Blit(image, rt);
-
-        RenderTexture.active = rt;
-        Texture2D resizedImage = new Texture2D(scaledWidth, scaledHeight, TextureFormat.RGBA32, false);
-        resizedImage.ReadPixels(new Rect(0, 0, scaledWidth, scaledHeight), 0, 0);
-        resizedImage.Apply();
-        RenderTexture.active = null;
-        RenderTexture.ReleaseTemporary(rt);
-
-        // Flip Y coordinates to match expected input format
-        UnityEngine.Color[] pixels = resizedImage.GetPixels();
-        UnityEngine.Color[] flippedPixels = new UnityEngine.Color[pixels.Length];
-
-        // Optimize row-by-row copying
-        for (int y = 0; y < scaledHeight; y++)
-        {
-            int srcRowStart = y * scaledWidth;
-            int dstRowStart = (scaledHeight - y - 1) * scaledWidth;
-
-            Array.Copy(pixels, srcRowStart, flippedPixels, dstRowStart, scaledWidth);
-        }
-
-        Texture2D flippedImage = new Texture2D(scaledWidth, scaledHeight, TextureFormat.RGBA32, false);
-        flippedImage.SetPixels(flippedPixels);
-        flippedImage.Apply();
-        GameObject.Destroy(resizedImage);
-
+    // Preprocess image for model input
+    private (float[], ValueTuple<int, int>) PreprocessImage(Color32 [] camera, int scaledWidth, int scaledHeight)
+    {
         // Create CHW layout data array (channel, height, width)
         float[] normalizedData = new float[3 * targetSize * targetSize];
 
@@ -635,19 +607,21 @@ public class SegmentAnythingModel
         {
             for (int x = 0; x < targetSize; x++)
             {
-                int baseIdx = y * targetSize + x;
+                float fx = x * scaledWidth / targetSize;
+                float fy = y * scaledHeight / targetSize;
+                Color32 v = Bilinear(camera, scaledWidth, scaledHeight, fx, fy);
 
-                if (y < scaledHeight && x < scaledWidth)
-                {
-                    UnityEngine.Color pixel = flippedImage.GetPixel(x, y);
-                    normalizedData[ch0Offset + baseIdx] = (pixel.r - Mean[0]) / Std[0];
-                    normalizedData[ch1Offset + baseIdx] = (pixel.g - Mean[1]) / Std[1];
-                    normalizedData[ch2Offset + baseIdx] = (pixel.b - Mean[2]) / Std[2];
-                }
+                //int baseIdx = (targetSize - 1 - y) * targetSize + x; // Bottom2Top
+                int baseIdx = y * targetSize + x; // Top2Bottom
+
+                //if (y < scaledHeight && x < scaledWidth)
+                //{
+                    normalizedData[ch0Offset + baseIdx] = (v.r - Mean[0]) / Std[0];
+                    normalizedData[ch1Offset + baseIdx] = (v.g - Mean[1]) / Std[1];
+                    normalizedData[ch2Offset + baseIdx] = (v.b - Mean[2]) / Std[2];
+                //}
             }
         }
-
-        GameObject.Destroy(flippedImage);
 
         return (normalizedData, (scaledHeight, scaledWidth));
     }
@@ -742,31 +716,29 @@ public class SegmentAnythingModel
     }
 
     // Process the current video frame
-    public void ProcessFrame(AiliaImageSource imageSource)
+    public void ProcessFrame(Color32 [] image, int scaledWidth, int scaledHeight)
     {
         if (!modelsInitialized || isProcessing || isQuitting)
         {
             return;
         }
 
-        this.imageSource = imageSource;
-
         try
         {
             isProcessing = true;
 
             // Set up point coords for inference
-            float[,] coords = GetClickPoints(imageSource.Height);
+            float[,] coords = GetClickPoints(scaledHeight);
             float[] labels = GetPointLabels();
 
             string coordsLog = $"Points input ({labels.Length}): ";
             for (int i = 0; i < labels.Length; i += 1)
             {
-                coordsLog += $"({coords[i, 0]},{-coords[i, 1] - imageSource.Height + 1})[{labels[i]}]";
+                coordsLog += $"({coords[i, 0]},{-coords[i, 1] - scaledHeight + 1})[{labels[i]}]";
             }
             Debug.Log(coordsLog);
 
-            var (masks, scores) = RunInference(coords, labels);
+            var (masks, scores) = RunInference(image, scaledWidth, scaledHeight, coords, labels);
 
             if (isQuitting)
             {
@@ -793,7 +765,7 @@ public class SegmentAnythingModel
                     GameObject.Destroy(visualizedResult);
                 }
 
-                visualizedResult = CreateMaskedImage(masks[bestMaskIndex], imageSource);
+                visualizedResult = CreateMaskedImage(masks[bestMaskIndex], image, scaledWidth, scaledHeight);
 
                 // Only draw click points if the showClickPoints flag is enabled
                 if (showClickPoints)
