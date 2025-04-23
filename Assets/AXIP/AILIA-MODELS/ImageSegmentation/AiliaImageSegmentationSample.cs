@@ -142,19 +142,23 @@ namespace ailiaSDK
 			SetShape(imageSegmentaionModels);
 
 			// texture & buffer allocate
-			labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
-			AiliaImageSource.Resize(InputWidth, InputHeight);
+			if (false){//imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
+				// 元画像サイズ
+				InputWidth = AiliaImageSource.Width;
+				InputHeight = AiliaImageSource.Height;
+				OutputWidth = InputWidth;
+				OutputHeight = InputHeight;
+				raw_image.rectTransform.sizeDelta = new Vector2(1.0f, 1.0f);
+			} else {
+				// 事前にリサイズ
+				AiliaImageSource.Resize(InputWidth, InputHeight);
+			}
+
 			input = new float[InputWidth * InputHeight * InputChannel];
 
-			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
-			{
-                output = new float[InputWidth * InputHeight];
-                outputImage = new Color32[InputWidth * InputHeight];
-            } else
-			{
-                output = new float[OutputWidth * OutputHeight * OutputChannel];
-                outputImage = new Color32[OutputWidth * OutputHeight];
-            }
+			output = new float[OutputWidth * OutputHeight * OutputChannel];
+			outputImage = new Color32[OutputWidth * OutputHeight];
+			labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
 		}
 
 		void UISetup()
@@ -166,10 +170,14 @@ namespace ailiaSDK
 			raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
 			raw_image.gameObject.SetActive(false);
 
-			mode_text.text = "ailia Image Segmentation\n" +
-                "Left/Right click: positive/negative point\n" +
-				"Middle click: drag to define border box\n" +
-                "Space key down to original image";
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1) {
+				mode_text.text = "ailia Image Segmentation\n" +
+					"Left/Right click: positive/negative point\n" +
+					"Middle click: drag to define border box\n" +
+					"Space key down to original image";
+			} else {
+				mode_text.text = "ailia Image Segmentation";
+			}
 		}
 
 		async void Update()
@@ -217,6 +225,8 @@ namespace ailiaSDK
 				inputImageHeight = ailia_camera.GetHeight();
 				inputImage = ailia_camera.GetPixels32(); // Bottom2Top format
 				inputImage = ResizeImage(inputImage, inputImageWidth, inputImageHeight, InputWidth, InputHeight);	// Convert to Top2Bottom format
+				inputImageWidth = InputWidth;
+				inputImageHeight = InputHeight;
 			}else{
 				bool convert_to_top2bottom = true;	// Convert to Top2Bottom format
 				inputImageWidth = InputWidth;
@@ -268,6 +278,8 @@ namespace ailiaSDK
 			else if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
 				outputImage = samModel.visualizedResult.GetPixels32();
+				Debug.Log("InputWidth" + InputWidth + "/" + InputHeight);
+				Debug.Log("samModel.visualizedResult" + samModel.visualizedResult.width + "/" + samModel.visualizedResult.height);
 			}
 			else
 				LabelPaint(output, outputImage, OutputChannel, colorPalette);
@@ -287,6 +299,9 @@ namespace ailiaSDK
 			originalTexture.Apply();
 			raw_image.texture = originalTexture;
 			blendMaterial.SetTexture(mainTexId, originalTexture);
+
+			Debug.Log("originalTexture" + originalTexture.width + "/" + originalTexture.height);
+			Debug.Log("labelTexture" + labelTexture.width + "/" + labelTexture.height);
 
 			labelTexture.SetPixels32(outputImage);
 			labelTexture.Apply();
