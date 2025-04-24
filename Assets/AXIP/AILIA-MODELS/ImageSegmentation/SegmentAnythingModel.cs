@@ -144,7 +144,7 @@ public class SegmentAnythingModel
         foreach (var point in clickPoints)
         {
             points[i, 0] = point.x;
-            points[i, 1] = point.y;//imageHeight - 1 - point.y;
+            points[i, 1] = point.y;
 
             i += 1;
         }
@@ -152,9 +152,9 @@ public class SegmentAnythingModel
         if (addBoxCoords)
         {
             points[clickPoints.Count, 0] = boxCoords.xMin;
-            points[clickPoints.Count, 1] = boxCoords.yMin;//imageHeight - 1 - boxCoords.yMin;
+            points[clickPoints.Count, 1] = boxCoords.yMin;
             points[clickPoints.Count + 1, 0] = boxCoords.xMax;
-            points[clickPoints.Count + 1, 1] = boxCoords.yMax;//imageHeight - 1 - boxCoords.yMax;
+            points[clickPoints.Count + 1, 1] = boxCoords.yMax;
         }
 
         return points;
@@ -214,7 +214,7 @@ public class SegmentAnythingModel
             }
 
             bool dataSetResult = encoder.SetInputBlobData(inputData, imgIndex);
-            Debug.Log($"updated SET DATA {dataSetResult}");
+            //Debug.Log($"updated SET DATA {dataSetResult}");
 
             // Run encoder
             bool encResult = encoder.Update();
@@ -232,10 +232,9 @@ public class SegmentAnythingModel
 
             uint outputBlobIndex = encoder.GetOutputBlobList()[0];
             Ailia.AILIAShape outputShape = encoder.GetBlobShape(outputBlobIndex);
-            //float[] encoderOutput = new float[1 * EncoderOutChannels * EncoderOutSize * EncoderOutSize]; // 1x256x64x64
             float[] encoderOutput = new float[outputShape.w * outputShape.z * outputShape.y * outputShape.x];
 
-            Debug.Log(outputShape + " " + encoderOutput.Length + " " + (EncoderOutChannels * EncoderOutSize * EncoderOutSize));
+            //Debug.Log(outputShape + " " + encoderOutput.Length + " " + (EncoderOutChannels * EncoderOutSize * EncoderOutSize));
 
             encoder.GetBlobData(encoderOutput, outputBlobIndex);
 
@@ -482,15 +481,10 @@ public class SegmentAnythingModel
         int maskHeight = mask.GetLength(0);
         int maskWidth = mask.GetLength(1);
 
-        Debug.Log("maskHeight" + maskHeight);
-        Debug.Log("maskWidth" + maskWidth);
-        Debug.Log("imageWidth" + imageWidth);
-        Debug.Log("imageHeight" + imageHeight);
-
         // Apply mask to original image - optimized inner loop
         for (int y = 0; y < maskHeight; y++)
         {
-            int unityY = y;//imageHeight - y - 1;
+            int unityY = y;
             int rowOffset = unityY * imageWidth;
 
             for (int x = 0; x < maskWidth; x++)
@@ -536,12 +530,12 @@ public class SegmentAnythingModel
             int origY = (int)coords[i, 1];
 
             // Convert to Unity coordinates
-            int py = origY;//image.height - origY - 1;
+            int py = origY;
             py = Mathf.Clamp(py, 0, image.height - 1);
 
             Color32 markerColor = labels[i] == 1 ? new Color32(0, 255, 0, 255) : new Color32(0, 0, 255, 255);
 
-            Debug.Log($"{coords[i, 0]},{coords[i, 1]} => {px}, {py}");
+            //Debug.Log($"{coords[i, 0]},{coords[i, 1]} => {px}, {py}");
 
             // Draw marker with bounds checking in the loop
             for (int dy = -markerSize; dy <= markerSize; dy++)
@@ -611,19 +605,15 @@ public class SegmentAnythingModel
         {
             for (int x = 0; x < targetSize; x++)
             {
-                float fx = x / scale;//scaledWidth / targetSize;
-                float fy = y / scale;//scaledHeight / targetSize;
+                float fx = x / scale;
+                float fy = y / scale;
                 Color32 v = Bilinear(camera, texWidth, texHeight, fx, fy);
 
-                //int baseIdx = (targetSize - 1 - y) * targetSize + x; // Bottom2Top
                 int baseIdx = y * targetSize + x; // Top2Bottom
 
-                //if (y < scaledHeight && x < scaledWidth)
-                //{
-                    normalizedData[ch0Offset + baseIdx] = (v.r / 255.0f - Mean[0]) / Std[0];
-                    normalizedData[ch1Offset + baseIdx] = (v.g / 255.0f - Mean[1]) / Std[1];
-                    normalizedData[ch2Offset + baseIdx] = (v.b / 255.0f - Mean[2]) / Std[2];
-                //}
+                normalizedData[ch0Offset + baseIdx] = (v.r / 255.0f - Mean[0]) / Std[0];
+                normalizedData[ch1Offset + baseIdx] = (v.g / 255.0f - Mean[1]) / Std[1];
+                normalizedData[ch2Offset + baseIdx] = (v.b / 255.0f - Mean[2]) / Std[2];
             }
         }
 
@@ -635,20 +625,19 @@ public class SegmentAnythingModel
         int maskHeight = mask.GetLength(2);
         int maskWidth = mask.GetLength(3);
 
-        float scale = maskWidth / (float)Mathf.Max(origWidth, origHeight);
-
-        // First resize to targetSize
+        // Final resize to targetSize
         bool[,] finalMask = new bool[origHeight, origWidth];
+
         for (int y = 0; y < origHeight; y++)
         {
-            float srcY = y * scale;
+            float srcY = y * maskHeight / origHeight;
             int y0 = (int)Math.Floor(srcY);
             int y1 = Math.Min(y0 + 1, maskHeight - 1);
             float wy = srcY - y0;
 
             for (int x = 0; x < origWidth; x++)
             {
-                float srcX = x * scale;
+                float srcX = x * maskWidth / origWidth;
                 int x0 = (int)Math.Floor(srcX);
                 int x1 = Math.Min(x0 + 1, maskWidth - 1);
                 float wx = srcX - x0;
@@ -688,7 +677,7 @@ public class SegmentAnythingModel
             {
                 coordsLog += $"({coords[i, 0]},{-coords[i, 1] - imageHeight + 1})[{labels[i]}]";
             }
-            Debug.Log(coordsLog);
+            //Debug.Log(coordsLog);
 
             var (masks, scores) = RunInference(image, imageWidth, imageHeight, coords, labels);
 

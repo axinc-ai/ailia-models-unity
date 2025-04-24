@@ -111,11 +111,6 @@ namespace ailiaSDK
             
 			// Load sample image
 			LoadImage(imageSegmentaionModels, AiliaImageSource);
-
-			// Resize
-			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
-				//AiliaImageSource.Resize(1024, 1024);
-			}
 		}
 
 		void UISetup()
@@ -236,8 +231,6 @@ namespace ailiaSDK
 				outputImage = samModel.visualizedResult.GetPixels32();
 				outputWidth = samModel.visualizedResult.width;
 				outputHeight = samModel.visualizedResult.height;
-				Debug.Log("InputWidth" + inputImageWidth + "/" + inputImageHeight);
-				Debug.Log("samModel.visualizedResult" + samModel.visualizedResult.width + "/" + samModel.visualizedResult.height);
 			}
 			else{
 				(outputImage, outputWidth, outputHeight) = segModel.PostProcesss(imageSegmentaionModels, inputImageWidth, inputImageHeight);
@@ -261,9 +254,6 @@ namespace ailiaSDK
 			originalTexture.Apply();
 			raw_image.texture = originalTexture;
 			blendMaterial.SetTexture(mainTexId, originalTexture);
-
-			Debug.Log("originalTexture" + originalTexture.width + "/" + originalTexture.height);
-			Debug.Log("labelTexture" + labelTexture.width + "/" + labelTexture.height);
 
 			labelTexture.SetPixels32(outputImage);
 			labelTexture.Apply();
