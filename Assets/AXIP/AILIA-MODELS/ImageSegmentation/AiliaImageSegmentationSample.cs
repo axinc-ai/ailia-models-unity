@@ -135,7 +135,7 @@ namespace ailiaSDK
 			Color32[] outputImage = new Color32[InputWidth * InputHeight];
 			for(int y=0;y<InputHeight;y++){
 				for(int x=0;x<InputWidth;x++){
-					outputImage[(InputHeight-1-y)*InputHeight+x]=inputImage[y*InputWidth+x];
+					outputImage[(InputHeight-1-y)*InputWidth+x]=inputImage[y*InputWidth+x];
 				}
 			}
 			return outputImage;
@@ -166,6 +166,7 @@ namespace ailiaSDK
 			{
 				if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
 					samModel.ResetClickPoint();
+					boxRect = new();
 					oneshot = true;
 				}
 				blendMaterial.SetFloat(blendFlagId, 0);
@@ -290,7 +291,7 @@ namespace ailiaSDK
 			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
 				samModel = new SegmentAnythingModel();
-				urlList = samModel.GetModelURLs();
+				urlList = samModel.GetModelURLs(imageSegmentaionModels);
 			}
 			else
 			{
@@ -302,7 +303,7 @@ namespace ailiaSDK
             {
                 if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
                 {
-                    modelPrepared = samModel.InitializeModels(gpu_mode);
+                    modelPrepared = samModel.InitializeModels(imageSegmentaionModels, gpu_mode);
 					envName = samModel.EnvironmentName();
                 }
                 else
@@ -412,7 +413,7 @@ namespace ailiaSDK
                 return;
             }
             
-			if (boxRect.width > 0 && boxRect.height > 0 || isDraggingForBox)
+			if ((boxRect.width > 0 && boxRect.height > 0) || isDraggingForBox)
 			{
                 Vector3[] corners = new Vector3[4];
                 raw_image.rectTransform.GetWorldCorners(corners);

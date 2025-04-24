@@ -68,9 +68,10 @@ public class SegmentAnythingModel
     public void ResetClickPoint(){
         clickPoints = new();
         clickPointLabels = new();
+        boxCoords = new();
     }
 
-    public List<ModelDownloadURL> GetModelURLs()
+    public List<ModelDownloadURL> GetModelURLs(ImageSegmentaionModels modelType)
     {
         List<ModelDownloadURL> modelDownloadURLs = new List<ModelDownloadURL>();
         string serverFolderName = "segment-anything";
@@ -84,7 +85,7 @@ public class SegmentAnythingModel
     }
 
     // Initialize Ailia models
-    public bool InitializeModels(bool gpuMode)
+    public bool InitializeModels(ImageSegmentaionModels modelType, bool gpuMode)
     {
         if (modelsInitialized) return true;
 
