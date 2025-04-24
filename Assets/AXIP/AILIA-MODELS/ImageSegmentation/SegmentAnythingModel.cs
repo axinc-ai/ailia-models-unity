@@ -89,9 +89,9 @@ public class SegmentAnythingModel
     }
 
     // Initialize Ailia models
-    public void InitializeModels(bool gpuMode)
+    public bool InitializeModels(bool gpuMode)
     {
-        if (modelsInitialized) return;
+        if (modelsInitialized) return true;
 
         try
         {
@@ -132,6 +132,8 @@ public class SegmentAnythingModel
             Debug.LogError($"Error while loading SAM model: {e.Message}\n{e.StackTrace}");
             modelsInitialized = false;
         }
+
+        return modelsInitialized;
     }
 
     public float[,] GetClickPoints(int imageHeight)
@@ -876,4 +878,13 @@ public class SegmentAnythingModel
         }
     }
 
+    public void Destroy(){
+        encoder.Close();
+        decoder.Close();
+    }
+
+    public string EnvironmentName()
+    {
+        return encoder.EnvironmentName();
+    }
 }

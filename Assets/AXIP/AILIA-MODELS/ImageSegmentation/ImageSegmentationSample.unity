@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.44394028, g: 0.4931519, b: 0.5722083, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -499,8 +499,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   imageSegmentaionModels: 8
   gpu_mode: 0
-  inputDataProcessingShader: {fileID: 7200000, guid: 4ad8a3eeb0183024b80805583ce4281a,
-    type: 3}
   UICanvas: {fileID: 1813464803}
   camera_mode: 0
   camera_id: 0
