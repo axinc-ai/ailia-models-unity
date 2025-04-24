@@ -29,7 +29,6 @@ public class SegmentAnythingModel
     private Rect boxCoords = new();
     private bool addBoxCoords => boxCoords.width > 0 && boxCoords.height > 0;
     private int targetSize = 1024;
-    private AiliaImageSource imageSource;
     private ailia.AiliaModel encoder;
     private ailia.AiliaModel decoder;
 
@@ -38,7 +37,6 @@ public class SegmentAnythingModel
     public bool success { get; private set; } = false; 
     private bool gpuMode = false;
     private bool showClickPoints = true;
-    private bool useLowResMasks = false;
 
     // Normalization constants (ImageNet)
     private readonly float[] Mean = { 0.485f, 0.456f, 0.406f };
@@ -51,6 +49,8 @@ public class SegmentAnythingModel
     // Visualization-related fields
     public Texture2D visualizedResult { get; private set; }
     private readonly Color32 MaskColor = new Color32(255, 0, 0, 255);
+    private bool saveFrame = false;
+    private float[] encoderOutput = null;
 
     public void SetBoxCoords(Rect box)
     {
@@ -65,18 +65,13 @@ public class SegmentAnythingModel
         clickPointLabels.Add(!negativePoint);
     }
 
-    public (int, int) GetInputSize(AiliaImageSource imageSource)
-    {
-        float scale = (float)targetSize / Math.Max(imageSource.Width, imageSource.Height);
-
-        return (((int)(scale * imageSource.Width)), ((int)(scale * imageSource.Height)));
-    }
-    public Ailia.AILIAShape GetOutputShape()
-    {
-        return decoder.GetBlobShape(decoder.GetOutputBlobList()[0]);
+    public void ResetClickPoint(){
+        clickPoints = new();
+        clickPointLabels = new();
+        boxCoords = new();
     }
 
-    public List<ModelDownloadURL> GetModelURLs()
+    public List<ModelDownloadURL> GetModelURLs(ImageSegmentaionModels modelType)
     {
         List<ModelDownloadURL> modelDownloadURLs = new List<ModelDownloadURL>();
         string serverFolderName = "segment-anything";
@@ -90,9 +85,9 @@ public class SegmentAnythingModel
     }
 
     // Initialize Ailia models
-    public void InitializeModels(bool gpuMode)
+    public bool InitializeModels(ImageSegmentaionModels modelType, bool gpuMode)
     {
-        if (modelsInitialized) return;
+        if (modelsInitialized) return true;
 
         try
         {
@@ -133,6 +128,8 @@ public class SegmentAnythingModel
             Debug.LogError($"Error while loading SAM model: {e.Message}\n{e.StackTrace}");
             modelsInitialized = false;
         }
+
+        return modelsInitialized;
     }
 
     public float[,] GetClickPoints(int imageHeight)
@@ -143,7 +140,7 @@ public class SegmentAnythingModel
         foreach (var point in clickPoints)
         {
             points[i, 0] = point.x;
-            points[i, 1] = imageHeight - 1 - point.y;
+            points[i, 1] = point.y;
 
             i += 1;
         }
@@ -151,9 +148,9 @@ public class SegmentAnythingModel
         if (addBoxCoords)
         {
             points[clickPoints.Count, 0] = boxCoords.xMin;
-            points[clickPoints.Count, 1] = imageHeight - 1 - boxCoords.yMin;
+            points[clickPoints.Count, 1] = boxCoords.yMin;
             points[clickPoints.Count + 1, 0] = boxCoords.xMax;
-            points[clickPoints.Count + 1, 1] = imageHeight - 1 - boxCoords.yMax;
+            points[clickPoints.Count + 1, 1] = boxCoords.yMax;
         }
 
         return points;
@@ -177,19 +174,17 @@ public class SegmentAnythingModel
         return labels;
     }
 
-    // Run inference with AiliaSDK
-    private (bool[][,], float[]) RunInference(float[,] pointCoords, float[] pointLabels)
+    // Run Embedding
+
+    private void RunEmbedding(Color32 [] image, int imgWidth, int imgHeight)
     {
         if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
         {
-            return (new bool[0][,], new float[0]);
+            return;
         }
 
-        int imgHeight = imageSource.Height;
-        int imgWidth = imageSource.Width;
-
         // Preprocess image
-        var (inputData, inputSize) = PreprocessImage(imageSource);
+        var (inputData, inputSize) = PreprocessImage(image, imgWidth, imgHeight);
 
         try
         {
@@ -205,42 +200,61 @@ public class SegmentAnythingModel
 
             if (isQuitting || encoder == null)
             {
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             bool shapeSetResult = encoder.SetInputBlobShape(encInputShape, imgIndex);
             if (isQuitting || !shapeSetResult)
             {
                 Debug.LogError("Failed to set encoder input shape: " + encoder.Status);
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             bool dataSetResult = encoder.SetInputBlobData(inputData, imgIndex);
-            Debug.Log($"updated SET DATA {dataSetResult}");
+            //Debug.Log($"updated SET DATA {dataSetResult}");
 
             // Run encoder
             bool encResult = encoder.Update();
 
             if (isQuitting || encoder == null || decoder == null)
             {
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             if (!encResult)
             {
                 Debug.LogError("Encoder inference failed: " + encoder.Status);
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             uint outputBlobIndex = encoder.GetOutputBlobList()[0];
             Ailia.AILIAShape outputShape = encoder.GetBlobShape(outputBlobIndex);
-            //float[] encoderOutput = new float[1 * EncoderOutChannels * EncoderOutSize * EncoderOutSize]; // 1x256x64x64
-            float[] encoderOutput = new float[outputShape.w * outputShape.z * outputShape.y * outputShape.x];
+            encoderOutput = new float[outputShape.w * outputShape.z * outputShape.y * outputShape.x];
 
-            Debug.Log(outputShape + " " + encoderOutput.Length + " " + (EncoderOutChannels * EncoderOutSize * EncoderOutSize));
+            //Debug.Log(outputShape + " " + encoderOutput.Length + " " + (EncoderOutChannels * EncoderOutSize * EncoderOutSize));
 
             encoder.GetBlobData(encoderOutput, outputBlobIndex);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Inference error: " + e.Message + "\n" + e.StackTrace);
+        }
+    }
 
+    // Run Inference
+    private (bool[][,], float[]) RunInference(int imgWidth, int imgHeight, float[,] pointCoords, float[] pointLabels)
+    {
+        if (isQuitting || !modelsInitialized || encoder == null || decoder == null || encoderOutput == null)
+        {
+            return (new bool[0][,], new float[0]);
+        }
+        if (pointCoords.Length == 0)
+        {
+            return (new bool[0][,], new float[0]);
+        }
+
+        try
+        {
             // Scale coordinates to match target size
             float[,] scaledCoords = ApplyCoordinateScaling(pointCoords, imgHeight, imgWidth);
 
@@ -345,7 +359,7 @@ public class SegmentAnythingModel
             bool setLabelsResult = decoder.SetInputBlobData(pointLabels, (uint)pointLabelsIndex);
             float[] maskInput = new float[1 * 1 * DecoderMaskInputSize * DecoderMaskInputSize]; // 1x1x64x64
             float[] hasMaskInput = new float[1] { 0 }; // 1
-            float[] origImSizeInput = new float[2] { imageSource.Height, imageSource.Width }; // 2
+            float[] origImSizeInput = new float[2] { imgHeight, imgWidth }; // 2
             bool maskInputResult = decoder.SetInputBlobData(maskInput, (uint)maskInputIndex);
             bool hasMaskInputResult = decoder.SetInputBlobData(hasMaskInput, (uint)hasMaskInputIndex);
             bool origImSizeResult = decoder.SetInputBlobData(origImSizeInput, (uint)origImSizeIndex);
@@ -379,7 +393,7 @@ public class SegmentAnythingModel
             }
 
             // Identify mask and score blobs
-            int masksBlobIndex = decoder.FindBlobIndexByName(useLowResMasks ? "low_res_masks" : "masks");
+            int masksBlobIndex = decoder.FindBlobIndexByName("masks");
             int scoresBlobIndex = decoder.FindBlobIndexByName("iou_predictions");
 
             if (masksBlobIndex < 0 || scoresBlobIndex < 0)
@@ -431,14 +445,7 @@ public class SegmentAnythingModel
             for (int i = 0; i < numMasks; i++)
             {
                 float[,,,] maskTensor = ReshapeToTensor(maskOutput, i, maskHeight, maskWidth, maskArea);
-
-                if (useLowResMasks)
-                {
-                    masks[i] = PostprocessLowResMask(maskTensor, inputSize.Item1, inputSize.Item2, imgHeight, imgWidth);
-                } else
-                {
-                    masks[i] = PostprocessMask(maskTensor, imgHeight, imgWidth);
-                }
+                masks[i] = PostprocessMask(maskTensor, imgHeight, imgWidth);
             }
 
             return (masks, scoreOutput);
@@ -471,7 +478,7 @@ public class SegmentAnythingModel
     // Scale coordinates to target size
     private float[,] ApplyCoordinateScaling(float[,] coords, int imgHeight, int imgWidth)
     {
-        float scale = (float)targetSize / Math.Max(imgHeight, imgWidth);
+        float scale = GetScale(imgWidth, imgHeight);
         float[,] scaledCoords = new float[coords.GetLength(0), coords.GetLength(1)];
 
         for (int i = 0; i < coords.GetLength(0); i++)
@@ -484,21 +491,17 @@ public class SegmentAnythingModel
     }
 
     // Overlay mask on original image
-    private Texture2D CreateMaskedImage(bool[,] mask, AiliaImageSource imageSource)
+    private Texture2D CreateMaskedImage(bool[,] mask, Color32 [] pixels, int imageWidth, int imageHeight)
     {
-        int imageWidth = imageSource.Width;
-        int imageHeight = imageSource.Height;
         Texture2D result = new Texture2D(imageWidth, imageHeight, TextureFormat.ARGB32, false);
         
-        Color32[] pixels = imageSource.GetPixels32(new Rect(0, 0, imageSource.Width, imageSource.Height), true);
-
         int maskHeight = mask.GetLength(0);
         int maskWidth = mask.GetLength(1);
 
         // Apply mask to original image - optimized inner loop
         for (int y = 0; y < maskHeight; y++)
         {
-            int unityY = imageHeight - y - 1;
+            int unityY = y;
             int rowOffset = unityY * imageWidth;
 
             for (int x = 0; x < maskWidth; x++)
@@ -514,6 +517,33 @@ public class SegmentAnythingModel
                         (byte)Mathf.Lerp(originalColor.b, MaskColor.b, 0.4f),
                         MaskColor.a
                     );
+                }
+            }
+        }
+
+        result.SetPixels32(pixels);
+        result.Apply();
+        return result;
+    }
+
+    private Texture2D CreateEmptyMaskedImage(Color32 [] pixels, int imageWidth, int imageHeight)
+    {
+        Texture2D result = new Texture2D(imageWidth, imageHeight, TextureFormat.ARGB32, false);
+        
+        // Apply mask to original image - optimized inner loop
+        for (int y = 0; y < imageHeight; y++)
+        {
+            int unityY = y;
+            int rowOffset = unityY * imageWidth;
+
+            for (int x = 0; x < imageWidth; x++)
+            {
+                int pixelIndex = rowOffset + x;
+
+                if (pixelIndex >= 0 && pixelIndex < pixels.Length)
+                {
+                    Color32 originalColor = pixels[pixelIndex];
+                    pixels[pixelIndex] = originalColor;
                 }
             }
         }
@@ -544,12 +574,12 @@ public class SegmentAnythingModel
             int origY = (int)coords[i, 1];
 
             // Convert to Unity coordinates
-            int py = image.height - origY - 1;
+            int py = origY;
             py = Mathf.Clamp(py, 0, image.height - 1);
 
             Color32 markerColor = labels[i] == 1 ? new Color32(0, 255, 0, 255) : new Color32(0, 0, 255, 255);
 
-            Debug.Log($"{coords[i, 0]},{coords[i, 1]} => {px}, {py}");
+            //Debug.Log($"{coords[i, 0]},{coords[i, 1]} => {px}, {py}");
 
             // Draw marker with bounds checking in the loop
             for (int dy = -markerSize; dy <= markerSize; dy++)
@@ -576,52 +606,34 @@ public class SegmentAnythingModel
         return result;
     }
 
-    // Preprocess image for model input
-    private (float[], ValueTuple<int, int>) PreprocessImage(AiliaImageSource imageSource)
+    private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
     {
-        int imgHeight = imageSource.Height;
-        int imgWidth = imageSource.Width;
-
-        Texture2D image = new Texture2D(imgWidth, imgHeight, TextureFormat.ARGB32, false);
-        image.SetPixels32(imageSource.GetPixels32(new Rect(0, 0, imgWidth, imgHeight), true));
-        image.Apply();
-
-        
-
-        // Scale to fit in target size while maintaining aspect ratio
-        float scale = (float)targetSize / Math.Max(imgHeight, imgWidth);
-        int scaledWidth = (int)(imgWidth * scale);
-        int scaledHeight = (int)(imgHeight * scale);
-
-        // Use persistent RenderTexture to avoid allocation
-        RenderTexture rt = RenderTexture.GetTemporary(scaledWidth, scaledHeight, 0, RenderTextureFormat.ARGB32);
-        Graphics.Blit(image, rt);
-
-        RenderTexture.active = rt;
-        Texture2D resizedImage = new Texture2D(scaledWidth, scaledHeight, TextureFormat.RGBA32, false);
-        resizedImage.ReadPixels(new Rect(0, 0, scaledWidth, scaledHeight), 0, 0);
-        resizedImage.Apply();
-        RenderTexture.active = null;
-        RenderTexture.ReleaseTemporary(rt);
-
-        // Flip Y coordinates to match expected input format
-        UnityEngine.Color[] pixels = resizedImage.GetPixels();
-        UnityEngine.Color[] flippedPixels = new UnityEngine.Color[pixels.Length];
-
-        // Optimize row-by-row copying
-        for (int y = 0; y < scaledHeight; y++)
-        {
-            int srcRowStart = y * scaledWidth;
-            int dstRowStart = (scaledHeight - y - 1) * scaledWidth;
-
-            Array.Copy(pixels, srcRowStart, flippedPixels, dstRowStart, scaledWidth);
+        int x2 = (int)fx;
+        int y2 = (int)fy;
+        float xa = 1.0f - (fx - x2);
+        float xb = 1.0f - xa;
+        float ya = 1.0f - (fy - y2);
+        float yb = 1.0f - ya;
+        if (x2 >= w || y2 >= h || x2 < 0 || y2 < 0){
+            return new Color32(0, 0, 0, 255);
         }
+        Color32 c1 = face[y2 * w + x2];
+        Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
+        Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
+        Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
+        byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
+        byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
+        byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
+        return new Color32(r, g, b, 255);
+    }
 
-        Texture2D flippedImage = new Texture2D(scaledWidth, scaledHeight, TextureFormat.RGBA32, false);
-        flippedImage.SetPixels(flippedPixels);
-        flippedImage.Apply();
-        GameObject.Destroy(resizedImage);
+    private float GetScale(int texWidth, int texHeight){
+        return targetSize / (float)Mathf.Max(texWidth, texHeight);
+    }
 
+    // Preprocess image for model input
+    private (float[], ValueTuple<int, int>) PreprocessImage(Color32 [] camera, int texWidth, int texHeight)
+    {
         // Create CHW layout data array (channel, height, width)
         float[] normalizedData = new float[3 * targetSize * targetSize];
 
@@ -630,143 +642,104 @@ public class SegmentAnythingModel
         int ch1Offset = targetSize * targetSize;
         int ch2Offset = 2 * targetSize * targetSize;
 
+        float scale = GetScale(texWidth, texHeight);
+
         // Fill with normalized values and padding
         for (int y = 0; y < targetSize; y++)
         {
             for (int x = 0; x < targetSize; x++)
             {
-                int baseIdx = y * targetSize + x;
+                float fx = x / scale;
+                float fy = y / scale;
+                Color32 v = Bilinear(camera, texWidth, texHeight, fx, fy);
 
-                if (y < scaledHeight && x < scaledWidth)
-                {
-                    UnityEngine.Color pixel = flippedImage.GetPixel(x, y);
-                    normalizedData[ch0Offset + baseIdx] = (pixel.r - Mean[0]) / Std[0];
-                    normalizedData[ch1Offset + baseIdx] = (pixel.g - Mean[1]) / Std[1];
-                    normalizedData[ch2Offset + baseIdx] = (pixel.b - Mean[2]) / Std[2];
-                }
+                int baseIdx = y * targetSize + x; // Top2Bottom
+
+                normalizedData[ch0Offset + baseIdx] = (v.r / 255.0f - Mean[0]) / Std[0];
+                normalizedData[ch1Offset + baseIdx] = (v.g / 255.0f - Mean[1]) / Std[1];
+                normalizedData[ch2Offset + baseIdx] = (v.b / 255.0f - Mean[2]) / Std[2];
             }
         }
 
-        GameObject.Destroy(flippedImage);
-
-        return (normalizedData, (scaledHeight, scaledWidth));
+        return (normalizedData, (texHeight, texWidth));
     }
 
-    // Post-process mask outputs
-    private bool[,] PostprocessLowResMask(float[,,,] mask, int inputHeight, int inputWidth, int origHeight, int origWidth)
-    {
-        int maskHeight = mask.GetLength(2);
-        int maskWidth = mask.GetLength(3);
-
-        // First resize to targetSize
-        float[,] resizedMask = new float[targetSize, targetSize];
-        for (int y = 0; y < targetSize; y++)
-        {
-            for (int x = 0; x < targetSize; x++)
-            {
-                float srcY = y * (float)maskHeight / targetSize;
-                float srcX = x * (float)maskWidth / targetSize;
-
-                int y0 = (int)Math.Floor(srcY);
-                int y1 = Math.Min(y0 + 1, maskHeight - 1);
-                int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, maskWidth - 1);
-
-                float wy = srcY - y0;
-                float wx = srcX - x0;
-
-                // Bilinear interpolation
-                resizedMask[y, x] = (1 - wy) * (1 - wx) * mask[0, 0, y0, x0] +
-                                    wy * (1 - wx) * mask[0, 0, y1, x0] +
-                                    (1 - wy) * wx * mask[0, 0, y0, x1] +
-                                    wy * wx * mask[0, 0, y1, x1];
-            }
-        }
-
-        // Crop to input size
-        float[,] croppedMask = new float[inputHeight, inputWidth];
-        for (int y = 0; y < inputHeight; y++)
-        {
-            for (int x = 0; x < inputWidth; x++)
-            {
-                croppedMask[y, x] = resizedMask[y, x];
-            }
-        }
-
-        // Resize to original image size
-        bool[,] finalMask = new bool[origHeight, origWidth];
-        for (int y = 0; y < origHeight; y++)
-        {
-            float srcY = y * (float)inputHeight / origHeight;
-            int y0 = (int)Math.Floor(srcY);
-            int y1 = Math.Min(y0 + 1, inputHeight - 1);
-            float wy = srcY - y0;
-
-            for (int x = 0; x < origWidth; x++)
-            {
-                float srcX = x * (float)inputWidth / origWidth;
-                int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, inputWidth - 1);
-                float wx = srcX - x0;
-
-                // Bilinear interpolation
-                float val = (1 - wy) * (1 - wx) * croppedMask[y0, x0] +
-                            wy * (1 - wx) * croppedMask[y1, x0] +
-                            (1 - wy) * wx * croppedMask[y0, x1] +
-                            wy * wx * croppedMask[y1, x1];
-
-                finalMask[y, x] = val > 0.0f; // Apply threshold
-            }
-        }
-
-        return finalMask;
-    }
-    
     private bool[,] PostprocessMask(float[,,,] mask, int origHeight, int origWidth)
     {
         int maskHeight = mask.GetLength(2);
         int maskWidth = mask.GetLength(3);
 
-        // First resize to targetSize
+        // Final resize to targetSize
         bool[,] finalMask = new bool[origHeight, origWidth];
+
         for (int y = 0; y < origHeight; y++)
         {
+            float srcY = y * maskHeight / origHeight;
+            int y0 = (int)Math.Floor(srcY);
+            int y1 = Math.Min(y0 + 1, maskHeight - 1);
+            float wy = srcY - y0;
+
             for (int x = 0; x < origWidth; x++)
             {
+                float srcX = x * maskWidth / origWidth;
+                int x0 = (int)Math.Floor(srcX);
+                int x1 = Math.Min(x0 + 1, maskWidth - 1);
+                float wx = srcX - x0;
+
                 // Bilinear interpolation
-                finalMask[y, x] = mask[0, 0, y, x] > 0;
+                float val = (1 - wy) * (1 - wx) * mask[0, 0, y0, x0] +
+                            wy * (1 - wx) * mask[0, 0, y1, x0] +
+                            (1 - wy) * wx * mask[0, 0, y0, x1] +
+                            wy * wx * mask[0, 0, y1, x1];
+
+                finalMask[y, x] = val > 0;
             }
         }
 
         return finalMask;
     }
 
-    // Process the current video frame
-    public void ProcessFrame(AiliaImageSource imageSource)
+    // Calculate embedding of input image
+    // image : top bottom format
+    public void ProcessEmbedding(Color32 [] image, int imageWidth, int imageHeight)
+    {
+        if (!modelsInitialized || isProcessing || isQuitting)
+        {
+            return;
+        }
+        RunEmbedding(image, imageWidth, imageHeight);
+    }
+
+    // Check embedding exist
+    public bool EmbeddingExist(){
+        return encoderOutput != null;
+    }
+
+    // Calculate mask of input image
+    // image : top bottom format
+    public void ProcessMask(Color32 [] image, int imageWidth, int imageHeight)
     {
         if (!modelsInitialized || isProcessing || isQuitting)
         {
             return;
         }
 
-        this.imageSource = imageSource;
-
         try
         {
             isProcessing = true;
 
             // Set up point coords for inference
-            float[,] coords = GetClickPoints(imageSource.Height);
+            float[,] coords = GetClickPoints(imageHeight);
             float[] labels = GetPointLabels();
 
             string coordsLog = $"Points input ({labels.Length}): ";
             for (int i = 0; i < labels.Length; i += 1)
             {
-                coordsLog += $"({coords[i, 0]},{-coords[i, 1] - imageSource.Height + 1})[{labels[i]}]";
+                coordsLog += $"({coords[i, 0]},{-coords[i, 1] - imageHeight + 1})[{labels[i]}]";
             }
-            Debug.Log(coordsLog);
+            //Debug.Log(coordsLog);
 
-            var (masks, scores) = RunInference(coords, labels);
+            var (masks, scores) = RunInference(imageWidth, imageHeight, coords, labels);
 
             if (isQuitting)
             {
@@ -793,7 +766,7 @@ public class SegmentAnythingModel
                     GameObject.Destroy(visualizedResult);
                 }
 
-                visualizedResult = CreateMaskedImage(masks[bestMaskIndex], imageSource);
+                visualizedResult = CreateMaskedImage(masks[bestMaskIndex], image, imageWidth, imageHeight);
 
                 // Only draw click points if the showClickPoints flag is enabled
                 if (showClickPoints)
@@ -801,14 +774,18 @@ public class SegmentAnythingModel
                     visualizedResult = DrawClickPoints(coords, labels, visualizedResult);
                 }
 
-                SaveFrameAsPNG(visualizedResult);
+                if (saveFrame)
+                {
+                    SaveFrameAsPNG(visualizedResult);
+                }
 
                 success = true;
             }
             else
             {
-                Debug.LogWarning($"No valid masks");
-                success = false;
+                //Debug.LogWarning($"No valid masks");
+                visualizedResult = CreateEmptyMaskedImage(image, imageWidth, imageHeight);
+                success = true;
             }
         }
         catch (OperationCanceledException)
@@ -818,7 +795,7 @@ public class SegmentAnythingModel
         }
         catch (Exception e)
         {
-            Debug.LogError($"Error in ProcessCurrentFrameAsync: {e.Message}\n{e.StackTrace}");
+            Debug.LogError($"Error in ProcessCurrentFrame: {e.Message}\n{e.StackTrace}");
             success = false;
         }
         finally
@@ -883,4 +860,13 @@ public class SegmentAnythingModel
         }
     }
 
+    public void Destroy(){
+        encoder.Close();
+        decoder.Close();
+    }
+
+    public string EnvironmentName()
+    {
+        return encoder.EnvironmentName();
+    }
 }
