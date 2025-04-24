@@ -39,18 +39,6 @@ namespace ailiaSDK
 		Text mode_text = null;
 		private bool oneshot = true;
 
-		// compute shader id
-		int computeShaderWeightId;
-		int computeShaderBiasId;
-		int computeShaderWidthId;
-		int computeShaderHeightId;
-		int computeShaderTextureId;
-		int computeShaderResultId;
-		int channelLastKernel;
-		int channelLastUpsideDownKernel;
-		int channelFirstKernel;
-		int channelFirstUpsideDownKernel;
-
 		// AILIA
 		private AiliaCamera ailia_camera = new AiliaCamera();
 
@@ -126,7 +114,7 @@ namespace ailiaSDK
 
 			// Resize
 			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
-				AiliaImageSource.Resize(1024, 1024);
+				//AiliaImageSource.Resize(1024, 1024);
 			}
 		}
 

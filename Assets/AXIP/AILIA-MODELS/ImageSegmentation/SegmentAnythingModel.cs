@@ -37,7 +37,6 @@ public class SegmentAnythingModel
     public bool success { get; private set; } = false; 
     private bool gpuMode = false;
     private bool showClickPoints = true;
-    private bool useLowResMasks = false;
 
     // Normalization constants (ImageNet)
     private readonly float[] Mean = { 0.485f, 0.456f, 0.406f };
@@ -50,6 +49,7 @@ public class SegmentAnythingModel
     // Visualization-related fields
     public Texture2D visualizedResult { get; private set; }
     private readonly Color32 MaskColor = new Color32(255, 0, 0, 255);
+    private bool saveFrame = false;
 
     public void SetBoxCoords(Rect box)
     {
@@ -377,7 +377,7 @@ public class SegmentAnythingModel
             }
 
             // Identify mask and score blobs
-            int masksBlobIndex = decoder.FindBlobIndexByName(useLowResMasks ? "low_res_masks" : "masks");
+            int masksBlobIndex = decoder.FindBlobIndexByName("masks");
             int scoresBlobIndex = decoder.FindBlobIndexByName("iou_predictions");
 
             if (masksBlobIndex < 0 || scoresBlobIndex < 0)
@@ -429,14 +429,7 @@ public class SegmentAnythingModel
             for (int i = 0; i < numMasks; i++)
             {
                 float[,,,] maskTensor = ReshapeToTensor(maskOutput, i, maskHeight, maskWidth, maskArea);
-
-                if (useLowResMasks)
-                {
-                    masks[i] = PostprocessLowResMask(maskTensor, inputSize.Item1, inputSize.Item2, imgHeight, imgWidth);
-                } else
-                {
-                    masks[i] = PostprocessMask(maskTensor, targetSize, targetSize, imgHeight, imgWidth);
-                }
+                masks[i] = PostprocessMask(maskTensor, imgHeight, imgWidth);
             }
 
             return (masks, scoreOutput);
@@ -469,7 +462,7 @@ public class SegmentAnythingModel
     // Scale coordinates to target size
     private float[,] ApplyCoordinateScaling(float[,] coords, int imgHeight, int imgWidth)
     {
-        float scale = (float)targetSize / Math.Max(imgHeight, imgWidth);
+        float scale = GetScale(imgWidth, imgHeight);
         float[,] scaledCoords = new float[coords.GetLength(0), coords.GetLength(1)];
 
         for (int i = 0; i < coords.GetLength(0); i++)
@@ -596,6 +589,10 @@ public class SegmentAnythingModel
         return new Color32(r, g, b, 255);
     }
 
+    private float GetScale(int texWidth, int texHeight){
+        return targetSize / (float)Mathf.Max(texWidth, texHeight);
+    }
+
     // Preprocess image for model input
     private (float[], ValueTuple<int, int>) PreprocessImage(Color32 [] camera, int texWidth, int texHeight)
     {
@@ -607,7 +604,7 @@ public class SegmentAnythingModel
         int ch1Offset = targetSize * targetSize;
         int ch2Offset = 2 * targetSize * targetSize;
 
-        float scale = targetSize / Mathf.Max(texWidth, texHeight);
+        float scale = GetScale(texWidth, texHeight);
 
         // Fill with normalized values and padding
         for (int y = 0; y < targetSize; y++)
@@ -633,95 +630,27 @@ public class SegmentAnythingModel
         return (normalizedData, (texHeight, texWidth));
     }
 
-    // Post-process mask outputs
-    private bool[,] PostprocessLowResMask(float[,,,] mask, int inputHeight, int inputWidth, int origHeight, int origWidth)
+    private bool[,] PostprocessMask(float[,,,] mask, int origHeight, int origWidth)
     {
         int maskHeight = mask.GetLength(2);
         int maskWidth = mask.GetLength(3);
 
-        // First resize to targetSize
-        float[,] resizedMask = new float[targetSize, targetSize];
-        for (int y = 0; y < targetSize; y++)
-        {
-            for (int x = 0; x < targetSize; x++)
-            {
-                float srcY = y * (float)maskHeight / targetSize;
-                float srcX = x * (float)maskWidth / targetSize;
+        float scale = maskWidth / (float)Mathf.Max(origWidth, origHeight);
 
-                int y0 = (int)Math.Floor(srcY);
-                int y1 = Math.Min(y0 + 1, maskHeight - 1);
+        // First resize to targetSize
+        bool[,] finalMask = new bool[origHeight, origWidth];
+        for (int y = 0; y < origHeight; y++)
+        {
+            float srcY = y * scale;
+            int y0 = (int)Math.Floor(srcY);
+            int y1 = Math.Min(y0 + 1, maskHeight - 1);
+            float wy = srcY - y0;
+
+            for (int x = 0; x < origWidth; x++)
+            {
+                float srcX = x * scale;
                 int x0 = (int)Math.Floor(srcX);
                 int x1 = Math.Min(x0 + 1, maskWidth - 1);
-
-                float wy = srcY - y0;
-                float wx = srcX - x0;
-
-                // Bilinear interpolation
-                resizedMask[y, x] = (1 - wy) * (1 - wx) * mask[0, 0, y0, x0] +
-                                    wy * (1 - wx) * mask[0, 0, y1, x0] +
-                                    (1 - wy) * wx * mask[0, 0, y0, x1] +
-                                    wy * wx * mask[0, 0, y1, x1];
-            }
-        }
-
-        // Crop to input size
-        float[,] croppedMask = new float[inputHeight, inputWidth];
-        for (int y = 0; y < inputHeight; y++)
-        {
-            for (int x = 0; x < inputWidth; x++)
-            {
-                croppedMask[y, x] = resizedMask[y, x];
-            }
-        }
-
-        // Resize to original image size
-        bool[,] finalMask = new bool[origHeight, origWidth];
-        for (int y = 0; y < origHeight; y++)
-        {
-            float srcY = y * (float)inputHeight / origHeight;
-            int y0 = (int)Math.Floor(srcY);
-            int y1 = Math.Min(y0 + 1, inputHeight - 1);
-            float wy = srcY - y0;
-
-            for (int x = 0; x < origWidth; x++)
-            {
-                float srcX = x * (float)inputWidth / origWidth;
-                int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, inputWidth - 1);
-                float wx = srcX - x0;
-
-                // Bilinear interpolation
-                float val = (1 - wy) * (1 - wx) * croppedMask[y0, x0] +
-                            wy * (1 - wx) * croppedMask[y1, x0] +
-                            (1 - wy) * wx * croppedMask[y0, x1] +
-                            wy * wx * croppedMask[y1, x1];
-
-                finalMask[y, x] = val > 0.0f; // Apply threshold
-            }
-        }
-
-        return finalMask;
-    }
-    
-    private bool[,] PostprocessMask(float[,,,] mask, int inputHeight, int inputWidth, int origHeight, int origWidth)
-    {
-        int maskHeight = mask.GetLength(2);
-        int maskWidth = mask.GetLength(3);
-
-        // First resize to targetSize
-        bool[,] finalMask = new bool[origHeight, origWidth];
-        for (int y = 0; y < origHeight; y++)
-        {
-            float srcY = y * (float)inputHeight / origHeight;
-            int y0 = (int)Math.Floor(srcY);
-            int y1 = Math.Min(y0 + 1, inputHeight - 1);
-            float wy = srcY - y0;
-
-            for (int x = 0; x < origWidth; x++)
-            {
-                float srcX = x * (float)inputWidth / origWidth;
-                int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, inputWidth - 1);
                 float wx = srcX - x0;
 
                 // Bilinear interpolation
@@ -796,7 +725,10 @@ public class SegmentAnythingModel
                     visualizedResult = DrawClickPoints(coords, labels, visualizedResult);
                 }
 
-                SaveFrameAsPNG(visualizedResult);
+                if (saveFrame)
+                {
+                    SaveFrameAsPNG(visualizedResult);
+                }
 
                 success = true;
             }
