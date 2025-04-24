@@ -10,25 +10,25 @@ using ailia;
 
 namespace ailiaSDK
 {
+	// Model list
+	public enum ImageSegmentaionModels
+	{
+		HRNetV2_W18_Small_v2,
+		HRNetV2_W18_Small_v1,
+		HRNetV2_W48,
+		hair_segmentation,
+		pspnet_hair_segmentation,
+		deeplabv3,
+		u2net,
+		modnet,
+		segment_anything1
+	}
+
 	public class AiliaImageSegmentationSample : MonoBehaviour
 	{
-		// Model list
-		public enum ImageSegmentaionModels
-		{
-			HRNetV2_W18_Small_v2,
-			HRNetV2_W18_Small_v1,
-			HRNetV2_W48,
-			hair_segmentation,
-			pspnet_hair_segmentation,
-			deeplabv3,
-			u2net,
-			modnet
-		}
-
 		// Settings
 		public ImageSegmentaionModels imageSegmentaionModels = ImageSegmentaionModels.HRNetV2_W18_Small_v2;
 		public bool gpu_mode = false;
-		public ComputeShader inputDataProcessingShader = null;
 		public GameObject UICanvas = null;
 		public bool camera_mode = true;
 		public int camera_id = 0;
@@ -39,20 +39,7 @@ namespace ailiaSDK
 		Text mode_text = null;
 		private bool oneshot = true;
 
-		// compute shader id
-		int computeShaderWeightId;
-		int computeShaderBiasId;
-		int computeShaderWidthId;
-		int computeShaderHeightId;
-		int computeShaderTextureId;
-		int computeShaderResultId;
-		int channelLastKernel;
-		int channelLastUpsideDownKernel;
-		int channelFirstKernel;
-		int channelFirstUpsideDownKernel;
-
 		// AILIA
-		private AiliaModel ailiaModel;
 		private AiliaCamera ailia_camera = new AiliaCamera();
 
 		// Input source
@@ -62,10 +49,11 @@ namespace ailiaSDK
 		public Texture2D image_source_pspnet_hair_segmentation = null;
 		public Texture2D image_source_deeplabv3 = null;
 		public Texture2D image_source_u2net = null;
-		public Texture2D image_source_modnet = null;
-		
-		// Pre-and-Post processing Shader
-		Material blendMaterial;
+        public Texture2D image_source_modnet = null;
+        public Texture2D image_source_sam1 = null;
+
+        // Pre-and-Post processing Shader
+        Material blendMaterial;
 		int mainTexId;
 		int blendTexId;
 		int blendFlagId;
@@ -73,29 +61,27 @@ namespace ailiaSDK
 		int blendVFlipId;
 
 		// Model input and output
-		int InputWidth;
-		int InputHeight;
-		int InputChannel;
-		int OutputWidth;
-		int OutputHeight;
-		int OutputChannel;
+
 		Texture2D labelTexture;
 		Texture2D originalTexture;
 		Vector2 rawImageSize;
-		float[] output;
-		float[] input;
-		Color32[] outputImage;
-		Color32[] colorPalette = AiliaImageUtil.CreatePalette(256, 127);
+	
+		// Segment Anything Model
+		private SegmentationModel segModel;
+		private SegmentAnythingModel samModel;
+		private bool isDraggingForBox = false;
+		private Rect boxRect = new ();
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
+		string envName = "";
 
-		void Start()
+		async void Start()
 		{
 			AiliaLicense.CheckAndDownloadLicense();
 			UISetup();
-
-			AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();
+            
+            AiliaImageSource = gameObject.GetComponent<AiliaImageSource>();
 
 			// for Rendering 
 			blendMaterial = new Material(Shader.Find("Ailia/AlphaBlending2Tex"));
@@ -107,20 +93,6 @@ namespace ailiaSDK
 			raw_image.material = blendMaterial;
 
 			rawImageSize = raw_image.rectTransform.sizeDelta;
-
-			if (inputDataProcessingShader != null)
-			{
-				computeShaderWeightId = Shader.PropertyToID("weight");
-				computeShaderBiasId = Shader.PropertyToID("bias");
-				computeShaderWidthId = Shader.PropertyToID("width");
-				computeShaderHeightId = Shader.PropertyToID("height");
-				computeShaderTextureId = Shader.PropertyToID("texure");
-				computeShaderResultId = Shader.PropertyToID("result_buffer");
-				channelLastKernel = inputDataProcessingShader.FindKernel("ChannelLast");
-				channelLastUpsideDownKernel = inputDataProcessingShader.FindKernel("ChannelLastUpsideDown");
-				channelFirstKernel = inputDataProcessingShader.FindKernel("ChannelFirst");
-				channelFirstUpsideDownKernel = inputDataProcessingShader.FindKernel("ChannelFirstUpsideDown");
-			}
 
 			// for Processing
 			AiliaInit();
@@ -135,25 +107,10 @@ namespace ailiaSDK
 		void AiliaInit()
 		{
 			// Create Ailia
-			ailiaModel = CreateAiliaNet(imageSegmentaionModels, gpu_mode);
+			CreateAiliaNet(imageSegmentaionModels, gpu_mode);
+            
 			// Load sample image
 			LoadImage(imageSegmentaionModels, AiliaImageSource);
-		}
-
-		void AllocateInputAndOutputTensor()
-		{
-			float rawImageRatio = rawImageSize.x / rawImageSize.y;
-			float ratio = AiliaImageSource.Width / (float)AiliaImageSource.Height;
-			raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
-
-			SetShape(imageSegmentaionModels);
-
-			// texture & buffer allocate
-			labelTexture = new Texture2D(OutputWidth, OutputHeight, TextureFormat.RGBA32, false);
-			AiliaImageSource.Resize(InputWidth, InputHeight);
-			input = new float[InputWidth * InputHeight * InputChannel];
-			output = new float[OutputWidth * OutputHeight * OutputChannel];
-			outputImage = new Color32[OutputWidth * OutputHeight];
 		}
 
 		void UISetup()
@@ -165,18 +122,38 @@ namespace ailiaSDK
 			raw_image = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
 			raw_image.gameObject.SetActive(false);
 
-			mode_text.text = "ailia Image Segmentation\nSpace key down to original image";
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1) {
+				mode_text.text = "ailia Image Segmentation\n" +
+					"Left/Right click: positive/negative point\n" +
+					"Middle click: drag to define border box\n" +
+					"Space key down to reset";
+			} else {
+				mode_text.text = "ailia Image Segmentation";
+			}
+		}
+		Color32 [] VerticalFlip(Color32[] inputImage, int InputWidth, int InputHeight){
+			Color32[] outputImage = new Color32[InputWidth * InputHeight];
+			for(int y=0;y<InputHeight;y++){
+				for(int x=0;x<InputWidth;x++){
+					outputImage[(InputHeight-1-y)*InputWidth+x]=inputImage[y*InputWidth+x];
+				}
+			}
+			return outputImage;
 		}
 
 		void Update()
 		{
-			if (!AiliaImageSource.IsPrepared || !modelPrepared)
+            HandleClick(Input.GetMouseButton(0), Input.GetMouseButton(1), Input.GetMouseButton(2));
+
+            if (AiliaImageSource == null || !AiliaImageSource.IsPrepared || !modelPrepared)
 			{
 				return;
 			}
 			if (modelPrepared && !modelAllocated)
 			{
-				AllocateInputAndOutputTensor();
+				if (imageSegmentaionModels != ImageSegmentaionModels.segment_anything1){
+					segModel.AllocateInputAndOutputTensor(imageSegmentaionModels, AiliaImageSource.Width, AiliaImageSource.Height);
+				}
 				modelAllocated = true;
 			}
 			if (camera_mode && !ailia_camera.IsEnable())
@@ -187,6 +164,11 @@ namespace ailiaSDK
 			// When space key down, draw original image
 			if (Input.GetKey(KeyCode.Space))
 			{
+				if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
+					samModel.ResetClickPoint();
+					boxRect = new();
+					oneshot = true;
+				}
 				blendMaterial.SetFloat(blendFlagId, 0);
 			}
 			else
@@ -201,60 +183,84 @@ namespace ailiaSDK
 			}
 
 			// Make input data
-			Rect rect = new Rect(0, 0, InputWidth, InputHeight);
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 			Color32[] inputImage = null;
+			int inputImageWidth = 0;
+			int inputImageHeight = 0;
 			if(camera_mode){
-				int tex_width = ailia_camera.GetWidth();
-				int tex_height = ailia_camera.GetHeight();
+				inputImageWidth = ailia_camera.GetWidth();
+				inputImageHeight = ailia_camera.GetHeight();
 				inputImage = ailia_camera.GetPixels32(); // Bottom2Top format
-				inputImage = ResizeImage(inputImage, tex_width, tex_height, InputWidth, InputHeight);	// Convert to Top2Bottom format
-				InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
+				inputImage = VerticalFlip(inputImage, inputImageWidth, inputImageHeight); // Top2Bottom format
 			}else{
-				bool convert_to_top2bottom = true;	// Convert to Top2Bottom format
-				if (!gpu_mode || inputDataProcessingShader == null)
-				{
-					inputImage = AiliaImageSource.GetPixels32(rect, convert_to_top2bottom);
-					InputDataProcessingCPU(imageSegmentaionModels, inputImage, input);
-				}
-				else
-				{
-					originalTexture = AiliaImageSource.GetTexture(rect);
-					InputDataProcessing(imageSegmentaionModels, originalTexture, input, convert_to_top2bottom);
-				}
+				bool convert_to_top2bottom = true;
+				inputImageWidth = AiliaImageSource.Width;
+				inputImageHeight = AiliaImageSource.Height;
+				Rect rect = new Rect(0, 0, inputImageWidth, inputImageHeight);
+				inputImage = AiliaImageSource.GetPixels32(rect, convert_to_top2bottom); // Top2Bottom format
 			}
+
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			// Predict
 			long start_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
-			bool result = ailiaModel.Predict(output, input);
+
+			bool result = false;
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+				if (!samModel.EmbeddingExist()){
+					if (samModel.GetClickPoints(0).Length == 0)
+					{
+						samModel.AddClickPoint(inputImageWidth / 4, inputImageHeight / 4 + 30);
+					}
+				}
+				if (camera_mode || !samModel.EmbeddingExist()){
+					samModel.ProcessEmbedding(inputImage, inputImageWidth, inputImageHeight);
+				}
+				samModel.ProcessMask(inputImage, inputImageWidth, inputImageHeight);
+				result = samModel.success;
+            }
+			else
+			{
+				result = segModel.ProcessFrame(imageSegmentaionModels, inputImage, inputImageWidth, inputImageHeight);
+            }
+
+
+			if (!result)
+			{
+				oneshot = false;
+				return;
+			}
 
 			// convert result to image
-			if (imageSegmentaionModels == ImageSegmentaionModels.hair_segmentation)
-				LabelPaintHairSegmentation(output, outputImage, Color.red);
-			else if (imageSegmentaionModels == ImageSegmentaionModels.pspnet_hair_segmentation)
-				LabelPaintPspnet(output, outputImage, Color.red);
-			else if (imageSegmentaionModels == ImageSegmentaionModels.u2net || imageSegmentaionModels == ImageSegmentaionModels.modnet)
-				LabelPaintU2netModnet(output, outputImage, Color.green); 
-			else
-				LabelPaint(output, outputImage, OutputChannel, colorPalette);
+			Color32[] outputImage;
+			int outputWidth, outputHeight;
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+			{
+				outputImage = samModel.visualizedResult.GetPixels32();
+				outputWidth = samModel.visualizedResult.width;
+				outputHeight = samModel.visualizedResult.height;
+			}
+			else{
+				(outputImage, outputWidth, outputHeight) = segModel.PostProcesss(imageSegmentaionModels, inputImageWidth, inputImageHeight);
+			}
 
 			long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			if (label_text != null)
 			{
-				label_text.text = ((end_time - start_time) + (end_time2 - start_time2)).ToString() + "ms\n" + ailiaModel.EnvironmentName();
+				label_text.text = ((end_time - start_time) + (end_time2 - start_time2)).ToString() + "ms\n" + envName;
 			}
 
 			// for viewer
-			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
-			{
-				if(originalTexture == null){
-					originalTexture = new Texture2D(InputWidth, InputHeight, TextureFormat.RGBA32, false);
-				}
-				originalTexture.SetPixels32(inputImage);
-				originalTexture.Apply();
+			if(originalTexture == null){
+				originalTexture = new Texture2D(outputWidth, outputHeight, TextureFormat.RGBA32, false);
 			}
+			if(labelTexture == null){
+				labelTexture = new Texture2D(outputWidth, outputHeight, TextureFormat.RGBA32, false);
+			}
+			originalTexture.SetPixels32(inputImage);
+			originalTexture.Apply();
 			raw_image.texture = originalTexture;
 			blendMaterial.SetTexture(mainTexId, originalTexture);
 
@@ -262,15 +268,13 @@ namespace ailiaSDK
 			labelTexture.Apply();
 			blendMaterial.SetTexture(blendTexId, labelTexture);
 
-			if (!gpu_mode || inputDataProcessingShader == null || camera_mode)
-			{
-				blendMaterial.SetFloat(mainVFlipId, 1);	//originalTexture is Top2Bottom
-			}
-			else
-			{
-				blendMaterial.SetFloat(mainVFlipId, 0);	//originalTexture is Bottom2Top
-			}
+			blendMaterial.SetFloat(mainVFlipId, 1);	//originalTexture is Top2Bottom
 			blendMaterial.SetFloat(blendVFlipId, 1);	//outputImage is Top2Bottom
+
+
+			float rawImageRatio = rawImageSize.x / rawImageSize.y;
+			float ratio = inputImageWidth/ (float)inputImageHeight;
+			raw_image.rectTransform.sizeDelta = new Vector2(ratio / rawImageRatio * rawImageSize.x, rawImageSize.y);
 
 			raw_image.gameObject.SetActive(true);
 
@@ -278,146 +282,38 @@ namespace ailiaSDK
 		}
 
 		// Download models and Create ailiaModel
-		AiliaModel CreateAiliaNet(ImageSegmentaionModels modelType, bool gpu_mode = true)
+		void CreateAiliaNet(ImageSegmentaionModels modelType, bool gpu_mode = true)
 		{
-			string asset_path = Application.temporaryCachePath;
-			string serverFolderName = "";
-			string prototxtName = "";
-			string onnxName = "";
-			switch (modelType)
-			{
-				case ImageSegmentaionModels.HRNetV2_W18_Small_v2:
-					serverFolderName = "hrnet";
-					prototxtName = "HRNetV2-W18-Small-v2.onnx.prototxt";
-					onnxName = "HRNetV2-W18-Small-v2.onnx";
-					break;
-				case ImageSegmentaionModels.HRNetV2_W18_Small_v1:
-					serverFolderName = "hrnet";
-					prototxtName = "HRNetV2-W18-Small-v1.onnx.prototxt";
-					onnxName = "HRNetV2-W18-Small-v1.onnx";
-					break;
-				case ImageSegmentaionModels.HRNetV2_W48:
-					serverFolderName = "hrnet";
-					prototxtName = "HRNetV2-W48.onnx.prototxt";
-					onnxName = "HRNetV2-W48.onnx";
-					break;
-				case ImageSegmentaionModels.hair_segmentation:
-					serverFolderName = "hair_segmentation";
-					prototxtName = "hair_segmentation.opt.onnx.prototxt";
-					onnxName = "hair_segmentation.opt.onnx";
-					break;
-				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					serverFolderName = "pspnet-hair-segmentation";
-					prototxtName = "pspnet-hair-segmentation.onnx.prototxt";
-					onnxName = "pspnet-hair-segmentation.onnx";
-					break;
-				case ImageSegmentaionModels.deeplabv3:
-					serverFolderName = "deeplabv3";
-					prototxtName = "deeplabv3.opt.onnx.prototxt";
-					onnxName = "deeplabv3.opt.onnx";
-					break;
-				case ImageSegmentaionModels.u2net:
-					serverFolderName = "u2net";
-					prototxtName = "u2net_opset11.onnx.prototxt";
-					onnxName = "u2net_opset11.onnx";
-					break;
-				case ImageSegmentaionModels.modnet:
-					serverFolderName = "modnet";
-					prototxtName = "modnet.opt.onnx.prototxt";
-					onnxName = "modnet.opt.onnx";
-					break;
-			}
-
-			ailiaModel = new AiliaModel();
-			if (gpu_mode)
-			{
-				// call before OpenFile
-				ailiaModel.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-			}
-
 			AiliaDownload ailia_download = new AiliaDownload();
 			ailia_download.DownloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel").gameObject;
-			var urlList = new List<ModelDownloadURL>();
-			urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = prototxtName });
-			urlList.Add(new ModelDownloadURL() { folder_path = serverFolderName, file_name = onnxName });
+			List<ModelDownloadURL> urlList = null;
 
-			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
-				modelPrepared = ailiaModel.OpenFile(asset_path + "/" + prototxtName, asset_path + "/" + onnxName);
-			}));
-
-			return ailiaModel;
-		}
-
-		void SetShape(ImageSegmentaionModels imageSegmentaionModels)
-		{
-			Ailia.AILIAShape shape = null;
-			switch (imageSegmentaionModels)
-			{
-				case ImageSegmentaionModels.HRNetV2_W18_Small_v2:
-				case ImageSegmentaionModels.HRNetV2_W18_Small_v1:
-				case ImageSegmentaionModels.HRNetV2_W48:
-				case ImageSegmentaionModels.pspnet_hair_segmentation:
-				case ImageSegmentaionModels.deeplabv3:
-					shape = ailiaModel.GetInputShape();
-					InputWidth = (int)shape.x;
-					InputHeight = (int)shape.y;
-					InputChannel = (int)shape.z;
-					shape = ailiaModel.GetOutputShape();
-					OutputWidth = (int)shape.x;
-					OutputHeight = (int)shape.y;
-					OutputChannel = (int)shape.z;
-					break;
-
-				case ImageSegmentaionModels.hair_segmentation:
-					shape = new Ailia.AILIAShape();
-					shape.x = 3;
-					shape.y = (uint)AiliaImageSource.Width;
-					shape.z = (uint)AiliaImageSource.Height;
-					shape.w = 1;
-					shape.dim = 4;
-					ailiaModel.SetInputShape(shape);
-					InputWidth = AiliaImageSource.Width;
-					InputHeight = AiliaImageSource.Height;
-					InputChannel = 3;
-					OutputWidth = AiliaImageSource.Width;
-					OutputHeight = AiliaImageSource.Height;
-					OutputChannel = 1;
-					break;
-
-				case ImageSegmentaionModels.u2net:
-					shape = ailiaModel.GetInputShape();
-					InputWidth = (int)shape.x;
-					InputHeight = (int)shape.y;
-					InputChannel = (int)shape.z;
-					shape = ailiaModel.GetOutputShape();
-					OutputWidth = (int)shape.x;
-					OutputHeight = (int)shape.y;
-					OutputChannel = (int)shape.z;
-					break;
-
-				case ImageSegmentaionModels.modnet:
-					shape = new Ailia.AILIAShape();
-					shape.x = (uint)AiliaImageSource.Width/32*32;
-					shape.y = (uint)AiliaImageSource.Height/32*32;
-					shape.z = 3;
-					shape.w = 1;
-					shape.dim = 4;
-					ailiaModel.SetInputShape(shape);
-					InputWidth = AiliaImageSource.Width/32*32;
-					InputHeight = AiliaImageSource.Height/32*32;
-					InputChannel = 3;
-					shape = ailiaModel.GetOutputShape();
-					OutputWidth = (int)shape.x;
-					OutputHeight = (int)shape.y;
-					OutputChannel = (int)shape.z;
-					Debug.Log(""+OutputChannel+"/"+OutputWidth+"/"+OutputHeight);
-					//OutputWidth = AiliaImageSource.Width/32*32;
-					//OutputHeight = AiliaImageSource.Height/32*32;
-					//OutputChannel = 1;
-					break;
+				samModel = new SegmentAnythingModel();
+				urlList = samModel.GetModelURLs(imageSegmentaionModels);
 			}
+			else
+			{
+				segModel = new SegmentationModel();
+				urlList = segModel.GetModelURLs(imageSegmentaionModels);
+            }
+
+            StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+            {
+                if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
+                {
+                    modelPrepared = samModel.InitializeModels(imageSegmentaionModels, gpu_mode);
+					envName = samModel.EnvironmentName();
+                }
+                else
+                {
+                    modelPrepared = segModel.InitializeModels(imageSegmentaionModels, gpu_mode);
+					envName = segModel.EnvironmentName();
+                }
+            }));
 		}
+
 
 		void LoadImage(ImageSegmentaionModels imageSegmentaionModels, AiliaImageSource ailiaImageSource)
 		{
@@ -440,216 +336,126 @@ namespace ailiaSDK
 				case ImageSegmentaionModels.u2net:
 					ailiaImageSource.CreateSource(image_source_u2net);
 					break;
-				case ImageSegmentaionModels.modnet:
-					ailiaImageSource.CreateSource(image_source_modnet);
-					break;
-
-			}
+                case ImageSegmentaionModels.modnet:
+                    ailiaImageSource.CreateSource(image_source_modnet);
+                    break;
+                case ImageSegmentaionModels.segment_anything1:
+                    ailiaImageSource.CreateSource(image_source_sam1);
+                    break;
+            }
 		}
 
-		Color32 [] ResizeImage(Color32[] inputImage, int tex_width, int tex_height, int InputWidth, int InputHeight){
-			Color32[] outputImage = new Color32[InputWidth * InputHeight];
-			for(int y=0;y<InputHeight;y++){
-				for(int x=0;x<InputWidth;x++){
-					int x2 = x*tex_width/InputWidth;
-					int y2 = y*tex_height/InputHeight;
-					outputImage[(InputHeight-1-y)*InputHeight+x]=inputImage[y2*tex_width+x2];
-				}
-			}
-			return outputImage;
-		}
 
-		void InputDataProcessingCPU(ImageSegmentaionModels imageSegmentaionModels, Color32[] inputImage, float[] processedInputBuffer)
+		void HandleClick(bool leftClick, bool rightClick, bool middleClick)
 		{
-			float weight = 1f / 255f;
-			float bias = 0;
-			bool rgbRepeats = false;
-			switch (imageSegmentaionModels)
+			if (!raw_image.isActiveAndEnabled || raw_image.texture == null)
 			{
-				case ImageSegmentaionModels.hair_segmentation:
-					rgbRepeats = true;
-					break;
-				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataProcessingCPU_PSP(inputImage, processedInputBuffer);
-					return;
-				case ImageSegmentaionModels.deeplabv3:
-					weight = 1f / 127.5f;
-					bias = -1;
-					break;
-				case ImageSegmentaionModels.modnet:
-					weight = 1f / 127.5f;
-					bias = -1;
-					break;
-				default:
-					break;
+				return;
 			}
 
-			// flatten input data
-			if (rgbRepeats)
+            Vector3[] corners = new Vector3[4];
+            raw_image.rectTransform.GetWorldCorners(corners);
+
+            Rect rawImageRect = new Rect(
+                corners[0].x,
+                Screen.height - corners[2].y,
+                corners[2].x - corners[0].x,
+                corners[2].y - corners[0].y
+            );
+
+            Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+
+            float widthRatio = raw_image.texture.width / rawImageRect.width;
+            float heightRatio = raw_image.texture.height / rawImageRect.height;
+
+            int x = Mathf.Clamp(Mathf.RoundToInt((mousePos.x - rawImageRect.x) * widthRatio), 0, raw_image.texture.width - 1);
+            int y = raw_image.texture.height - 1 - Mathf.Clamp(Mathf.RoundToInt((mousePos.y - rawImageRect.y) * heightRatio), 0, raw_image.texture.height - 1);
+
+            if (rawImageRect.Contains(mousePos))
+            {
+                if (leftClick || rightClick)
+                {
+                    samModel?.AddClickPoint(x, y, rightClick);
+                    oneshot = true;
+
+                    Debug.Log($"Click registered at: {x}, {y}");
+                }
+
+                if (middleClick && !isDraggingForBox)
+                {
+                    isDraggingForBox = true;
+                    boxRect.xMin = x;
+                    boxRect.yMin = y;
+                }
+            }
+
+            if (!middleClick && isDraggingForBox)
+            {
+                isDraggingForBox = false;
+
+                float firstX = boxRect.xMin;
+                float firstY = boxRect.yMin;
+
+                boxRect.xMin = Math.Min(firstX, x);
+                boxRect.yMin = Math.Min(firstY, y);
+                boxRect.xMax = Math.Max(firstX, x);
+                boxRect.yMax = Math.Max(firstY, y);
+
+                samModel.SetBoxCoords(boxRect);
+				oneshot = true;
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (!raw_image.isActiveAndEnabled || raw_image.texture == null)
+            {
+                return;
+            }
+            
+			if ((boxRect.width > 0 && boxRect.height > 0) || isDraggingForBox)
 			{
-				for (int i = 0; i < inputImage.Length; i++)
-				{
-					// rgbrgbrgb...
-					processedInputBuffer[i * 3 + 0] = (inputImage[i].r) * weight + bias;
-					processedInputBuffer[i * 3 + 1] = (inputImage[i].g) * weight + bias;
-					processedInputBuffer[i * 3 + 2] = (inputImage[i].b) * weight + bias;
-				}
+                Vector3[] corners = new Vector3[4];
+                raw_image.rectTransform.GetWorldCorners(corners);
+
+                Rect rawImageRect = new Rect(
+                    corners[0].x,
+                    Screen.height - corners[2].y,
+                    corners[2].x - corners[0].x,
+                    corners[2].y - corners[0].y
+                );
+
+                float widthRatio = raw_image.texture.width / rawImageRect.width;
+                float heightRatio = raw_image.texture.height / rawImageRect.height;
+
+				int xMin = (int)(boxRect.xMin / widthRatio + rawImageRect.x);
+                int yMin = (int)(boxRect.yMin / heightRatio + rawImageRect.y);
+                int xMax = ((int)(isDraggingForBox ? Input.mousePosition.x : (boxRect.xMax / widthRatio + rawImageRect.x)));
+                int yMax = ((int)(isDraggingForBox ? (Screen.height - Input.mousePosition.y) : (boxRect.yMax / heightRatio + rawImageRect.y)));
+
+                float thickness = 2; 
+				Rect lineArea = new Rect();
+                lineArea.xMin = xMin;
+                lineArea.yMin = yMin;
+                lineArea.xMax = xMax;
+                lineArea.yMax = yMax;
+
+                lineArea.y = yMin - thickness; //Bottom
+                lineArea.height = thickness; //Top line
+                GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+
+                lineArea.y = yMax - thickness; //Bottom
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+
+				lineArea.height = yMin - yMax;
+				lineArea.width = thickness; //Left
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
+				lineArea.x = xMax - thickness;//Right
+				GUI.DrawTexture(lineArea, Texture2D.whiteTexture);
 			}
-			else
-			{
-				for (int i = 0; i < inputImage.Length; i++)
-				{
-					// rrr...ggg...bbb...
-					processedInputBuffer[i + inputImage.Length * 0] = (inputImage[i].r) * weight + bias;
-					processedInputBuffer[i + inputImage.Length * 1] = (inputImage[i].g) * weight + bias;
-					processedInputBuffer[i + inputImage.Length * 2] = (inputImage[i].b) * weight + bias;
-				}
-			}
-		}
+        }
 
-		void InputDataProcessingCPU_PSP(Color32[] inputImage, float[] processedInputBuffer)
-		{
-			for (int i = 0; i < inputImage.Length; i++)
-			{
-				// rrr...ggg...bbb...
-				processedInputBuffer[i + inputImage.Length * 0] = (inputImage[i].r * (1f / 255f) - 0.485f) * (1f / 0.229f);
-				processedInputBuffer[i + inputImage.Length * 1] = (inputImage[i].g * (1f / 255f) - 0.456f) * (1f / 0.224f);
-				processedInputBuffer[i + inputImage.Length * 2] = (inputImage[i].b * (1f / 255f) - 0.406f) * (1f / 0.225f);
-			}
-		}
-
-		ComputeBuffer cbuffer;
-		void InputDataProcessing(ImageSegmentaionModels imageSegmentaionModels, Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
-		{
-			float weight = 1;
-			float bias = 0;
-			bool rgbRepeats = false;
-			switch (imageSegmentaionModels)
-			{
-				case ImageSegmentaionModels.hair_segmentation:
-					rgbRepeats = true;
-					break;
-				case ImageSegmentaionModels.pspnet_hair_segmentation:
-					InputDataProcessingPSP(inputImage, processedInputBuffer, upsideDown);
-					return;
-				case ImageSegmentaionModels.deeplabv3:
-					weight = 2;
-					bias = -1;
-					break;
-				case ImageSegmentaionModels.u2net:
-					weight = 2;
-					break;
-				case ImageSegmentaionModels.modnet:
-					weight = 2;
-					bias = -1;
-					break;
-				default:
-					break;
-			}
-
-			if (cbuffer == null || cbuffer.count != processedInputBuffer.Length)
-			{
-				if (cbuffer != null) cbuffer.Release();
-				cbuffer = new ComputeBuffer(processedInputBuffer.Length, sizeof(float));
-			}
-
-			int kernelIndex;
-			if (rgbRepeats)
-			{
-				if (upsideDown) kernelIndex = channelLastUpsideDownKernel;
-				else kernelIndex = channelLastKernel;
-			}
-			else
-			{
-				if (upsideDown) kernelIndex = channelFirstUpsideDownKernel;
-				else kernelIndex = channelFirstKernel;
-			}
-			inputDataProcessingShader.SetFloat(computeShaderWeightId, weight);
-			inputDataProcessingShader.SetFloat(computeShaderBiasId, bias);
-			inputDataProcessingShader.SetInt(computeShaderWidthId, inputImage.width);
-			inputDataProcessingShader.SetInt(computeShaderHeightId, inputImage.height);
-			inputDataProcessingShader.SetTexture(kernelIndex, computeShaderTextureId, inputImage);
-			inputDataProcessingShader.SetBuffer(kernelIndex, computeShaderResultId, cbuffer);
-			inputDataProcessingShader.Dispatch(kernelIndex, inputImage.width / 32 + 1, inputImage.height / 32 + 1, 1);
-			cbuffer.GetData(processedInputBuffer);
-		}
-
-		void InputDataProcessingPSP(Texture inputImage, float[] processedInputBuffer, bool upsideDown = false)
-		{
-			if (cbuffer == null || cbuffer.count != processedInputBuffer.Length)
-			{
-				if (cbuffer != null) cbuffer.Release();
-				cbuffer = new ComputeBuffer(processedInputBuffer.Length, sizeof(float));
-			}
-			int kernelIndex = 0;
-			if (upsideDown)
-				kernelIndex = inputDataProcessingShader.FindKernel("ImageNetChannelFirstUpsideDown");
-			else
-				kernelIndex = inputDataProcessingShader.FindKernel("ImageNetChannelFirst");
-			inputDataProcessingShader.SetInt(computeShaderWidthId, inputImage.width);
-			inputDataProcessingShader.SetInt(computeShaderHeightId, inputImage.height);
-			inputDataProcessingShader.SetTexture(kernelIndex, computeShaderTextureId, inputImage);
-			inputDataProcessingShader.SetBuffer(kernelIndex, computeShaderResultId, cbuffer);
-			inputDataProcessingShader.Dispatch(kernelIndex, inputImage.width / 32 + 1, inputImage.height / 32 + 1, 1);
-			cbuffer.GetData(processedInputBuffer);
-		}
-
-		void LabelPaint(float[] labelData, Color32[] pixelBuffer, int channel, Color32[] palette)
-		{
-			Debug.Assert(palette.Length >= channel, "wrong palette size");
-			Debug.Assert(labelData.Length == pixelBuffer.Length * channel, "wrong parameter");
-
-			for (int i = 0; i < pixelBuffer.Length; i++)
-			{
-				int maxIndex = 0;
-				float maxValue = labelData[i + 0 * (pixelBuffer.Length)];
-				for (int c = 1; c < channel; c++)
-				{
-					if (maxValue < labelData[i + c * pixelBuffer.Length])
-					{
-						maxValue = labelData[i + c * pixelBuffer.Length];
-						maxIndex = c;
-					}
-				}
-				pixelBuffer[i] = palette[maxIndex];
-			}
-		}
-
-		void LabelPaintHairSegmentation(float[] labelData, Color32[] pixelBuffer, Color32 color)
-		{
-			Debug.Assert(labelData.Length == pixelBuffer.Length, "wrong parameter");
-
-			for (int i = 0; i < pixelBuffer.Length; i++)
-			{
-				pixelBuffer[i] = color;
-				pixelBuffer[i].a = (byte)(Mathf.Clamp01(labelData[i]) * 255);
-			}
-		}
-
-		void LabelPaintPspnet(float[] labelData, Color32[] pixelBuffer, Color32 color)
-		{
-			Debug.Assert(labelData.Length == pixelBuffer.Length, "wrong parameter");
-
-			for (int i = 0; i < pixelBuffer.Length; i++)
-			{
-				pixelBuffer[i] = color;
-
-				float k = Mathf.Exp(labelData[i]);
-				pixelBuffer[i].a = (byte)(k / (1.0f + k) * 255);
-			}
-		}
-
-		void LabelPaintU2netModnet(float[] labelData, Color32[] pixelBuffer, Color32 color)
-		{
-			Debug.Assert(labelData.Length == pixelBuffer.Length, "wrong parameter");	
-			for (int i = 0; i < pixelBuffer.Length; i++)
-			{
-				pixelBuffer[i] = color;
-				pixelBuffer[i].a = (byte)(255 - Mathf.Clamp01(labelData[i]) * 255);
-			}	 
-		}
-
-		void OnApplicationQuit()
+        void OnApplicationQuit()
 		{
 			DestroyAiliaDetector();
 		}
@@ -659,10 +465,14 @@ namespace ailiaSDK
 			DestroyAiliaDetector();
 		}
 
-		private void DestroyAiliaDetector()
+		void DestroyAiliaDetector()
 		{
-			ailiaModel.Close();
-			if (cbuffer != null) cbuffer.Release();
+			if (samModel != null){
+				samModel.Destroy();
+			}
+			if (segModel != null){
+				segModel.Destroy();
+			}
 		}
 	}
 }
