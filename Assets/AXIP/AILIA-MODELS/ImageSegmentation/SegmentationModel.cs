@@ -173,19 +173,6 @@ public class SegmentationModel
 	public void AllocateInputAndOutputTensor(ImageSegmentaionModels imageSegmentaionModels, int imageWidth, int imageHeight)
 	{
 		SetInputShape(imageSegmentaionModels, imageWidth, imageHeight);
-
-		// texture & buffer allocate
-		//if (false){//imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
-			// 元画像サイズ
-			//InputWidth = imageWidth;
-			//InputHeight = imageHeight;
-			//OutputWidth = InputWidth;
-			//OutputHeight = InputHeight;
-		//} else {
-		//	// 事前にリサイズ
-		//	AiliaImageSource.Resize(InputWidth, InputHeight);
-		//}
-
 		input = new float[InputWidth * InputHeight * InputChannel];
 		output = new float[OutputWidth * OutputHeight * OutputChannel];
 		outputImage = new Color32[OutputWidth * OutputHeight];
@@ -207,9 +194,9 @@ public class SegmentationModel
 		else
 			LabelPaint(output, outputImage, OutputChannel, colorPalette);
 		
-		outputImage = ResizeImage(outputImage, OutputWidth, OutputHeight, inputImageWidth, inputImageHeight);
+		Color32[] resizedOutputImage = ResizeImage(outputImage, OutputWidth, OutputHeight, inputImageWidth, inputImageHeight);
 
-		return (outputImage, inputImageWidth, inputImageHeight);
+		return (resizedOutputImage, inputImageWidth, inputImageHeight);
 	}
 
 	Color32 [] ResizeImage(Color32[] inputImage, int tex_width, int tex_height, int InputWidth, int InputHeight){
