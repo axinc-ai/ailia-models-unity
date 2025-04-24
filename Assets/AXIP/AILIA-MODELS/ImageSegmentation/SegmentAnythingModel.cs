@@ -50,6 +50,7 @@ public class SegmentAnythingModel
     public Texture2D visualizedResult { get; private set; }
     private readonly Color32 MaskColor = new Color32(255, 0, 0, 255);
     private bool saveFrame = false;
+    private float[] encoderOutput = null;
 
     public void SetBoxCoords(Rect box)
     {
@@ -64,15 +65,9 @@ public class SegmentAnythingModel
         clickPointLabels.Add(!negativePoint);
     }
 
-    public (int, int) GetInputSize(AiliaImageSource imageSource)
-    {
-        //float scale = (float)targetSize / Math.Max(imageSource.Width, imageSource.Height);
-        //return (((int)(scale * imageSource.Width)), ((int)(scale * imageSource.Height)));
-        return (targetSize, targetSize);
-    }
-    public Ailia.AILIAShape GetOutputShape()
-    {
-        return decoder.GetBlobShape(decoder.GetOutputBlobList()[0]);
+    public void ResetClickPoint(){
+        clickPoints = new();
+        clickPointLabels = new();
     }
 
     public List<ModelDownloadURL> GetModelURLs()
@@ -178,12 +173,13 @@ public class SegmentAnythingModel
         return labels;
     }
 
-    // Run inference with AiliaSDK
-    private (bool[][,], float[]) RunInference(Color32 [] image, int imgWidth, int imgHeight, float[,] pointCoords, float[] pointLabels)
+    // Run Embedding
+
+    private void RunEmbedding(Color32 [] image, int imgWidth, int imgHeight)
     {
         if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
         {
-            return (new bool[0][,], new float[0]);
+            return;
         }
 
         // Preprocess image
@@ -203,14 +199,14 @@ public class SegmentAnythingModel
 
             if (isQuitting || encoder == null)
             {
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             bool shapeSetResult = encoder.SetInputBlobShape(encInputShape, imgIndex);
             if (isQuitting || !shapeSetResult)
             {
                 Debug.LogError("Failed to set encoder input shape: " + encoder.Status);
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             bool dataSetResult = encoder.SetInputBlobData(inputData, imgIndex);
@@ -221,23 +217,43 @@ public class SegmentAnythingModel
 
             if (isQuitting || encoder == null || decoder == null)
             {
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             if (!encResult)
             {
                 Debug.LogError("Encoder inference failed: " + encoder.Status);
-                return (new bool[0][,], new float[0]);
+                return;
             }
 
             uint outputBlobIndex = encoder.GetOutputBlobList()[0];
             Ailia.AILIAShape outputShape = encoder.GetBlobShape(outputBlobIndex);
-            float[] encoderOutput = new float[outputShape.w * outputShape.z * outputShape.y * outputShape.x];
+            encoderOutput = new float[outputShape.w * outputShape.z * outputShape.y * outputShape.x];
 
             //Debug.Log(outputShape + " " + encoderOutput.Length + " " + (EncoderOutChannels * EncoderOutSize * EncoderOutSize));
 
             encoder.GetBlobData(encoderOutput, outputBlobIndex);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Inference error: " + e.Message + "\n" + e.StackTrace);
+        }
+    }
 
+    // Run Inference
+    private (bool[][,], float[]) RunInference(int imgWidth, int imgHeight, float[,] pointCoords, float[] pointLabels)
+    {
+        if (isQuitting || !modelsInitialized || encoder == null || decoder == null || encoderOutput == null)
+        {
+            return (new bool[0][,], new float[0]);
+        }
+        if (pointCoords.Length == 0)
+        {
+            return (new bool[0][,], new float[0]);
+        }
+
+        try
+        {
             // Scale coordinates to match target size
             float[,] scaledCoords = ApplyCoordinateScaling(pointCoords, imgHeight, imgWidth);
 
@@ -509,6 +525,33 @@ public class SegmentAnythingModel
         return result;
     }
 
+    private Texture2D CreateEmptyMaskedImage(Color32 [] pixels, int imageWidth, int imageHeight)
+    {
+        Texture2D result = new Texture2D(imageWidth, imageHeight, TextureFormat.ARGB32, false);
+        
+        // Apply mask to original image - optimized inner loop
+        for (int y = 0; y < imageHeight; y++)
+        {
+            int unityY = y;
+            int rowOffset = unityY * imageWidth;
+
+            for (int x = 0; x < imageWidth; x++)
+            {
+                int pixelIndex = rowOffset + x;
+
+                if (pixelIndex >= 0 && pixelIndex < pixels.Length)
+                {
+                    Color32 originalColor = pixels[pixelIndex];
+                    pixels[pixelIndex] = originalColor;
+                }
+            }
+        }
+
+        result.SetPixels32(pixels);
+        result.Apply();
+        return result;
+    }
+
     // Visualize clicked points
     private Texture2D DrawClickPoints(float[,] coords, float[] labels, Texture2D image)
     {
@@ -655,9 +698,25 @@ public class SegmentAnythingModel
         return finalMask;
     }
 
-    // Process the current video frame
+    // Calculate embedding of input image
     // image : top bottom format
-    public void ProcessFrame(Color32 [] image, int imageWidth, int imageHeight)
+    public void ProcessEmbedding(Color32 [] image, int imageWidth, int imageHeight)
+    {
+        if (!modelsInitialized || isProcessing || isQuitting)
+        {
+            return;
+        }
+        RunEmbedding(image, imageWidth, imageHeight);
+    }
+
+    // Check embedding exist
+    public bool EmbeddingExist(){
+        return encoderOutput != null;
+    }
+
+    // Calculate mask of input image
+    // image : top bottom format
+    public void ProcessMask(Color32 [] image, int imageWidth, int imageHeight)
     {
         if (!modelsInitialized || isProcessing || isQuitting)
         {
@@ -679,7 +738,7 @@ public class SegmentAnythingModel
             }
             //Debug.Log(coordsLog);
 
-            var (masks, scores) = RunInference(image, imageWidth, imageHeight, coords, labels);
+            var (masks, scores) = RunInference(imageWidth, imageHeight, coords, labels);
 
             if (isQuitting)
             {
@@ -723,8 +782,9 @@ public class SegmentAnythingModel
             }
             else
             {
-                Debug.LogWarning($"No valid masks");
-                success = false;
+                //Debug.LogWarning($"No valid masks");
+                visualizedResult = CreateEmptyMaskedImage(image, imageWidth, imageHeight);
+                success = true;
             }
         }
         catch (OperationCanceledException)

@@ -126,7 +126,7 @@ namespace ailiaSDK
 				mode_text.text = "ailia Image Segmentation\n" +
 					"Left/Right click: positive/negative point\n" +
 					"Middle click: drag to define border box\n" +
-					"Space key down to original image";
+					"Space key down to reset";
 			} else {
 				mode_text.text = "ailia Image Segmentation";
 			}
@@ -164,6 +164,10 @@ namespace ailiaSDK
 			// When space key down, draw original image
 			if (Input.GetKey(KeyCode.Space))
 			{
+				if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1){
+					samModel.ResetClickPoint();
+					oneshot = true;
+				}
 				blendMaterial.SetFloat(blendFlagId, 0);
 			}
 			else
@@ -203,12 +207,16 @@ namespace ailiaSDK
 			bool result = false;
 			if (imageSegmentaionModels == ImageSegmentaionModels.segment_anything1)
 			{
-				if (samModel.GetClickPoints(0).Length == 0)
-				{
-					samModel.AddClickPoint(inputImageWidth / 4, inputImageHeight / 4 + 30);
+				if (!samModel.EmbeddingExist()){
+					if (samModel.GetClickPoints(0).Length == 0)
+					{
+						samModel.AddClickPoint(inputImageWidth / 4, inputImageHeight / 4 + 30);
+					}
 				}
-
-				samModel.ProcessFrame(inputImage, inputImageWidth, inputImageHeight);
+				if (camera_mode || !samModel.EmbeddingExist()){
+					samModel.ProcessEmbedding(inputImage, inputImageWidth, inputImageHeight);
+				}
+				samModel.ProcessMask(inputImage, inputImageWidth, inputImageHeight);
 				result = samModel.success;
             }
 			else
