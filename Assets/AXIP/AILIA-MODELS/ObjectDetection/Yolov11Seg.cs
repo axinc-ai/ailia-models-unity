@@ -14,15 +14,16 @@ using UnityEngine.UI;
 using ailia;
 
 namespace ailiaSDK {
-	public class Mask {
+	public class ImageF {
 		public int w;
 		public int h;
+		public int c;
 		public float[] data;
 	}
 
 	public class AILIADetectorObjectEX : AiliaDetector.AILIADetectorObject
 	{
-		public Mask mask;
+		public ImageF mask;
 	}
 
 	public class Yolov11Seg {
@@ -100,14 +101,14 @@ namespace ailiaSDK {
 				return null;
 			}
 
-			int tex_width = width;
-			int tex_height = height;
-
-			float[] input_data = Preprocess(pixels, tex_width, tex_height);
+			ImageF inputImageF = Preprocess(pixels, width, height);
+			float[] input_data = inputImageF.data;
+			int input_width = inputImageF.w;
+			int input_height = inputImageF.h;
 
 			Ailia.AILIAShape input_shape = new Ailia.AILIAShape();
-			input_shape.x=(uint)detectionSize;
-			input_shape.y=(uint)detectionSize;
+			input_shape.x=(uint)input_width;
+			input_shape.y=(uint)input_height;
 			input_shape.z=3;
 			input_shape.w=1;
 			input_shape.dim=4;
@@ -157,17 +158,19 @@ namespace ailiaSDK {
 				return null;
 			}
 
-			float aspect = (float)tex_width / tex_height;
-			List<AILIADetectorObjectEX> list = PostProcessing(preds_data, preds_shape, proto_data, proto_shape, tex_width, tex_height);
+			float aspect = (float)width / height;
+			List<AILIADetectorObjectEX> list = PostProcessing(preds_data, preds_shape, proto_data, proto_shape,
+				input_width, input_height,
+			 	width, height);
 
 			return list;
 		}
 
-		private float[] Preprocess(Color32[] pixels, int width, int height)
+		private ImageF Preprocess(Color32[] pixels, int width, int height)
 		{
 			float ratio = Mathf.Min((float)detectionSize / height, (float)detectionSize / width);
-			int newHeight = Mathf.RoundToInt(height * ratio);
 			int newWidth = Mathf.RoundToInt(width * ratio);
+			int newHeight = Mathf.RoundToInt(height * ratio);
 
 			int dh = detectionSize - newHeight;
 			int dw = detectionSize - newWidth;
@@ -176,21 +179,24 @@ namespace ailiaSDK {
 			dw = dw % stride;
 			dh = dh % stride;
 
+			newWidth = newWidth + dw;
+			newHeight = newHeight + dh;
+
 			int top = Mathf.RoundToInt(dh / 2f - 0.1f);
 			int bottom = Mathf.RoundToInt(dh / 2f + 0.1f);
 			int left = Mathf.RoundToInt(dw / 2f - 0.1f);
 			int right = Mathf.RoundToInt(dw / 2f + 0.1f);
 
-			float[] processedData = new float[3 * detectionSize * detectionSize];
+			float[] processedData = new float[3 * newWidth * newHeight];
 
 			// Border color
 			byte borderR = 114;
 			byte borderG = 114;
 			byte borderB = 114;
 
-			for (int y = 0; y < detectionSize; y++)
+			for (int y = 0; y < newHeight; y++)
 			{
-				for (int x = 0; x < detectionSize; x++)
+				for (int x = 0; x < newWidth; x++)
 				{
 					int srcX = x - left;
 					int srcY = y - top;
@@ -214,18 +220,25 @@ namespace ailiaSDK {
 					}
 
 					// HWC -> CHW
-					int destIndex = y * detectionSize + x;
+					int destIndex = y * newWidth + x;
 					processedData[destIndex] = r / 255.0f;
-					processedData[detectionSize * detectionSize + destIndex] = g / 255.0f;
-					processedData[2 * detectionSize * detectionSize + destIndex] = b / 255.0f;
+					processedData[newWidth * newHeight + destIndex] = g / 255.0f;
+					processedData[2 * newWidth * newHeight + destIndex] = b / 255.0f;
 				}
 			}
 
-			return processedData;
+			ImageF processedImage = new ImageF();
+			processedImage.w = newWidth;
+			processedImage.h = newHeight;
+			processedImage.c = 3;
+			processedImage.data = processedData;
+
+			return processedImage;
 		}
 
 		private List<AILIADetectorObjectEX> PostProcessing(float[] preds, Ailia.AILIAShape predsShape,
                                                                 float[] proto, Ailia.AILIAShape protoShape,
+																int imgWidth, int imgHeight,
                                                                 int originalWidth, int originalHeight)
 		{
 			List<AILIADetectorObjectEX> results = new List<AILIADetectorObjectEX>();
@@ -327,8 +340,6 @@ namespace ailiaSDK {
 			keepIndices = keepIndices.Take(maxDet).ToList();
 
 			// Calculate scaling factors for the original image
-			int imgHeight = detectionSize;
-			int imgWidth = detectionSize;
 			float gain = Math.Min((float)imgHeight / originalHeight, (float)imgWidth / originalWidth);
 			int padW = (int)((imgWidth - originalWidth * gain) / 2);
 			int padH = (int)((imgHeight - originalHeight * gain) / 2);
@@ -342,7 +353,7 @@ namespace ailiaSDK {
 				int classId = validClassIds[origIdx];
 				float[] maskCoeffs = validMasks[origIdx];
 
-				Mask mask = ProcessMask(proto, protoShape, maskCoeffs, box, imgWidth, imgHeight);
+				ImageF mask = ProcessMask(proto, protoShape, maskCoeffs, box, imgWidth, imgHeight);
 
 				// Scale boxes back to original image
 				float x1 = (box[0] - padW) / gain;
@@ -372,7 +383,7 @@ namespace ailiaSDK {
 			return results;
 		}
 
-		private Mask ProcessMask(float[] proto, Ailia.AILIAShape protoShape, float[] maskCoeffs, float[] box, int imgWidth, int imgHeight)
+		private ImageF ProcessMask(float[] proto, Ailia.AILIAShape protoShape, float[] maskCoeffs, float[] box, int imgWidth, int imgHeight)
 		{
 			if (protoShape == null)
 			{
@@ -418,12 +429,11 @@ namespace ailiaSDK {
 				}
 			}
 
-			Mask maskData = new Mask();
+			ImageF maskData = new ImageF();
 			maskData.w = newW;
 			maskData.h = newH;
+			maskData.c = 1;
 			maskData.data = croppedMask;
-
-			// TODO: fix mask with padding
 
 			return maskData;
 		}

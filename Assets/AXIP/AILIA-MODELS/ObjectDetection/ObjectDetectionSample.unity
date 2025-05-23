@@ -479,6 +479,7 @@ MonoBehaviour:
   UICanvas: {fileID: 688907547}
   gpu_mode: 0
   camera_id: 0
+  demoTexture: {fileID: 0}
 --- !u!1 &1567056764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1945808911574990, guid: b13fba7fbe84549eaad325ff3431cb6f,
