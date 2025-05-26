@@ -414,7 +414,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1393556304}
   - component: {fileID: 1393556305}
-  - component: {fileID: 1393556306}
   m_Layer: 0
   m_Name: DetectorController
   m_TagString: Untagged
@@ -444,7 +443,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1393556303}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: be37ba9d4e6dcdb4abe1ed0b7bb7202c, type: 3}
   m_Name: 
@@ -454,32 +453,11 @@ MonoBehaviour:
   line: {fileID: 0}
   text_panel: {fileID: 1567056764}
   text_base: {fileID: 1580147085}
-  ailiaModelType: 8
+  ailiaModelType: 16
   UICanvas: {fileID: 688907547}
   gpu_mode: 1
   camera_id: 0
   pretrainedModel: mb2-ssd-lite
---- !u!114 &1393556306
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1393556303}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a4a898df0faa4489aa50e22882e44175, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  line_panel: {fileID: 475704809}
-  lines: {fileID: 906043600}
-  line: {fileID: 0}
-  text_panel: {fileID: 1567056764}
-  text_base: {fileID: 1580147085}
-  UICanvas: {fileID: 688907547}
-  gpu_mode: 0
-  camera_id: 0
-  demoTexture: {fileID: 0}
 --- !u!1 &1567056764 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1945808911574990, guid: b13fba7fbe84549eaad325ff3431cb6f,

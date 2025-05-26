@@ -93,13 +93,15 @@ namespace ailiaSDK {
 		}
 
 		// Update is called once per frame
-		public List<AILIADetectorObjectEX> Predict(Color32[] pixels, int width, int height)
+		public List<AiliaDetector.AILIADetectorObject> Predict(Color32[] pixels, int width, int height)
 		{
 			if (!FileOpened)
 			{
 				Debug.LogError("AILIA model file not opened");
 				return null;
 			}
+
+			Debug.LogError("Update");
 
 			ImageF inputImageF = Preprocess(pixels, width, height);
 			float[] input_data = inputImageF.data;
@@ -159,7 +161,7 @@ namespace ailiaSDK {
 			}
 
 			float aspect = (float)width / height;
-			List<AILIADetectorObjectEX> list = PostProcessing(preds_data, preds_shape, proto_data, proto_shape,
+			List<AiliaDetector.AILIADetectorObject> list = PostProcessing(preds_data, preds_shape, proto_data, proto_shape,
 				input_width, input_height,
 			 	width, height);
 
@@ -236,12 +238,12 @@ namespace ailiaSDK {
 			return processedImage;
 		}
 
-		private List<AILIADetectorObjectEX> PostProcessing(float[] preds, Ailia.AILIAShape predsShape,
+		private List<AiliaDetector.AILIADetectorObject> PostProcessing(float[] preds, Ailia.AILIAShape predsShape,
                                                                 float[] proto, Ailia.AILIAShape protoShape,
 																int imgWidth, int imgHeight,
                                                                 int originalWidth, int originalHeight)
 		{
-			List<AILIADetectorObjectEX> results = new List<AILIADetectorObjectEX>();
+			List<AiliaDetector.AILIADetectorObject> results = new List<AiliaDetector.AILIADetectorObject>();
 
 			float confThres = threshold;
 			float iouThres = iou;
