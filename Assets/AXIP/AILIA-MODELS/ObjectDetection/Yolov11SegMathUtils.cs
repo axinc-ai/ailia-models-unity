@@ -1,6 +1,6 @@
 using System;
 
-public static class MathUtils
+public static class Yolov11SegMathUtils
 {
     public static float Sigmoid(float x)
     {

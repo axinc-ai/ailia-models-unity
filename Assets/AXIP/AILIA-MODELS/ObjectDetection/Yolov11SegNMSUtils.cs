@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public static class NMSUtils
+public static class Yolov11SegNMSUtils
 {
     // Batched NMS: boxes [N,4], scores [N], classIds [N], iouThreshold scalar
     public static List<int> BatchedNMS(List<float[]> boxes, List<float> scores, List<int> classIds, float iouThreshold)

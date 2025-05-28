@@ -101,7 +101,7 @@ namespace ailiaSDK {
 				return null;
 			}
 
-			Debug.LogError("Update");
+			//Debug.LogError("Update");
 
 			ImageF inputImageF = Preprocess(pixels, width, height);
 			float[] input_data = inputImageF.data;
@@ -330,7 +330,7 @@ namespace ailiaSDK {
 											.ToArray();
 
 			// Apply NMS (Non-Maximum Suppression)
-			List<int> keepIndices = NMSUtils.BatchedNMS(
+			List<int> keepIndices = Yolov11SegNMSUtils.BatchedNMS(
 				sortedIndices.Select(i => validBoxes[i]).ToList(),
 				sortedIndices.Select(i => validScores[i]).ToList(),
 				sortedIndices.Select(i => validClassIds[i]).ToList(),
@@ -408,7 +408,7 @@ namespace ailiaSDK {
 						int protoIdx = i * mh * mw + y * mw + x;
 						sum += maskCoeffs[i] * proto[protoIdx];
 					}
-					mask[y * mw + x] = MathUtils.Sigmoid(sum);
+					mask[y * mw + x] = Yolov11SegMathUtils.Sigmoid(sum);
 				}
 			}
 
