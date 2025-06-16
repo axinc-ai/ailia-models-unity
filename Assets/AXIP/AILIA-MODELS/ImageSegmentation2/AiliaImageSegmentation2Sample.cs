@@ -319,14 +319,6 @@ namespace ailiaSDK
                             );
                             envName = sam2Model.EnvironmentName();
                         }
-                        else
-                        {
-                            // modelPrepared = seg2Model.InitializeModels(
-                            //     ImageSegmentaion2Models,
-                            //     gpu_mode
-                            // );
-                            // envName = seg2Model.EnvironmentName();
-                        }
                     }
                 )
             );
