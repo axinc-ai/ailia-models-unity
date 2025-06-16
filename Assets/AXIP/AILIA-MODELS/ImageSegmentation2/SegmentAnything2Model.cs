@@ -71,7 +71,7 @@ public class SegmentAnything2Model
     {
         boxCoords = box;
 
-        Debug.Log($"boxCoords set to {box.xMin},{box.yMin} {box.xMax},{box.yMax}");
+        // Debug.Log($"boxCoords set to {box.xMin},{box.yMin} {box.xMax},{box.yMax}");
     }
 
     public void AddClickPoint(int x, int y, bool negativePoint = false)
@@ -636,38 +636,6 @@ public class SegmentAnything2Model
         return result;
     }
 
-    private float[,] ResizeBilinear(float[,] input, int newH, int newW)
-    {
-        int srcH = input.GetLength(0);
-        int srcW = input.GetLength(1);
-        float[,] result = new float[newH, newW];
-
-        float scaleY = (float)srcH / newH;
-        float scaleX = (float)srcW / newW;
-
-        for (int y = 0; y < newH; y++)
-        {
-            float srcY = y * scaleY;
-            int y0 = (int)Math.Floor(srcY);
-            int y1 = Math.Min(y0 + 1, srcH - 1);
-            float wy = srcY - y0;
-
-            for (int x = 0; x < newW; x++)
-            {
-                float srcX = x * scaleX;
-                int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, srcW - 1);
-                float wx = srcX - x0;
-
-                float top = (1 - wx) * input[y0, x0] + wx * input[y0, x1];
-                float bottom = (1 - wx) * input[y1, x0] + wx * input[y1, x1];
-                result[y, x] = (1 - wy) * top + wy * bottom;
-            }
-        }
-
-        return result;
-    }
-
     private float[][,,] PrepareBackboneFeatures(BackboneOutputs backboneData)
     {
         int numFeatureLevels = 3;
@@ -898,90 +866,11 @@ public class SegmentAnything2Model
         return output;
     }
 
-    private struct InputData
-    {
-        public Vector2[] inputPoints;
-        public int[] inputLabels;
-        public Vector4? inputBox; // x1, y1, x2, y2 or similar
-    }
-
     private struct BackboneOutputs
     {
         public float[,,,] visionFeatures;
         public float[][,,,] visionPosEnc;
         public float[][,,,] backboneFpn;
-    }
-
-    private InputData GetInputPoint(
-        List<Vector2> posPoints,
-        List<Vector2> negPoints,
-        Vector4? box = null
-    )
-    {
-        // Handle nulls like Python version
-        if (posPoints == null)
-        {
-            if (negPoints == null && box == null)
-            {
-                posPoints = new List<Vector2> { new Vector2(0, 0) }; // <-- replace with actual default POINT1
-            }
-            else
-            {
-                posPoints = new List<Vector2>();
-            }
-        }
-
-        if (negPoints == null)
-        {
-            negPoints = new List<Vector2>();
-        }
-
-        List<Vector2> inputPoints = new List<Vector2>();
-        List<int> inputLabels = new List<int>();
-
-        foreach (var pt in posPoints)
-        {
-            inputPoints.Add(pt);
-            inputLabels.Add(1);
-        }
-
-        foreach (var pt in negPoints)
-        {
-            inputPoints.Add(pt);
-            inputLabels.Add(0);
-        }
-
-        return new InputData
-        {
-            inputPoints = inputPoints.ToArray(),
-            inputLabels = inputLabels.ToArray(),
-            inputBox = box
-        };
-    }
-
-    List<Vector2> ConvertFloatArrayToVector2List(float[,] points)
-    {
-        int rows = points.GetLength(0);
-        int cols = points.GetLength(1);
-
-        if (cols != 2)
-            throw new System.ArgumentException("Input must have shape [N, 2]");
-
-        List<Vector2> result = new List<Vector2>();
-        for (int i = 0; i < rows; i++)
-        {
-            float x = points[i, 0];
-            float y = points[i, 1];
-            result.Add(new Vector2(x, y));
-        }
-
-        return result;
-    }
-
-    public struct ConcatPoints
-    {
-        public Vector2[] coords;
-        public int[] labels;
     }
 
     // Run Inference
@@ -1005,67 +894,6 @@ public class SegmentAnything2Model
 
         try
         {
-            // Call the method
-            List<Vector2> posPoints = ConvertFloatArrayToVector2List(pointCoords);
-            InputData inputData = GetInputPoint(posPoints, null, null);
-
-            // // Unpack the result
-            Vector2[] point_coords = inputData.inputPoints;
-            int[] point_labels = inputData.inputLabels;
-            Vector4? input_box = inputData.inputBox;
-
-            ConcatPoints? concatPoints = null;
-
-            if (point_coords != null && point_coords.Length > 0)
-            {
-                concatPoints = new ConcatPoints { coords = point_coords, labels = point_labels };
-            }
-
-            if (input_box.HasValue)
-            {
-                // Convert Vector4 box → 2 corner points
-                Vector4 box = input_box.Value;
-                Vector2 topLeft = new Vector2(box.x, box.y);
-                Vector2 bottomRight = new Vector2(box.z, box.w);
-
-                Vector2[] boxCoords = new Vector2[] { topLeft, bottomRight };
-                int[] boxLabels = new int[] { 2, 3 };
-
-                if (point_coords != null && point_coords.Length > 0)
-                {
-                    // Merge box points + labels with user points
-                    Vector2[] concatCoords = new Vector2[boxCoords.Length + point_coords.Length];
-                    int[] concatLabels = new int[boxLabels.Length + point_labels.Length];
-
-                    boxCoords.CopyTo(concatCoords, 0);
-                    point_coords.CopyTo(concatCoords, boxCoords.Length);
-
-                    boxLabels.CopyTo(concatLabels, 0);
-                    point_labels.CopyTo(concatLabels, boxLabels.Length);
-
-                    concatPoints = new ConcatPoints
-                    {
-                        coords = concatCoords,
-                        labels = concatLabels
-                    };
-                }
-                else
-                {
-                    // Only box points
-                    concatPoints = new ConcatPoints { coords = boxCoords, labels = boxLabels };
-                }
-            }
-            else if (point_coords != null && point_coords.Length > 0)
-            {
-                // Only point prompts
-                concatPoints = new ConcatPoints { coords = point_coords, labels = point_labels };
-            }
-
-            if (concatPoints == null)
-            {
-                throw new System.Exception("concatPoints must exist");
-            }
-
             float[,] scaledCoords = ApplyCoordinateScaling(pointCoords, imgHeight, imgWidth);
 
             // Prepare point coordinates and labels
@@ -1075,6 +903,11 @@ public class SegmentAnything2Model
             {
                 flattenedCoords[i * 2] = scaledCoords[i, 0];
                 flattenedCoords[i * 2 + 1] = scaledCoords[i, 1];
+            }
+
+            for (int i = 0; i < flattenedCoords.Length; i++)
+            {
+                Debug.Log(flattenedCoords[i]);
             }
 
             // float[,,] maskInputDummy;
@@ -1155,11 +988,6 @@ public class SegmentAnything2Model
             {
                 Debug.LogError("Failed to set input blob shapes");
                 return (new bool[0][,], new float[0]);
-            }
-
-            for (int i = 0; i < flattenedCoords.Length; i++)
-            {
-                Debug.Log(flattenedCoords[i]);
             }
 
             bool setCoordsResult = prompt.SetInputBlobData(
@@ -1535,10 +1363,6 @@ public class SegmentAnything2Model
             int maskHeight = (int)masksBlobShape.y;
             int maskArea = maskWidth * maskHeight;
             bool[][,] masksResult = new bool[numMasks][,];
-
-            Debug.Log(maskWidth);
-            Debug.Log(maskHeight);
-            Debug.Log(maskArea);
 
             for (int i = 0; i < numMasks; i++)
             {
