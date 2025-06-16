@@ -32,6 +32,7 @@ namespace ailiaSDK {
 			yolox_s,
 			yolox_tiny_nnapi,
 			yolox_s_nnapi,
+			yolov11_seg,
 		}
 
 		[SerializeField]
@@ -56,6 +57,7 @@ namespace ailiaSDK {
 		//AILIA
 		private AiliaDetectorModel ailia_detector = new AiliaDetectorModel();
 		private AiliaTFLiteYoloxSample ailia_tflite = new AiliaTFLiteYoloxSample();
+		private Yolov11Seg yolov11seg = null;
 
 		private AiliaCamera ailia_camera = new AiliaCamera();
 		private AiliaDownload ailia_download = new AiliaDownload();
@@ -313,7 +315,7 @@ namespace ailiaSDK {
 					}));
 
 					break;
-				
+
 				case DetectorModels.yolov4_tiny:
 					mode_text.text = "ailia yolov4-tiny Detector";
 					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
@@ -432,6 +434,23 @@ namespace ailiaSDK {
 					}));
 
 					break;
+				case DetectorModels.yolov11_seg:
+					classifierLabel = AiliaClassifierLabel.COCO_CATEGORY;
+					category_n = 80;
+
+					yolov11seg = new Yolov11Seg(classifierLabel, gpu_mode);
+
+					mode_text.text = "ailia yolov11_seg Detector";
+
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov11-seg", file_name = "yolo11n-seg.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "yolov11-seg", file_name = "yolo11n-seg.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = yolov11seg.Open(asset_path + "/yolo11n-seg.onnx.prototxt", asset_path + "/yolo11n-seg.onnx");
+					}));
+
+					break;
 				default:
 					Debug.Log("Others ailia models are working in progress.");
 					break;
@@ -443,6 +462,10 @@ namespace ailiaSDK {
 		{
 			ailia_detector.Close();
 			ailia_tflite.DestroyAiliaTFLite();
+			if (yolov11seg != null)
+			{
+				yolov11seg.Close();
+			}
 		}
 
 		// Use this for initialization
@@ -482,7 +505,9 @@ namespace ailiaSDK {
 			//Detection
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 			List<AiliaDetector.AILIADetectorObject> list = new List<AiliaDetector.AILIADetectorObject>();
-			if (ailiaModelType == DetectorModels.yolox_tiny_nnapi || ailiaModelType == DetectorModels.yolox_s_nnapi){
+			if (ailiaModelType == DetectorModels.yolov11_seg && yolov11seg != null) {
+				list = yolov11seg.Predict(camera, tex_width, tex_height);
+			} else if (ailiaModelType == DetectorModels.yolox_tiny_nnapi || ailiaModelType == DetectorModels.yolox_s_nnapi){
 				list = ailia_tflite.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
 			}else{
 				list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
@@ -531,6 +556,58 @@ namespace ailiaSDK {
 			Color color = Color.white;
 			color = Color.HSVToRGB((float)box.category / category_n, 1.0f, 1.0f);
 			DrawRect2D(color, x1, y1, w, h, tex_width, tex_height);
+
+			// Draw segmentation mask
+			var boxExt = box as AILIADetectorObjectEX;
+			if (boxExt != null && boxExt.mask != null)
+			{
+				int maskWidth = boxExt.mask.w;
+				int maskHeight = boxExt.mask.h;
+				float[] maskData = boxExt.mask.data;
+
+				Color maskColor = new Color(color.r, color.g, color.b, 0.5f);
+
+				for (int y = y1; y < y2; y++)
+				{
+					float normalizedY = (float)(y - y1) / h;
+
+					for (int x = x1; x < x2; x++)
+					{
+						float normalizedX = (float)(x - x1) / w;
+
+						// Calculate mask index with proper interpolation
+						float maskX = normalizedX * maskWidth;
+						float maskY = normalizedY * maskHeight;
+
+						// Bilinear interpolation
+						int maskX1 = Mathf.FloorToInt(maskX);
+						int maskY1 = Mathf.FloorToInt(maskY);
+						int maskX2 = Mathf.Min(maskX1 + 1, maskWidth - 1);
+						int maskY2 = Mathf.Min(maskY1 + 1, maskHeight - 1);
+
+						float wx = maskX - maskX1;
+						float wy = maskY - maskY1;
+
+						float v1 = maskData[maskY1 * maskWidth + maskX1];
+						float v2 = maskData[maskY1 * maskWidth + maskX2];
+						float v3 = maskData[maskY2 * maskWidth + maskX1];
+						float v4 = maskData[maskY2 * maskWidth + maskX2];
+
+						float maskValue = v1 * (1 - wx) * (1 - wy) + v2 * wx * (1 - wy) +
+										v3 * (1 - wx) * wy + v4 * wx * wy;
+
+						if (maskValue > 0.5)
+						{
+							int idx = (tex_height - 1 - y) * tex_width + x;
+							if (idx >= 0 && idx < camera.Length)
+							{
+								Color32 pixelColor = camera[idx];
+								camera[idx] = Color32.Lerp(pixelColor, maskColor, 0.5f);
+							}
+						}
+					}
+				}
+			}
 
 			float p = (int)(box.prob * 100) / 100.0f;
 			string text = "";
