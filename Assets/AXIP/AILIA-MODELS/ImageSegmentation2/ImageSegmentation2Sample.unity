@@ -256,13 +256,7 @@ MonoBehaviour:
   UICanvas: {fileID: 2075427421}
   camera_mode: 0
   camera_id: 0
-  image_source_hrnet: {fileID: 2800000, guid: ff78b2bc2394948d085a57b0073d1196, type: 3}
-  image_source_hair_segmentation: {fileID: 0}
-  image_source_pspnet_hair_segmentation: {fileID: 0}
-  image_source_deeplabv3: {fileID: 0}
-  image_source_u2net: {fileID: 0}
-  image_source_modnet: {fileID: 0}
-  image_source_sam1: {fileID: 2800000, guid: ff78b2bc2394948d085a57b0073d1196, type: 3}
+  image_source_sam2: {fileID: 0}
 --- !u!114 &296455737
 MonoBehaviour:
   m_ObjectHideFlags: 0

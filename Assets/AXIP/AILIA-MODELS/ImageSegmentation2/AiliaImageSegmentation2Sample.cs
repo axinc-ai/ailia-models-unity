@@ -13,14 +13,6 @@ namespace ailiaSDK
     // Model list
     public enum ImageSegmentaion2Models
     {
-        // HRNetV2_W18_Small_v2,
-        // HRNetV2_W18_Small_v1,
-        // HRNetV2_W48,
-        // hair_segmentation,
-        // pspnet_hair_segmentation,
-        // deeplabv3,
-        // u2net,
-        // modnet,
         image_encoder_hiera_l
     }
 
@@ -45,13 +37,7 @@ namespace ailiaSDK
 
         // Input source
         AiliaImageSource AiliaImageSource;
-        public Texture2D image_source_hrnet = null;
-        public Texture2D image_source_hair_segmentation = null;
-        public Texture2D image_source_pspnet_hair_segmentation = null;
-        public Texture2D image_source_deeplabv3 = null;
-        public Texture2D image_source_u2net = null;
-        public Texture2D image_source_modnet = null;
-        public Texture2D image_source_sam1 = null;
+        public Texture2D image_source_sam2 = null;
 
         // Pre-and-Post processing Shader
         Material blendMaterial;
@@ -68,7 +54,6 @@ namespace ailiaSDK
         Vector2 rawImageSize;
 
         // Segment Anything Model
-        private Segmentation2Model seg2Model;
         private SegmentAnything2Model sam2Model;
         private bool isDraggingForBox = false;
         private Rect boxRect = new();
@@ -164,14 +149,6 @@ namespace ailiaSDK
             }
             if (modelPrepared && !modelAllocated)
             {
-                if (ImageSegmentaion2Models != ImageSegmentaion2Models.image_encoder_hiera_l)
-                {
-                    seg2Model.AllocateInputAndOutputTensor(
-                        ImageSegmentaion2Models,
-                        AiliaImageSource.Width,
-                        AiliaImageSource.Height
-                    );
-                }
                 modelAllocated = true;
             }
             if (camera_mode && !ailia_camera.IsEnable())
@@ -244,15 +221,6 @@ namespace ailiaSDK
                 sam2Model.ProcessMask(inputImage, inputImageWidth, inputImageHeight);
                 result = sam2Model.success;
             }
-            else
-            {
-                result = seg2Model.ProcessFrame(
-                    ImageSegmentaion2Models,
-                    inputImage,
-                    inputImageWidth,
-                    inputImageHeight
-                );
-            }
 
             if (!result)
             {
@@ -264,20 +232,9 @@ namespace ailiaSDK
             Color32[] outputImage;
             int outputWidth,
                 outputHeight;
-            if (ImageSegmentaion2Models == ImageSegmentaion2Models.image_encoder_hiera_l)
-            {
-                outputImage = sam2Model.visualizedResult.GetPixels32();
-                outputWidth = sam2Model.visualizedResult.width;
-                outputHeight = sam2Model.visualizedResult.height;
-            }
-            else
-            {
-                (outputImage, outputWidth, outputHeight) = seg2Model.PostProcesss(
-                    ImageSegmentaion2Models,
-                    inputImageWidth,
-                    inputImageHeight
-                );
-            }
+            outputImage = sam2Model.visualizedResult.GetPixels32();
+            outputWidth = sam2Model.visualizedResult.width;
+            outputHeight = sam2Model.visualizedResult.height;
 
             long end_time2 = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
@@ -346,18 +303,15 @@ namespace ailiaSDK
                 sam2Model = new SegmentAnything2Model();
                 urlList = sam2Model.GetModelURLs(ImageSegmentaion2Models);
             }
-            else
-            {
-                seg2Model = new Segmentation2Model();
-                urlList = seg2Model.GetModelURLs(ImageSegmentaion2Models);
-            }
 
             StartCoroutine(
                 ailia_download.DownloadWithProgressFromURL(
                     urlList,
                     () =>
                     {
-                        if (ImageSegmentaion2Models == ImageSegmentaion2Models.image_encoder_hiera_l)
+                        if (
+                            ImageSegmentaion2Models == ImageSegmentaion2Models.image_encoder_hiera_l
+                        )
                         {
                             modelPrepared = sam2Model.InitializeModels(
                                 ImageSegmentaion2Models,
@@ -367,11 +321,11 @@ namespace ailiaSDK
                         }
                         else
                         {
-                            modelPrepared = seg2Model.InitializeModels(
-                                ImageSegmentaion2Models,
-                                gpu_mode
-                            );
-                            envName = seg2Model.EnvironmentName();
+                            // modelPrepared = seg2Model.InitializeModels(
+                            //     ImageSegmentaion2Models,
+                            //     gpu_mode
+                            // );
+                            // envName = seg2Model.EnvironmentName();
                         }
                     }
                 )
@@ -385,28 +339,8 @@ namespace ailiaSDK
         {
             switch (ImageSegmentaion2Models)
             {
-                // case ImageSegmentaion2Models.HRNetV2_W18_Small_v2:
-                // case ImageSegmentaion2Models.HRNetV2_W18_Small_v1:
-                // case ImageSegmentaion2Models.HRNetV2_W48:
-                //     ailiaImageSource.CreateSource(image_source_hrnet);
-                //     break;
-                // case ImageSegmentaion2Models.hair_segmentation:
-                //     ailiaImageSource.CreateSource(image_source_hair_segmentation);
-                //     break;
-                // case ImageSegmentaion2Models.pspnet_hair_segmentation:
-                //     ailiaImageSource.CreateSource(image_source_pspnet_hair_segmentation);
-                //     break;
-                // case ImageSegmentaion2Models.deeplabv3:
-                //     ailiaImageSource.CreateSource(image_source_deeplabv3);
-                //     break;
-                // case ImageSegmentaion2Models.u2net:
-                //     ailiaImageSource.CreateSource(image_source_u2net);
-                //     break;
-                // case ImageSegmentaion2Models.modnet:
-                //     ailiaImageSource.CreateSource(image_source_modnet);
-                //     break;
                 case ImageSegmentaion2Models.image_encoder_hiera_l:
-                    ailiaImageSource.CreateSource(image_source_sam1);
+                    ailiaImageSource.CreateSource(image_source_sam2);
                     break;
             }
         }
@@ -558,10 +492,6 @@ namespace ailiaSDK
             if (sam2Model != null)
             {
                 sam2Model.Destroy();
-            }
-            if (seg2Model != null)
-            {
-                seg2Model.Destroy();
             }
         }
     }
