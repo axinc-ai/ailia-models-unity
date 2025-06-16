@@ -301,9 +301,7 @@ public class SegmentAnything2Model
         }
 
         float[,,,] inputTensor = PreprocessImage(image, imgWidth, imgHeight, targetSize);
-        // var (inputData, inputSize) = PreprocessImage2(image, imgWidth, imgHeight);
         float[] nchw = Flatten4D(inputTensor);
-        // float[] nchw = inputData;
 
         try
         {
@@ -335,7 +333,7 @@ public class SegmentAnything2Model
             // Run encoder
             bool encResult = encoder.Update();
 
-            if (isQuitting || encoder == null || decoder == null)
+            if (isQuitting || encoder == null)
             {
                 return;
             }
@@ -593,7 +591,6 @@ public class SegmentAnything2Model
             ];
 
             encoderOutput = Flatten4D(lastFeatElement);
-            Debug.Log("encoderOutput");
             highResFeats = new float[featsArray.Length - 1][];
             for (int i = 0; i < allButLast.Length; i++)
             {
@@ -1149,10 +1146,22 @@ public class SegmentAnything2Model
                 (uint)promptMasksEnabledIndex
             );
 
+            if (
+                !concatPointShapeResult
+                || !labelsShapeResult
+                || !masksShapeResult
+                || !masksEnabledShapeResult
+            )
+            {
+                Debug.LogError("Failed to set input blob shapes");
+                return (new bool[0][,], new float[0]);
+            }
+
             for (int i = 0; i < flattenedCoords.Length; i++)
             {
                 Debug.Log(flattenedCoords[i]);
             }
+
             bool setCoordsResult = prompt.SetInputBlobData(
                 flattenedCoords,
                 (uint)promptCoordsIndex
@@ -1167,9 +1176,9 @@ public class SegmentAnything2Model
                 (uint)promptMasksEnabledIndex
             );
 
-            if (!setCoordsResult || !setlabelsResult || !masksEnabledShapeResult)
+            if (!setCoordsResult || !setlabelsResult || !setMaskseResult || !setMasksEnabledResult)
             {
-                Debug.LogError("Failed to set required common blob indices");
+                Debug.LogError("Failed to set blob data");
                 return (new bool[0][,], new float[0]);
             }
 
@@ -1193,11 +1202,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            if (isQuitting || prompt == null)
-            {
-                return (new bool[0][,], new float[0]);
-            }
-
             int sparseEmbeddingsBlobIndex = prompt.FindBlobIndexByName("sparse_embeddings");
             int denseEmbeddingsBlobIndex = prompt.FindBlobIndexByName("dense_embeddings");
             int densePeBlobIndex = prompt.FindBlobIndexByName("dense_pe");
@@ -1209,13 +1213,8 @@ public class SegmentAnything2Model
             )
             {
                 Debug.LogError(
-                    "Could not find sparse_embeddings, dense_embeddings and dense_pe blobs"
+                    "Could not find sparse_embeddings, dense_embeddings and dense_pe indices"
                 );
-                return (new bool[0][,], new float[0]);
-            }
-
-            if (isQuitting || prompt == null)
-            {
                 return (new bool[0][,], new float[0]);
             }
 
@@ -1261,6 +1260,24 @@ public class SegmentAnything2Model
             int highResFeatures1Index = decoder.FindBlobIndexByName("high_res_features1");
             int highResFeatures2Index = decoder.FindBlobIndexByName("high_res_features2");
 
+            if (
+                imageEmbeddingsIndex < 0
+                || imagePeIndex < 0
+                || sparsePromptEmbeddingsIndex < 0
+                || densePromptEmbeddingsIndex < 0
+                || highResFeatures1Index < 0
+                || highResFeatures2Index < 0
+            )
+            {
+                Debug.LogError("Could not find required indices");
+                return (new bool[0][,], new float[0]);
+            }
+
+            if (isQuitting || decoder == null)
+            {
+                return (new bool[0][,], new float[0]);
+            }
+
             ailia.Ailia.AILIAShape imageEmbeddingsShape = new ailia.Ailia.AILIAShape();
             imageEmbeddingsShape.dim = 4;
             imageEmbeddingsShape.w = 1; // batch=1
@@ -1302,17 +1319,6 @@ public class SegmentAnything2Model
             highResFeatures2Shape.y = 128; // height=64
             highResFeatures2Shape.x = 128; // width=64
 
-            if (imageEmbeddingsIndex < 0 || imagePeIndex < 0)
-            {
-                Debug.LogError("Could not find mask and score blobs");
-                return (new bool[0][,], new float[0]);
-            }
-
-            if (isQuitting || decoder == null)
-            {
-                return (new bool[0][,], new float[0]);
-            }
-
             bool imageEmbeddingsShapeResult = decoder.SetInputBlobShape(
                 imageEmbeddingsShape,
                 (uint)imageEmbeddingsIndex
@@ -1339,6 +1345,24 @@ public class SegmentAnything2Model
                 highResFeatures2Shape,
                 (uint)highResFeatures2Index
             );
+
+            if (
+                !imageEmbeddingsShapeResult
+                || !imagePeShapeResult
+                || !sparsePromptEmbeddingsShapeResult
+                || !densePromptEmbeddingsShapeResult
+                || !highResFeatures1ShapeResult
+                || !highResFeatures2ShapeResult
+            )
+            {
+                Debug.LogError("Failed to set input blob shapes");
+                return (new bool[0][,], new float[0]);
+            }
+
+            if (isQuitting || decoder == null)
+            {
+                return (new bool[0][,], new float[0]);
+            }
 
             bool imageEmbeddingsResult = decoder.SetInputBlobData(
                 encoderOutput,
@@ -1367,6 +1391,24 @@ public class SegmentAnything2Model
                 (uint)highResFeatures2Index
             );
 
+            if (
+                !imageEmbeddingsResult
+                || !imagePeResult
+                || !sparseEmbeddingsResult
+                || !denseEmbeddingsResult
+                || !highResFeatures1Result
+                || !highResFeatures2Result
+            )
+            {
+                Debug.LogError("Failed to set input blob data");
+                return (new bool[0][,], new float[0]);
+            }
+
+            if (isQuitting || decoder == null)
+            {
+                return (new bool[0][,], new float[0]);
+            }
+
             // Run decoder
             bool decoderResult = decoder.Update();
 
@@ -1393,6 +1435,23 @@ public class SegmentAnything2Model
             int iouPredBlobIndex = decoder.FindBlobIndexByName("iou_pred");
             int samTokensOutBlobIndex = decoder.FindBlobIndexByName("sam_tokens_out");
             int objectScoreLogitsBlobIndex = decoder.FindBlobIndexByName("object_score_logits");
+
+            if (
+                masksBlobIndex < 0
+                || iouPredBlobIndex < 0
+                || samTokensOutBlobIndex < 0
+                || objectScoreLogitsBlobIndex < 0
+            )
+            {
+                Debug.LogError("Could not find required indices");
+                return (new bool[0][,], new float[0]);
+            }
+
+            if (isQuitting || decoder == null)
+            {
+                return (new bool[0][,], new float[0]);
+            }
+
             ailia.Ailia.AILIAShape masksBlobShape = decoder.GetBlobShape((uint)masksBlobIndex);
             float[] masksBlobOutput = new float[
                 masksBlobShape.w * masksBlobShape.z * masksBlobShape.y * masksBlobShape.x
@@ -1430,6 +1489,17 @@ public class SegmentAnything2Model
                 (uint)objectScoreLogitsBlobIndex
             );
 
+            if (
+                !getMasksBlobResult
+                || !getiouPredBlobResult
+                || !getsamTokensBlobResult
+                || !objectScoreLogitsBlobResult
+            )
+            {
+                Debug.LogError("Failed to get blob data");
+                return (new bool[0][,], new float[0]);
+            }
+
             float[,,,] masks = ReshapeTo4D(
                 masksBlobOutput,
                 (int)masksBlobShape.w,
@@ -1454,30 +1524,6 @@ public class SegmentAnything2Model
                 (int)objectScoreLogitsBlobShape.y,
                 (int)objectScoreLogitsBlobShape.x
             );
-            // masks = masks[:, 1:, :, :] 1
-            // float[,,,] lowResMasks = SliceChannelDim(masks);
-            // iou_pred = iou_pred[:, 1:] 2
-            // iouPred = Slice2DColumns(iouPred, 1);
-            // sam_tokens_out = mask_tokens_out[:, 1:]
-            // samTokens = Slice3D_Dim1_From1(samTokens, 1);
-            // masks = self.postprocess_masks(
-            //     low_res_masks, orig_hw
-            // )
-            // float[,,,] resized = PostprocessMasks(lowResMasks, new int[] { imgHeight, imgWidth });
-            // low_res_masks 3
-            // Clip(ref lowResMasks, -32.0f, -32.0f);
-            // float maskThreshold = 0.0f;
-            // 1
-            // bool[,,,] binaryMask = ThresholdMask(resized, maskThreshold);
-
-            // sorted_ind = np.argsort(scores)[::-1]
-            // int[] sortedInd = ArgsortDescending(iouPred);
-
-            // bool[,,,] newMasks = ReorderMasks(binaryMask, sortedInd);
-
-            // bool[][,] masksResult = new bool[1][,];
-            // masksResult[0] = PostprocessMask(resized, imgHeight, imgWidth);
-            // Debug.Log(iouPred[0, 0]);
 
             if (isQuitting || decoder == null)
             {
@@ -1485,17 +1531,14 @@ public class SegmentAnything2Model
             }
 
             int numMasks = (int)iouPredBlobShape.x;
-            // Debug.Log(numMasks);
             int maskWidth = (int)masksBlobShape.x;
             int maskHeight = (int)masksBlobShape.y;
             int maskArea = maskWidth * maskHeight;
             bool[][,] masksResult = new bool[numMasks][,];
 
-            // Debug.Log(maskWidth);
-            // Debug.Log(maskHeight);
-            // Debug.Log(maskArea);
-            // Debug.Log(masksBlobOutput.Length);
-            // float[] maskUpscaled = ResizeMask1D(masksBlobOutput, maskHeight, maskWidth, imgHeight, imgWidth);
+            Debug.Log(maskWidth);
+            Debug.Log(maskHeight);
+            Debug.Log(maskArea);
 
             for (int i = 0; i < numMasks; i++)
             {
@@ -1518,190 +1561,6 @@ public class SegmentAnything2Model
         }
     }
 
-    // private bool[,,,] ReorderMasks(bool[,,,] masks, int[] sortedInd)
-    // {
-    //     int n = sortedInd.Length;
-    //     int c = masks.GetLength(1);
-    //     int h = masks.GetLength(2);
-    //     int w = masks.GetLength(3);
-
-    //     bool[,,,] reordered = new bool[n, c, h, w];
-
-    //     for (int i = 0; i < n; i++)
-    //     {
-    //         int srcIndex = sortedInd[i];
-    //         for (int j = 0; j < c; j++)
-    //             for (int y = 0; y < h; y++)
-    //                 for (int x = 0; x < w; x++)
-    //                     reordered[i, j, y, x] = masks[srcIndex, j, y, x];
-    //     }
-
-    //     return reordered;
-    // }
-
-    // private int[] ArgsortDescending(float[,] scores)
-    // {
-    //     int rows = scores.GetLength(0);
-    //     int cols = scores.GetLength(1);
-    //     int total = rows * cols;
-
-    //     // Create index-value pairs
-    //     var indexed = new List<(int index, float value)>(total);
-    //     for (int i = 0; i < rows; i++)
-    //         for (int j = 0; j < cols; j++)
-    //             indexed.Add((i * cols + j, scores[i, j]));
-
-    //     // Sort descending by value
-    //     var sorted = indexed.OrderByDescending(x => x.value).Select(x => x.index).ToArray();
-
-    //     return sorted;
-    // }
-
-    // private float[] ResizeMask1D(float[] input, int inH, int inW, int outH, int outW)
-    // {
-    //     float[] output = new float[outH * outW];
-    //     float yScale = (float)inH / outH;
-    //     float xScale = (float)inW / outW;
-
-    //     for (int y = 0; y < outH; y++)
-    //     {
-    //         float inY = y * yScale;
-    //         int y0 = (int)Math.Floor(inY);
-    //         int y1 = Math.Min(y0 + 1, inH - 1);
-    //         float yLerp = inY - y0;
-
-    //         for (int x = 0; x < outW; x++)
-    //         {
-    //             float inX = x * xScale;
-    //             int x0 = (int)Math.Floor(inX);
-    //             int x1 = Math.Min(x0 + 1, inW - 1);
-    //             float xLerp = inX - x0;
-
-    //             // Get pixel values
-    //             float v00 = input[y0 * inW + x0];
-    //             float v01 = input[y0 * inW + x1];
-    //             float v10 = input[y1 * inW + x0];
-    //             float v11 = input[y1 * inW + x1];
-
-    //             float top = (1 - xLerp) * v00 + xLerp * v01;
-    //             float bottom = (1 - xLerp) * v10 + xLerp * v11;
-    //             float value = (1 - yLerp) * top + yLerp * bottom;
-
-    //             output[y * outW + x] = value;
-    //         }
-    //     }
-
-    //     return output;
-    // }
-
-    // private void Clip(ref float[,,,] array, float minValue, float maxValue)
-    // {
-    //     int d0 = array.GetLength(0);
-    //     int d1 = array.GetLength(1);
-    //     int d2 = array.GetLength(2);
-    //     int d3 = array.GetLength(3);
-
-    //     for (int i0 = 0; i0 < d0; i0++)
-    //         for (int i1 = 0; i1 < d1; i1++)
-    //             for (int i2 = 0; i2 < d2; i2++)
-    //                 for (int i3 = 0; i3 < d3; i3++)
-    //                 {
-    //                     if (array[i0, i1, i2, i3] < minValue)
-    //                         array[i0, i1, i2, i3] = minValue;
-    //                     else if (array[i0, i1, i2, i3] > maxValue)
-    //                         array[i0, i1, i2, i3] = maxValue;
-    //                 }
-    // }
-
-    // private bool[,,,] ThresholdMask(float[,,,] input, float threshold)
-    // {
-    //     int d0 = input.GetLength(0);
-    //     int d1 = input.GetLength(1);
-    //     int d2 = input.GetLength(2);
-    //     int d3 = input.GetLength(3);
-
-    //     bool[,,,] mask = new bool[d0, d1, d2, d3];
-
-    //     for (int i0 = 0; i0 < d0; i0++)
-    //         for (int i1 = 0; i1 < d1; i1++)
-    //             for (int i2 = 0; i2 < d2; i2++)
-    //                 for (int i3 = 0; i3 < d3; i3++)
-    //                     mask[i0, i1, i2, i3] = input[i0, i1, i2, i3] > threshold;
-
-    //     return mask;
-    // }
-
-    // private float[,,,] PostprocessMasks(float[,,,] masks, int[] origHW)
-    // {
-    //     int N = masks.GetLength(0);
-    //     int C = masks.GetLength(1);
-    //     int H = masks.GetLength(2);
-    //     int W = masks.GetLength(3);
-
-    //     int newH = origHW[0];
-    //     int newW = origHW[1];
-    //     float[,,,] output = new float[N, C, newH, newW];
-
-    //     for (int n = 0; n < N; n++)
-    //     {
-    //         for (int c = 0; c < C; c++)
-    //         {
-    //             // Extract [H, W] slice for mask[n, c]
-    //             float[,] src = new float[H, W];
-    //             for (int h = 0; h < H; h++)
-    //                 for (int w = 0; w < W; w++)
-    //                     src[h, w] = masks[n, c, h, w];
-
-    //             // Resize using bilinear interpolation
-    //             float[,] resized = ResizeBilinear(src, newH, newW);
-
-    //             // Store into output[n, c]
-    //             for (int h = 0; h < newH; h++)
-    //                 for (int w = 0; w < newW; w++)
-    //                     output[n, c, h, w] = resized[h, w];
-    //         }
-    //     }
-
-    //     return output;
-    // }
-
-    // private float[,,,] SliceChannelDim(float[,,,] input)
-    // {
-    //     int N = input.GetLength(0);
-    //     int C = input.GetLength(1);
-    //     int H = input.GetLength(2);
-    //     int W = input.GetLength(3);
-
-    //     float[,,,] result = new float[N, C - 1, H, W];
-
-    //     for (int n = 0; n < N; n++)
-    //         for (int c = 1; c < C; c++) // start at 1
-    //             for (int h = 0; h < H; h++)
-    //                 for (int w = 0; w < W; w++)
-    //                     result[n, c - 1, h, w] = input[n, c, h, w];
-
-    //     return result;
-    // }
-
-    // private float[,,] Slice3D_Dim1_From1(float[,,] input, int start)
-    // {
-    //     int D0 = input.GetLength(0); // A
-    //     int D1 = input.GetLength(1); // B
-    //     int D2 = input.GetLength(2); // C
-
-    //     if (start >= D1)
-    //         throw new ArgumentException("Start index is out of bounds for axis 1");
-
-    //     float[,,] output = new float[D0, D1 - start, D2];
-
-    //     for (int i = 0; i < D0; i++)
-    //         for (int j = 1; j < D1; j++)
-    //             for (int k = 0; k < D2; k++)
-    //                 output[i, j - start, k] = input[i, j, k];
-
-    //     return output;
-    // }
-
     private float[,] ReshapeTo2D(float[] flat, int rows, int cols)
     {
         if (flat.Length != rows * cols)
@@ -1715,24 +1574,6 @@ public class SegmentAnything2Model
 
         return result;
     }
-
-    // private float[,] Slice2DColumns(float[,] input, int startCol)
-    // {
-    //     int rows = input.GetLength(0);
-    //     int cols = input.GetLength(1);
-
-    //     if (startCol >= cols)
-    //         throw new ArgumentException("startCol is out of range.");
-
-    //     int newCols = cols - startCol;
-    //     float[,] result = new float[rows, newCols];
-
-    //     for (int r = 0; r < rows; r++)
-    //         for (int c = 0; c < newCols; c++)
-    //             result[r, c] = input[r, c + startCol];
-
-    //     return result;
-    // }
 
     // Helper to convert 1D array to 4D array
     private float[,,,] ReshapeToTensor(float[] data, int maskIndex, int height, int width, int area)
@@ -1892,65 +1733,6 @@ public class SegmentAnything2Model
     private float GetScale(int texWidth, int texHeight)
     {
         return targetSize / (float)Mathf.Max(texWidth, texHeight);
-    }
-
-    // Preprocess image for model input
-    private (float[], ValueTuple<int, int>) PreprocessImage2(
-        Color32[] camera,
-        int texWidth,
-        int texHeight
-    )
-    {
-        // Create CHW layout data array (channel, height, width)
-        float[] normalizedData = new float[3 * targetSize * targetSize];
-
-        // Optimize by computing constants outside the inner loop
-        int ch0Offset = 0;
-        int ch1Offset = targetSize * targetSize;
-        int ch2Offset = 2 * targetSize * targetSize;
-
-        float scale = GetScale(texWidth, texHeight);
-
-        // Fill with normalized values and padding
-        for (int y = 0; y < targetSize; y++)
-        {
-            for (int x = 0; x < targetSize; x++)
-            {
-                float fx = x / scale;
-                float fy = y / scale;
-                Color32 v = Bilinear(camera, texWidth, texHeight, fx, fy);
-
-                int baseIdx = y * targetSize + x; // Top2Bottom
-
-                normalizedData[ch0Offset + baseIdx] = (v.r / 255.0f - Mean[0]) / Std[0];
-                normalizedData[ch1Offset + baseIdx] = (v.g / 255.0f - Mean[1]) / Std[1];
-                normalizedData[ch2Offset + baseIdx] = (v.b / 255.0f - Mean[2]) / Std[2];
-            }
-        }
-
-        return (normalizedData, (texHeight, texWidth));
-    }
-
-    private Color32 Bilinear(Color32[] face, int w, int h, float fx, float fy)
-    {
-        // Debug.Log("Bilinear");
-        int x2 = (int)fx;
-        int y2 = (int)fy;
-        float xa = 1.0f - (fx - x2);
-        float xb = 1.0f - xa;
-        float ya = 1.0f - (fy - y2);
-        float yb = 1.0f - ya;
-        if (x2 >= w || y2 >= h || x2 < 0 || y2 < 0){
-            return new Color32(0, 0, 0, 255);
-        }
-        Color32 c1 = face[y2 * w + x2];
-        Color32 c2 = (x2+1 < w) ? face[y2 * w + x2 + 1] : c1;
-        Color32 c3 = (y2+1 < h) ? face[(y2 + 1) * w + x2] : c1;
-        Color32 c4 = (x2+1 < w && y2+1 < h) ? face[(y2 + 1) * w + x2 + 1] : c1;
-        byte r = (byte)(c1.r * xa * ya + c2.r * xb * ya + c3.r * xa * yb + c4.r * xb * yb);
-        byte g = (byte)(c1.g * xa * ya + c2.g * xb * ya + c3.g * xa * yb + c4.g * xb * yb);
-        byte b = (byte)(c1.b * xa * ya + c2.b * xb * ya + c3.b * xa * yb + c4.b * xb * yb);
-        return new Color32(r, g, b, 255);
     }
 
     private float[,,,] PreprocessImage(
