@@ -292,7 +292,6 @@ public class SegmentAnything2Model
     }
 
     // Run Embedding
-
     private void RunEmbedding(Color32[] image, int imgWidth, int imgHeight)
     {
         if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
@@ -310,10 +309,10 @@ public class SegmentAnything2Model
             // Set encoder input shape (1x3x1024x1024)
             ailia.Ailia.AILIAShape encInputShape = new ailia.Ailia.AILIAShape();
             encInputShape.dim = 4;
-            encInputShape.w = 1; // batch=1
-            encInputShape.z = 3; // channels=3 (RGB)
-            encInputShape.y = (uint)targetSize; // height=1024
-            encInputShape.x = (uint)targetSize; // width=1024
+            encInputShape.w = 1;
+            encInputShape.z = 3;
+            encInputShape.y = (uint)targetSize;
+            encInputShape.x = (uint)targetSize;
 
             if (isQuitting || encoder == null)
             {
@@ -330,7 +329,6 @@ public class SegmentAnything2Model
             bool dataSetResult = encoder.SetInputBlobData(nchw, imgIndex);
             // Debug.Log($"updated SET DATA {dataSetResult}");
 
-            // Run encoder
             bool encResult = encoder.Update();
 
             if (isQuitting || encoder == null)
@@ -371,7 +369,6 @@ public class SegmentAnything2Model
                 return;
             }
 
-            // Get blob shapes
             ailia.Ailia.AILIAShape visionFeaturesBlobShape = encoder.GetBlobShape(
                 (uint)visionFeaturesBlobIndex
             );
@@ -545,7 +542,7 @@ public class SegmentAnything2Model
                 (int H, int W) = bbFeatSizes[revIndex]; // H, W
 
                 int HW = feat.GetLength(0);
-                int one = feat.GetLength(1); // should be 1
+                int one = feat.GetLength(1);
                 int C = feat.GetLength(2);
 
                 if (HW != H * W)
@@ -613,7 +610,6 @@ public class SegmentAnything2Model
         int b1 = b.GetLength(1);
         int b2 = b.GetLength(2);
 
-        // Check dimension compatibility (broadcasting rules)
         if ((b0 != 1 && b0 != a0) || (b1 != 1 && b1 != a1) || (b2 != 1 && b2 != a2))
             throw new ArgumentException("Incompatible shapes for broadcasting.");
 
@@ -729,10 +725,9 @@ public class SegmentAnything2Model
     // Generates one sample from a Gaussian distribution using Box-Muller transform
     private float NextGaussian(float mean = 0, float stdDev = 1)
     {
-        // Use Box-Muller transform to generate a normal distributed value
-        double u1 = 1.0 - _rng.NextDouble(); // uniform(0,1] random doubles
+        double u1 = 1.0 - _rng.NextDouble();
         double u2 = 1.0 - _rng.NextDouble();
-        double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2); // random normal(0,1)
+        double randStdNormal = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
         return (float)(mean + stdDev * randStdNormal);
     }
 
@@ -926,7 +921,6 @@ public class SegmentAnything2Model
             //     masksEnable = new int[] { 1 };
             // }
 
-            // Get blob indices
             int promptCoordsIndex = prompt.FindBlobIndexByName("coords");
             int promptLabelsIndex = prompt.FindBlobIndexByName("labels");
             int promptMasksIndex = prompt.FindBlobIndexByName("masks");
@@ -942,20 +936,17 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            // point_coords: 1x1x2
             ailia.Ailia.AILIAShape concatPointShape = new ailia.Ailia.AILIAShape();
             concatPointShape.dim = 3;
-            concatPointShape.z = 1; // batch=1
-            concatPointShape.y = 1; // points count (1)
-            concatPointShape.x = 2; // 2D coords (x,y)
+            concatPointShape.z = 1;
+            concatPointShape.y = 1;
+            concatPointShape.x = 2;
 
-            // // point_labels: 1x1
             ailia.Ailia.AILIAShape labelsShape = new ailia.Ailia.AILIAShape();
             labelsShape.dim = 2;
-            labelsShape.y = 1; // batch=1
+            labelsShape.y = 1;
             labelsShape.x = 1; // points count (1)
 
-            // maskunput dummy
             ailia.Ailia.AILIAShape masksShape = new ailia.Ailia.AILIAShape();
             masksShape.dim = 3;
             masksShape.z = 1;
@@ -1010,7 +1001,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            // Run prompt
             bool promptResult = prompt.Update();
 
             if (isQuitting || prompt == null)
@@ -1046,7 +1036,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            // Get blob shapes
             ailia.Ailia.AILIAShape sparseEmbeddingsBlobShape = prompt.GetBlobShape(
                 (uint)sparseEmbeddingsBlobIndex
             );
@@ -1078,7 +1067,6 @@ public class SegmentAnything2Model
             prompt.GetBlobData(denseEmbeddingsOutput, denseEmbeddingsBlobIndex);
             prompt.GetBlobData(densePeOutput, densePeBlobIndex);
 
-            // Identify mask and score blobs
             int imageEmbeddingsIndex = decoder.FindBlobIndexByName("image_embeddings");
             int imagePeIndex = decoder.FindBlobIndexByName("image_pe");
             int sparsePromptEmbeddingsIndex = decoder.FindBlobIndexByName(
@@ -1144,8 +1132,8 @@ public class SegmentAnything2Model
             highResFeatures2Shape.dim = 4;
             highResFeatures2Shape.w = 1; // batch=1
             highResFeatures2Shape.z = 64; // channel=256
-            highResFeatures2Shape.y = 128; // height=64
-            highResFeatures2Shape.x = 128; // width=64
+            highResFeatures2Shape.y = 128; // height=128
+            highResFeatures2Shape.x = 128; // width=128
 
             bool imageEmbeddingsShapeResult = decoder.SetInputBlobShape(
                 imageEmbeddingsShape,
@@ -1237,7 +1225,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            // Run decoder
             bool decoderResult = decoder.Update();
 
             if (isQuitting || decoder == null)
@@ -1258,7 +1245,6 @@ public class SegmentAnything2Model
             }
 
             // masks, iou_pred, sam_tokens_out, object_score_logits  = mask_decoder.run
-            // Get blob shapes
             int masksBlobIndex = decoder.FindBlobIndexByName("masks");
             int iouPredBlobIndex = decoder.FindBlobIndexByName("iou_pred");
             int samTokensOutBlobIndex = decoder.FindBlobIndexByName("sam_tokens_out");
@@ -1566,7 +1552,7 @@ public class SegmentAnything2Model
         int imageSize
     )
     {
-        // 2. Resize image to (imageSize, imageSize)
+        // Resize image to (imageSize, imageSize)
         float scale = GetScale(originalWidth, originalHeight);
         int newWidth = imageSize;
         int newHeight = imageSize;
@@ -1578,10 +1564,10 @@ public class SegmentAnything2Model
             newHeight
         );
 
-        // 3. Convert Color32[] to float[height, width, channels] normalized 0-1
+        // Convert Color32[] to float[height, width, channels]
         float[,,] floatImage = Color32ArrayToFloatArray(resizedImage, newHeight, newWidth);
 
-        // 4. Normalize per channel (subtract mean, divide std)
+        // Normalize per channel (subtract mean, divide std)
         float[] mean = new float[] { 0.485f, 0.456f, 0.406f };
         float[] std = new float[] { 0.229f, 0.224f, 0.225f };
 
@@ -1596,10 +1582,10 @@ public class SegmentAnything2Model
             }
         }
 
-        // 5. Transpose (H, W, C) => (C, H, W)
+        // Transpose (H, W, C) => (C, H, W)
         float[,,] chw = TransposeHWCtoCHW(floatImage);
 
-        // 6. Add batch dimension => (1, C, H, W)
+        // Add batch dimension => (1, C, H, W)
         float[,,,] batch = new float[1, 3, newHeight, newWidth];
         for (int c = 0; c < 3; c++)
             for (int h = 0; h < newHeight; h++)
@@ -1609,7 +1595,7 @@ public class SegmentAnything2Model
         return batch;
     }
 
-    // Helper: Resize Color32[] with nearest neighbor (or implement your own)
+    // Helper: Resize Color32[] with nearest neighbor
     private Color32[] ResizeColor32(
         Color32[] src,
         int srcWidth,
@@ -1631,7 +1617,6 @@ public class SegmentAnything2Model
         return dst;
     }
 
-    // Helper: Convert Color32[] to float[height,width,channels], normalized to [0..1]
     private float[,,] Color32ArrayToFloatArray(Color32[] image, int height, int width)
     {
         float[,,] result = new float[height, width, 3];
@@ -1647,7 +1632,7 @@ public class SegmentAnything2Model
         return result;
     }
 
-    // Helper: Transpose (H,W,C) => (C,H,W)
+    // Transpose (H,W,C) => (C,H,W)
     private float[,,] TransposeHWCtoCHW(float[,,] input)
     {
         int H = input.GetLength(0);
