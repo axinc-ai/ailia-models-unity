@@ -899,11 +899,6 @@ public class SegmentAnything2Model
                 flattenedCoords[i * 2 + 1] = scaledCoords[i, 1];
             }
 
-            for (int i = 0; i < flattenedCoords.Length; i++)
-            {
-                Debug.Log(flattenedCoords[i]);
-            }
-
             // float[,,] maskInputDummy;
             float[] maskInputDummy;
             float[] masksEnable;
