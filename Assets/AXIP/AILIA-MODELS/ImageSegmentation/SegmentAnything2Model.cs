@@ -21,14 +21,13 @@ public class SegmentAnything2Model
     private const string encoderProtoPath = "image_encoder_hiera_l.onnx.prototxt";
     private const string decoderWeightPath = "mask_decoder_hiera_l.onnx";
     private const string decoderProtoPath = "mask_decoder_hiera_l.onnx.prototxt";
+    private const string promptWeightPath = "prompt_encoder_hiera_l.onnx";
+    private const string promptProtoPath = "prompt_encoder_hiera_l.onnx.prototxt";
 
     // private const string memAttentionWeightPath = "memory_attention_hiera_l.opt.onnx";
     // private const string memAttentionProtoPath = "memory_attention_hiera_l.opt.onnx.prototxt";
     // private const string encoderMemWeightPath = "memory_encoder_hiera_l.onnx";
     // private const string encoderMemProtoPath = "memory_encoder_hiera_l.onnx.prototxt";
-    private const string promptWeightPath = "prompt_encoder_hiera_l.onnx";
-    private const string promptProtoPath = "prompt_encoder_hiera_l.onnx.prototxt";
-
     // private const string mlpWeightPath = "mlp_hiera_l.onnx";
     // private const string mlpProtoPath = "mlp_hiera_l.onnx.prototxt";
 
@@ -87,7 +86,7 @@ public class SegmentAnything2Model
         boxCoords = new();
     }
 
-    public List<ModelDownloadURL> GetModelURLs(ImageSegmentaion2Models modelType)
+    public List<ModelDownloadURL> GetModelURLs(ImageSegmentaionModels modelType)
     {
         List<ModelDownloadURL> modelDownloadURLs = new List<ModelDownloadURL>();
         string serverFolderName = "segment-anything-2";
@@ -133,7 +132,7 @@ public class SegmentAnything2Model
     }
 
     // Initialize Ailia models
-    public bool InitializeModels(ImageSegmentaion2Models modelType, bool gpuMode)
+    public bool InitializeModels(ImageSegmentaionModels modelType, bool gpuMode)
     {
         if (modelsInitialized)
             return true;
@@ -939,13 +938,13 @@ public class SegmentAnything2Model
             ailia.Ailia.AILIAShape concatPointShape = new ailia.Ailia.AILIAShape();
             concatPointShape.dim = 3;
             concatPointShape.z = 1;
-            concatPointShape.y = 1;
+            concatPointShape.y = (uint)pointCount;
             concatPointShape.x = 2;
 
             ailia.Ailia.AILIAShape labelsShape = new ailia.Ailia.AILIAShape();
             labelsShape.dim = 2;
             labelsShape.y = 1;
-            labelsShape.x = 1; // points count (1)
+            labelsShape.x = (uint)pointCount; // points count (1)
 
             ailia.Ailia.AILIAShape masksShape = new ailia.Ailia.AILIAShape();
             masksShape.dim = 3;
@@ -1856,6 +1855,7 @@ public class SegmentAnything2Model
     {
         encoder.Close();
         decoder.Close();
+        prompt.Close();
     }
 
     public string EnvironmentName()
