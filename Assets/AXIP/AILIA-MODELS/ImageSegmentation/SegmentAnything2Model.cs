@@ -293,13 +293,13 @@ public class SegmentAnything2Model
     // Run Embedding
     private void RunEmbedding(Color32[] image, int imgWidth, int imgHeight)
     {
-        if (isQuitting || !modelsInitialized || encoder == null || decoder == null)
+        if (isQuitting || !modelsInitialized || encoder == null)
         {
             return;
         }
 
         float[,,,] inputTensor = PreprocessImage(image, imgWidth, imgHeight, targetSize);
-        float[] nchw = Flatten4D(inputTensor);
+        float[] nchwInput = Flatten4D(inputTensor);
 
         try
         {
@@ -325,7 +325,7 @@ public class SegmentAnything2Model
                 return;
             }
 
-            bool dataSetResult = encoder.SetInputBlobData(nchw, imgIndex);
+            bool dataSetResult = encoder.SetInputBlobData(nchwInput, imgIndex);
             // Debug.Log($"updated SET DATA {dataSetResult}");
 
             bool encResult = encoder.Update();
@@ -875,9 +875,7 @@ public class SegmentAnything2Model
         float[] pointLabels
     )
     {
-        if (
-            isQuitting || !modelsInitialized || encoder == null || decoder == null || prompt == null
-        )
+        if (isQuitting || !modelsInitialized || decoder == null || prompt == null)
         {
             return (new bool[0][,], new float[0]);
         }
@@ -905,7 +903,12 @@ public class SegmentAnything2Model
 
             // if (maskInput == null)
             // {
-            maskInputDummy = new float[1 * 256 * 256];
+            int maskInputDummyChannel = 1;
+            int maskInputDummyHeight = 256;
+            int maskInputDummyWidth = 256;
+            maskInputDummy = new float[
+                maskInputDummyChannel * maskInputDummyHeight * maskInputDummyWidth
+            ];
             // maskInputDummy = new float[1, 256, 256];
             masksEnable = new float[1] { 0f };
             // }
@@ -943,9 +946,9 @@ public class SegmentAnything2Model
 
             ailia.Ailia.AILIAShape masksShape = new ailia.Ailia.AILIAShape();
             masksShape.dim = 3;
-            masksShape.z = 1;
-            masksShape.y = 256;
-            masksShape.x = 256;
+            masksShape.z = (uint)maskInputDummyChannel;
+            masksShape.y = (uint)maskInputDummyHeight;
+            masksShape.x = (uint)maskInputDummyWidth;
 
             ailia.Ailia.AILIAShape masksEnableShape = new ailia.Ailia.AILIAShape();
             masksEnableShape.dim = 1;
