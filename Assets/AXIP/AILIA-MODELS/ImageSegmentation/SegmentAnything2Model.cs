@@ -24,13 +24,6 @@ public class SegmentAnything2Model
     private const string promptWeightPath = "prompt_encoder_hiera_l.onnx";
     private const string promptProtoPath = "prompt_encoder_hiera_l.onnx.prototxt";
 
-    // private const string memAttentionWeightPath = "memory_attention_hiera_l.opt.onnx";
-    // private const string memAttentionProtoPath = "memory_attention_hiera_l.opt.onnx.prototxt";
-    // private const string encoderMemWeightPath = "memory_encoder_hiera_l.onnx";
-    // private const string encoderMemProtoPath = "memory_encoder_hiera_l.onnx.prototxt";
-    // private const string mlpWeightPath = "mlp_hiera_l.onnx";
-    // private const string mlpProtoPath = "mlp_hiera_l.onnx.prototxt";
-
     private List<Vector2Int> clickPoints = new();
     private List<Boolean> clickPointLabels = new();
     private Rect boxCoords = new();
@@ -103,30 +96,12 @@ public class SegmentAnything2Model
         modelDownloadURLs.Add(
             new ModelDownloadURL() { folder_path = serverFolderName, file_name = decoderProtoPath }
         );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = memAttentionWeightPath }
-        // );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = memAttentionProtoPath }
-        // );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = encoderMemWeightPath }
-        // );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = encoderMemProtoPath }
-        // );
         modelDownloadURLs.Add(
             new ModelDownloadURL() { folder_path = serverFolderName, file_name = promptWeightPath }
         );
         modelDownloadURLs.Add(
             new ModelDownloadURL() { folder_path = serverFolderName, file_name = promptProtoPath }
         );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = mlpWeightPath }
-        // );
-        // modelDownloadURLs.Add(
-        //     new ModelDownloadURL() { folder_path = serverFolderName, file_name = mlpProtoPath }
-        // );
 
         return modelDownloadURLs;
     }
@@ -155,22 +130,6 @@ public class SegmentAnything2Model
                 Application.temporaryCachePath,
                 decoderProtoPath
             );
-            // string memAttPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     memAttentionWeightPath
-            // );
-            // string memAttProtoPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     memAttentionProtoPath
-            // );
-            // string encMemPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     encoderMemWeightPath
-            // );
-            // string encMemProtoPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     encoderMemProtoPath
-            // );
             string pmtPath = System.IO.Path.Combine(
                 Application.temporaryCachePath,
                 promptWeightPath
@@ -179,21 +138,10 @@ public class SegmentAnything2Model
                 Application.temporaryCachePath,
                 promptProtoPath
             );
-            // string mlpPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     mlpWeightPath
-            // );
-            // string mlpProPath = System.IO.Path.Combine(
-            //     Application.temporaryCachePath,
-            //     mlpProtoPath
-            // );
 
             encoder = new ailia.AiliaModel();
             decoder = new ailia.AiliaModel();
-            // memAttention = new ailia.AiliaModel();
-            // encoderMem = new ailia.AiliaModel();
             prompt = new ailia.AiliaModel();
-            // mlp = new ailia.AiliaModel();
 
             uint memory_mode =
                 ailia.Ailia.AILIA_MEMORY_REDUCE_CONSTANT
@@ -202,35 +150,23 @@ public class SegmentAnything2Model
             memory_mode = ailia.Ailia.AILIA_MEMORY_REDUCE_INTERSTAGE;
             encoder.SetMemoryMode(memory_mode);
             decoder.SetMemoryMode(memory_mode);
-            // memAttention.SetMemoryMode(memory_mode);
-            // encoderMem.SetMemoryMode(memory_mode);
             prompt.SetMemoryMode(memory_mode);
-            // mlp.SetMemoryMode(memory_mode);
 
             this.gpuMode = gpuMode;
             if (gpuMode)
             {
                 encoder.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
                 decoder.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-                // memAttention.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-                // encoderMem.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
                 prompt.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
-                // mlp.Environment(ailia.Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
             }
 
             bool encOpened = false;
             bool decOpened = false;
-            // bool memOpened = false;
-            // bool encMemOpened = false;
             bool promptOpened = false;
-            // bool mlpOpened = false;
 
             encOpened = encoder.OpenFile(encProtoPath, encPath);
             decOpened = decoder.OpenFile(decProtoPath, decPath);
-            // memOpened = memAttention.OpenFile(memAttProtoPath, memAttPath);
-            // encMemOpened = encoderMem.OpenFile(encMemProtoPath, encMemPath);
             promptOpened = prompt.OpenFile(pmtProtoPath, pmtPath);
-            // mlpOpened = mlp.OpenFile(mlpProPath, mlpPath);
 
             if (!encOpened || !decOpened || !promptOpened)
             {
@@ -515,7 +451,6 @@ public class SegmentAnything2Model
 
             float[][,,] visionFeats = PrepareBackboneFeatures(backboneData);
 
-            // no_mem_embed = self.trunc_normal((1, 1, 256), std=0.02).astype(np.float32)
             int hidden_dim = 256;
             float[,,] noMemEmbed = TruncNormal(1, 1, hidden_dim, 0.02f);
             float[,,] lastFeat = visionFeats[visionFeats.Length - 1];
@@ -529,10 +464,6 @@ public class SegmentAnything2Model
                 (64, 64)
             };
 
-            // feats = [
-            //     np.transpose(feat, (1, 2, 0)).reshape(1, -1, *feat_size)
-            //     for feat, feat_size in zip(vision_feats[::-1], bb_feat_sizes[::-1])
-            // ][::-1]
             float[][,,,] featsArray = new float[visionFeats.Length][,,,];
             for (int i = 0; i < visionFeats.Length; i++)
             {
@@ -573,7 +504,6 @@ public class SegmentAnything2Model
             }
 
             Array.Reverse(featsArray);
-            // features = {"image_embed": feats[-1], "high_res_feats": feats[:-1]}
 
             float[,,,] lastFeatElement = featsArray[featsArray.Length - 1];
 
@@ -636,25 +566,6 @@ public class SegmentAnything2Model
         int numFeatureLevels = 3;
 
         float[][,,,] featureMaps = backboneData.backboneFpn.TakeLast(numFeatureLevels).ToArray();
-        // for (int i = 0; i < featureMaps.Length; i++)
-        // {
-        //     Debug.Log(featureMaps[i].Length);
-        // }
-        // float[][] visionPosEmbeds = backboneData.visionPosEnc.TakeLast(numFeatureLevels).ToArray();
-
-        // float[][,,,] visionPosEmbeds4D = new float[3][,,,]
-        // {
-        //     ReshapeTo4D(visionPosEmbeds[0], 1, 256, 256, 256),
-        //     ReshapeTo4D(visionPosEmbeds[1], 1, 256, 128, 128),
-        //     ReshapeTo4D(visionPosEmbeds[2], 1, 256, 64, 64)
-        // };
-
-        // float[][,,,] featureMaps4D = new float[3][,,,]
-        // {
-        //     ReshapeTo4D(featureMaps[0], 1, 128, 128, 128),
-        //     ReshapeTo4D(featureMaps[1], 1, 256, 64, 64),
-        //     ReshapeTo4D(featureMaps[2], 1, 256, 64, 64)
-        // };
 
         float[][,,] visionFeats = new float[numFeatureLevels][,,];
 
@@ -685,12 +596,6 @@ public class SegmentAnything2Model
 
             visionFeats[i] = output;
         }
-
-        // (int, int)[] feat_sizes = visionPosEmbeds4D
-        //     .Select(x => (height: x.GetLength(2), width: x.GetLength(3)))
-        //     .ToArray();
-
-        // float[][,,] processed = ProcessVisionPosEmbeds(visionPosEmbeds4D);
 
         return visionFeats;
     }
@@ -897,26 +802,16 @@ public class SegmentAnything2Model
                 flattenedCoords[i * 2 + 1] = scaledCoords[i, 1];
             }
 
-            // float[,,] maskInputDummy;
             float[] maskInputDummy;
             float[] masksEnable;
 
-            // if (maskInput == null)
-            // {
             int maskInputDummyChannel = 1;
             int maskInputDummyHeight = 256;
             int maskInputDummyWidth = 256;
             maskInputDummy = new float[
                 maskInputDummyChannel * maskInputDummyHeight * maskInputDummyWidth
             ];
-            // maskInputDummy = new float[1, 256, 256];
             masksEnable = new float[1] { 0f };
-            // }
-            // else
-            // {
-            //     maskInputDummy = maskInput;
-            //     masksEnable = new int[] { 1 };
-            // }
 
             int promptCoordsIndex = prompt.FindBlobIndexByName("coords");
             int promptLabelsIndex = prompt.FindBlobIndexByName("labels");
@@ -1241,7 +1136,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            // masks, iou_pred, sam_tokens_out, object_score_logits  = mask_decoder.run
             int masksBlobIndex = decoder.FindBlobIndexByName("masks");
             int iouPredBlobIndex = decoder.FindBlobIndexByName("iou_pred");
             int samTokensOutBlobIndex = decoder.FindBlobIndexByName("sam_tokens_out");
