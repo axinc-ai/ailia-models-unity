@@ -1205,31 +1205,6 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            float[,,,] masks = ReshapeTo4D(
-                masksBlobOutput,
-                (int)masksBlobShape.w,
-                (int)masksBlobShape.z,
-                (int)masksBlobShape.y,
-                (int)masksBlobShape.x
-            );
-
-            float[,] iouPred = ReshapeTo2D(
-                iouPredBlobOutput,
-                (int)iouPredBlobShape.y,
-                (int)iouPredBlobShape.x
-            );
-            float[,,] samTokens = ReshapeTo3D(
-                samTokensOutBlobOutput,
-                (int)samTokensOutBlobShape.z,
-                (int)samTokensOutBlobShape.y,
-                (int)samTokensOutBlobShape.x
-            );
-            float[,] objectScore = ReshapeTo2D(
-                objectScoreLogitsBlobOutput,
-                (int)objectScoreLogitsBlobShape.y,
-                (int)objectScoreLogitsBlobShape.x
-            );
-
             if (isQuitting || decoder == null)
             {
                 return (new bool[0][,], new float[0]);
@@ -1297,13 +1272,12 @@ public class SegmentAnything2Model
     // Scale coordinates to target size
     private float[,] ApplyCoordinateScaling(float[,] coords, int imgHeight, int imgWidth)
     {
-        float scale = GetScale(imgWidth, imgHeight);
         float[,] scaledCoords = new float[coords.GetLength(0), coords.GetLength(1)];
 
         for (int i = 0; i < coords.GetLength(0); i++)
         {
-            scaledCoords[i, 0] = coords[i, 0] * scale;
-            scaledCoords[i, 1] = coords[i, 1] * scale;
+            scaledCoords[i, 0] = coords[i, 0] * targetSize / imgWidth;
+            scaledCoords[i, 1] = coords[i, 1] * targetSize / imgHeight;
         }
 
         return scaledCoords;
@@ -1458,17 +1432,13 @@ public class SegmentAnything2Model
         // Convert Color32[] to float[height, width, channels]
         float[,,] floatImage = Color32ArrayToFloatArray(resizedImage, newHeight, newWidth);
 
-        // Normalize per channel (subtract mean, divide std)
-        float[] mean = new float[] { 0.485f, 0.456f, 0.406f };
-        float[] std = new float[] { 0.229f, 0.224f, 0.225f };
-
         for (int h = 0; h < newHeight; h++)
         {
             for (int w = 0; w < newWidth; w++)
             {
                 for (int c = 0; c < 3; c++)
                 {
-                    floatImage[h, w, c] = (floatImage[h, w, c] - mean[c]) / std[c];
+                    floatImage[h, w, c] = (floatImage[h, w, c] - Mean[c]) / Std[c];
                 }
             }
         }
