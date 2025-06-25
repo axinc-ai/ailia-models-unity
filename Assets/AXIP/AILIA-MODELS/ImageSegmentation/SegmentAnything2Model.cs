@@ -1418,7 +1418,6 @@ public class SegmentAnything2Model
     )
     {
         // Resize image to (imageSize, imageSize)
-        float scale = GetScale(originalWidth, originalHeight);
         int newWidth = imageSize;
         int newHeight = imageSize;
         Color32[] resizedImage = ResizeColor32(
