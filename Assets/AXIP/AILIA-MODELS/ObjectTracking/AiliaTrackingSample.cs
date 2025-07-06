@@ -50,13 +50,9 @@ namespace ailiaSDK {
 		private bool FileOpened = false;
 
 		// Detection parameter
-		float threshold = 0.25f;
-		float iou = 0.45f;
+		float threshold = 0.1f;
+		float iou = 1.0f;
 		uint category_n = 80;
-
-		// Tracking parameter
-		float score_threshold = 0.1f;
-		float iou_threshold = 0.7f;
 
 		// Tracking points
 		private Dictionary<uint, Queue<Vector2>> boxCenters = new Dictionary<uint, Queue<Vector2>>();
@@ -87,8 +83,13 @@ namespace ailiaSDK {
 						AiliaDetector.AILIA_DETECTOR_FLAG_NORMAL
 					);
 
-					ailia_tracker.Settings(AiliaTracker.AILIA_TRACKER_ALGORITHM_BYTE_TRACK);
-					ailia_tracker.Create();
+					AiliaTracker.AILIATrackerSettings settings = new AiliaTracker.AILIATrackerSettings();
+					settings.score_threshold = 0.1f;
+					settings.nms_threshold = 0.7f;
+					settings.track_threshold = 0.5f;
+					settings.track_buffer = 30;
+					settings.match_threshold = 0.8f;
+					ailia_tracker.Create(AiliaTracker.AILIA_TRACKER_ALGORITHM_BYTE_TRACK, settings);
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_" + model + ".opt.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "yolox", file_name = "yolox_" + model + ".opt.onnx" });
@@ -150,7 +151,7 @@ namespace ailiaSDK {
 			long start_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond; ;
 			List<AiliaDetector.AILIADetectorObject> list = new List<AiliaDetector.AILIADetectorObject>();
 			list = ailia_detector.ComputeFromImageB2T(camera, tex_width, tex_height, threshold, iou);
-			List<AiliaTracker.AILIATrackerObject> list2 = ailia_tracker.Compute(list, score_threshold, iou_threshold);
+			List<AiliaTracker.AILIATrackerObject> list2 = ailia_tracker.Compute(list);
 			long end_time = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
 			long start_time_class = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
