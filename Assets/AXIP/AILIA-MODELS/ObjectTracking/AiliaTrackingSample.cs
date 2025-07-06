@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using ailia;
+using ailiaTracker;
 
 namespace ailiaSDK {
 	public class AiliaTrackingSample : AiliaRenderer {
