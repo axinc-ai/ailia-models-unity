@@ -6,6 +6,7 @@
     "ai.ailia.ailia_speech": "https://github.com/axinc-ai/ailia-speech-unity.git",
     "ai.ailia.ailia_tflite": "https://github.com/axinc-ai/ailia-tflite-unity.git",
     "ai.ailia.ailia_tokenizer": "https://github.com/axinc-ai/ailia-tokenizer-unity.git",
+    "ai.ailia.ailia_tracker": "https://github.com/axinc-ai/ailia-tracker-unity.git",
     "ai.ailia.ailia_voice": "https://github.com/axinc-ai/ailia-voice-unity.git",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",

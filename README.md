@@ -112,6 +112,12 @@ The collection of pre-trained, state-of-the-art models for Unity.
 | [mobilenet_ssd](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [MobileNetV1, MobileNetV2, VGG based SSD/SSD-lite implementation in Pytorch](https://github.com/qfgaohao/pytorch-ssd) | Pytorch | 1.2.1 and later ||
 | [yolov11-seg](/Assets/AXIP/AILIA-MODELS/ObjectDetection/) | [Ultralytics YOLO11](https://github.com/ultralytics/ultralytics) | Pytorch | 1.2.14.1 and later |  |
 
+## Object tracking
+
+| Name | Detail | Exported From | Supported Ailia Version | Blog |
+|:-----------|------------:|:------------:|:------------:|:------------:|
+| [byte_track](/Assets/AXIP/AILIA-MODELS/ObjectTracking/) | [ByteTrack](https://github.com/ifzhang/ByteTrack) | Pytorch | 1.2.9 and later | [EN](https://medium.com/axinc-ai/bytetrack-tracking-model-that-also-considers-low-accuracy-bounding-boxes-17f5ed70e00c) [JP](https://medium.com/axinc/bytetrack-%E4%BD%8E%E3%81%84%E7%A2%BA%E5%BA%A6%E3%81%AEboundingbox%E3%82%82%E8%80%83%E6%85%AE%E3%81%99%E3%82%8B%E3%83%88%E3%83%A9%E3%83%83%E3%82%AD%E3%83%B3%E3%82%B0%E3%83%A2%E3%83%87%E3%83%AB-244b994d5afb) |
+
 ## Pose estimation
 
 | Name | Detail | Exported From | Supported Ailia Version | Blog |
