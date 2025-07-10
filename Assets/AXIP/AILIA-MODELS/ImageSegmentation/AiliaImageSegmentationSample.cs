@@ -457,8 +457,8 @@ namespace ailiaSDK
                 boxRect.xMax = Math.Max(firstX, x);
                 boxRect.yMax = Math.Max(firstY, y);
 
-                samModel.SetBoxCoords(boxRect);
-				sam2Model.SetBoxCoords(boxRect);
+                samModel?.SetBoxCoords(boxRect);
+				sam2Model?.SetBoxCoords(boxRect);
 				oneshot = true;
             }
         }
