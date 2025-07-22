@@ -1210,23 +1210,18 @@ public class SegmentAnything2Model
                 return (new bool[0][,], new float[0]);
             }
 
-            int numMasks = (int)iouPredBlobShape.x;
-            int maskWidth = (int)masksBlobShape.x;
-            int maskHeight = (int)masksBlobShape.y;
-            int maskArea = maskWidth * maskHeight;
-            bool[][,] masksResult = new bool[numMasks][,];
-
-            for (int i = 0; i < numMasks; i++)
-            {
-                float[,,,] maskTensor = ReshapeToTensor(
+            float[,,,] resized = PostprocessMasks(
+                ReshapeTo4D(
                     masksBlobOutput,
-                    i,
-                    maskHeight,
-                    maskWidth,
-                    maskArea
-                );
-                masksResult[i] = PostprocessMask(maskTensor, imgHeight, imgWidth);
-            }
+                    (int)masksBlobShape.w,
+                    (int)masksBlobShape.z,
+                    (int)masksBlobShape.y,
+                    (int)masksBlobShape.x
+                ),
+                imgHeight,
+                imgWidth
+            );
+            bool[][,] masksResult = ConvertToBoolMasks(resized);
 
             return (masksResult, iouPredBlobOutput);
         }
@@ -1506,40 +1501,98 @@ public class SegmentAnything2Model
         return output;
     }
 
-    private bool[,] PostprocessMask(float[,,,] mask, int origHeight, int origWidth)
+    private float[,] ResizeBilinear(float[,] src, int targetHeight, int targetWidth)
     {
-        int maskHeight = mask.GetLength(2);
-        int maskWidth = mask.GetLength(3);
+        int srcHeight = src.GetLength(0);
+        int srcWidth = src.GetLength(1);
 
-        // Final resize to targetSize
-        bool[,] finalMask = new bool[origHeight, origWidth];
+        float[,] result = new float[targetHeight, targetWidth];
 
-        for (int y = 0; y < origHeight; y++)
+        float scaleY = (float)(srcHeight - 1) / (targetHeight - 1);
+        float scaleX = (float)(srcWidth - 1) / (targetWidth - 1);
+
+        for (int y = 0; y < targetHeight; y++)
         {
-            float srcY = y * maskHeight / origHeight;
+            float srcY = y * scaleY;
             int y0 = (int)Math.Floor(srcY);
-            int y1 = Math.Min(y0 + 1, maskHeight - 1);
-            float wy = srcY - y0;
+            int y1 = Math.Min(y0 + 1, srcHeight - 1);
+            float dy = srcY - y0;
 
-            for (int x = 0; x < origWidth; x++)
+            for (int x = 0; x < targetWidth; x++)
             {
-                float srcX = x * maskWidth / origWidth;
+                float srcX = x * scaleX;
                 int x0 = (int)Math.Floor(srcX);
-                int x1 = Math.Min(x0 + 1, maskWidth - 1);
-                float wx = srcX - x0;
+                int x1 = Math.Min(x0 + 1, srcWidth - 1);
+                float dx = srcX - x0;
 
-                // Bilinear interpolation
-                float val =
-                    (1 - wy) * (1 - wx) * mask[0, 0, y0, x0]
-                    + wy * (1 - wx) * mask[0, 0, y1, x0]
-                    + (1 - wy) * wx * mask[0, 0, y0, x1]
-                    + wy * wx * mask[0, 0, y1, x1];
-
-                finalMask[y, x] = val > 0;
+                float top = (1 - dx) * src[y0, x0] + dx * src[y0, x1];
+                float bottom = (1 - dx) * src[y1, x0] + dx * src[y1, x1];
+                result[y, x] = (1 - dy) * top + dy * bottom;
             }
         }
 
-        return finalMask;
+        return result;
+    }
+
+    private float[,,,] PostprocessMasks(float[,,,] masks, int targetHeight, int targetWidth)
+    {
+        int batch = masks.GetLength(0);
+        int channels = masks.GetLength(1);
+        int height = masks.GetLength(2);
+        int width = masks.GetLength(3);
+
+        float[,,,] resizedMasks = new float[batch, channels, targetHeight, targetWidth];
+
+        for (int n = 0; n < batch; n++)
+        {
+            for (int c = 0; c < channels; c++)
+            {
+                // Extract 2D mask
+                float[,] mask2D = new float[height, width];
+                for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
+                        mask2D[y, x] = masks[n, c, y, x];
+
+                // Resize it
+                float[,] resized2D = ResizeBilinear(mask2D, targetHeight, targetWidth);
+
+                // Store resized mask
+                for (int y = 0; y < targetHeight; y++)
+                    for (int x = 0; x < targetWidth; x++)
+                        resizedMasks[n, c, y, x] = resized2D[y, x];
+            }
+        }
+
+        return resizedMasks;
+    }
+
+    private bool[][,] ConvertToBoolMasks(float[,,,] masks, float threshold = 0.0f)
+    {
+        int batch = masks.GetLength(0);
+        int channels = masks.GetLength(1);
+        int height = masks.GetLength(2);
+        int width = masks.GetLength(3);
+
+        bool[][,] result = new bool[batch * channels][,];
+        int index = 0;
+
+        for (int b = 0; b < batch; b++)
+        {
+            for (int c = 0; c < channels; c++)
+            {
+                bool[,] binaryMask = new bool[height, width];
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        binaryMask[y, x] = masks[b, c, y, x] > threshold;
+                    }
+                }
+                result[index++] = binaryMask;
+            }
+        }
+
+        return result;
     }
 
     // Calculate embedding of input image
