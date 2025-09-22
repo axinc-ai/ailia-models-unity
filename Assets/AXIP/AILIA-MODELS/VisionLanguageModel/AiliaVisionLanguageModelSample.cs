@@ -38,8 +38,8 @@ namespace ailiaSDK
 		private AiliaLLMModel llm = null;
 		private List<AiliaLLMMultimodalChatMessage> messages = new List<AiliaLLMMultimodalChatMessage>(); // Chat History
 		private Texture2D currentImage = null;
-		private byte[] currentImageData = null;
 		private RawImage rawImage = null;
+		private string currentImagePath = "";
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
@@ -94,13 +94,27 @@ namespace ailiaSDK
 				llm = new AiliaLLMModel();
 				llm.Create();
 				if (modelType == VisionLanguageModelSampleModels.gemma3_4b){
-					modelPrepared = llm.Open(asset_path + "/gemma-3-4b-it-Q4_K_M.gguf");
+					modelPrepared = llm.Open(asset_path + "/gemma-3-4b-it-Q4_K_M.gguf", 2048);
 					if (modelPrepared){
 						modelPrepared = llm.OpenMultimodalProjector(asset_path + "/gemma-3-4b-it-GGUF_mmproj-model-f16.gguf");
 					}
 				}
 				if (modelPrepared == false){
 					Debug.Log("ailiaModel.OpenFile failed");
+				}
+				else
+				{
+					// Check VLM capabilities
+					bool vision_support = false;
+					bool audio_support = false;
+					if (llm.GetMultimodalCapabilities(ref vision_support, ref audio_support))
+					{
+						Debug.Log("Vision support: " + vision_support + ", Audio support: " + audio_support);
+					}
+					else
+					{
+						Debug.Log("Failed to get multimodal capabilities");
+					}
 				}
 
 				StartCoroutine(LoadImage());
@@ -109,10 +123,11 @@ namespace ailiaSDK
 		}
 
 		private void SetSystemPrompt(){
+			messages.Clear();
 			AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 			message.role = "system";
-			message.content = "あなたは画像分析の専門家です。画像について詳しく説明してください。";
-			message.media_data = new List<AiliaLLMMediaData>();
+			message.content = "画像についてできるだけ簡潔に説明してください";
+			message.media_data = null;
 			messages.Add(message);
 		}
 
@@ -127,12 +142,12 @@ namespace ailiaSDK
 					currentImage = DownloadHandlerTexture.GetContent(www);
 					rawImage.texture = currentImage;
 
-					// Convert to RGBA32 format for processing
-					Texture2D readableTexture = new Texture2D(currentImage.width, currentImage.height, TextureFormat.RGBA32, false);
-					readableTexture.SetPixels(currentImage.GetPixels());
-					readableTexture.Apply();
-					currentImageData = readableTexture.GetRawTextureData();
+					// Save image to temporary file for file_path approach
+					currentImagePath = Application.temporaryCachePath + "/sample_image.jpg";
+					byte[] jpgData = currentImage.EncodeToJPG();
+					System.IO.File.WriteAllBytes(currentImagePath, jpgData);
 
+					Debug.Log("Image saved to: " + currentImagePath);
 					label_text.text = "Image loaded. Please input query about the image.";
 				}
 				else
@@ -188,48 +203,75 @@ namespace ailiaSDK
 				AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 				message.role = "assistant";
 				message.content = generate_text;
-				message.media_data = new List<AiliaLLMMediaData>();
+				message.media_data = null;
 				messages.Add(message);
 			}
 		}
 
 		public void Submit(){
 			if (!modelPrepared) {
+				Debug.Log("Model not prepared");
 				return;
 			}
 			if (done == false) {
+				Debug.Log("Generation in progress");
 				return;
 			}
 
 			string query_text = input_field.text;
+			Debug.Log("Submit called with query: " + query_text);
+
+			// Don't process empty queries
+			if (string.IsNullOrEmpty(query_text))
+			{
+				Debug.Log("Empty query, skipping");
+				return;
+			}
+
+			if (string.IsNullOrEmpty(currentImagePath)){
+				label_text.text = "Image not loaded yet";
+				return;
+			}
 
 			if (llm.ContextFull()){
 				messages = new List<AiliaLLMMultimodalChatMessage>();
 				SetSystemPrompt();
 			}
 
+			// Create user message with image (following working sample)
 			AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 			message.role = "user";
-			message.content = query_text;
+			message.content = query_text + " <__media__>"; // Add media tag
 			message.media_data = new List<AiliaLLMMediaData>();
 
-			// Add image data if available
-			if (currentImageData != null && currentImage != null){
-				AiliaLLMMediaData imageData = new AiliaLLMMediaData();
-				imageData.media_type = "image";
-				imageData.data = currentImageData;
-				imageData.width = (uint)currentImage.width;
-				imageData.height = (uint)currentImage.height;
-				imageData.file_path = null;
-				message.media_data.Add(imageData);
-			}
+			// Add image using file_path approach (like working sample)
+			AiliaLLMMediaData imageData = new AiliaLLMMediaData();
+			imageData.media_type = "image";
+			imageData.file_path = currentImagePath;
+			imageData.data = null; // Use file_path instead of data
+			imageData.width = 0;
+			imageData.height = 0;
+			message.media_data.Add(imageData);
 
 			messages.Add(message);
-
 			input_field.text = "";
-			generate_text = "";
 
-			llm.SetMultimodalPrompt(messages);
+			Debug.Log("Total messages: " + messages.Count);
+			for (int i = 0; i < messages.Count; i++)
+			{
+				int mediaCount = (messages[i].media_data != null) ? messages[i].media_data.Count : 0;
+				Debug.Log("Message " + i + " - Role: " + messages[i].role + ", Content: " + messages[i].content + ", Media count: " + mediaCount);
+			}
+
+			generate_text = "";
+			bool success = llm.SetMultimodalPrompt(messages);
+			if (!success) {
+				Debug.Log("Failed to set multimodal prompt - Context full: " + llm.ContextFull());
+				label_text.text = "Failed to set prompt. Please check console for details.";
+				return;
+			}
+
+			Debug.Log("SetMultimodalPrompt succeeded, starting generation");
 			done = false;
 		}
 	}
