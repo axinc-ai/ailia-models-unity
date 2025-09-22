@@ -2,22 +2,23 @@
 /* Copyright 2025 AXELL CORPORATION */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 
 using ailia;
 using ailiaLLM;
 
 namespace ailiaSDK
 {
-	public class AiliaLargeLanguageModelSample : MonoBehaviour
+	public class AiliaVisionLanguageModelSample : MonoBehaviour
 	{
 		// Model list
-		public enum LargeLanguageModelSampleModels
+		public enum VisionLanguageModelSampleModels
 		{
-			gemma2_2b,
-			llama3_2_3b,
+			gemma3_4b,
 		}
 
 		// UI
@@ -25,7 +26,7 @@ namespace ailiaSDK
 		public InputField input_field;
 
 		// Settings
-		public LargeLanguageModelSampleModels modelType = LargeLanguageModelSampleModels.gemma2_2b;
+		public VisionLanguageModelSampleModels modelType = VisionLanguageModelSampleModels.gemma3_4b;
 		public bool gpu_mode = false;
 		public GameObject UICanvas = null;
 
@@ -35,7 +36,10 @@ namespace ailiaSDK
 
 		// AILIA
 		private AiliaLLMModel llm = null;
-		private List<AiliaLLMChatMessage> messages = new List<AiliaLLMChatMessage>(); // Chat History
+		private List<AiliaLLMMultimodalChatMessage> messages = new List<AiliaLLMMultimodalChatMessage>(); // Chat History
+		private Texture2D currentImage = null;
+		private byte[] currentImageData = null;
+		private RawImage rawImage = null;
 
 		bool modelPrepared = false;
 		bool modelAllocated = false;
@@ -58,10 +62,11 @@ namespace ailiaSDK
 			label_text = UICanvas.transform.Find("LabelText").GetComponent<Text>();
 			mode_text = UICanvas.transform.Find("ModeLabel").GetComponent<Text>();
 
-			mode_text.text = "ailia Large Language Model Sample";
-			label_text.text = "Please input query.";
+			mode_text.text = "ailia Vision Language Model Sample";
+			label_text.text = "Loading image...";
 
-			UICanvas.transform.Find("RawImage").GetComponent<RawImage>().gameObject.SetActive(false);
+			rawImage = UICanvas.transform.Find("RawImage").GetComponent<RawImage>();
+			rawImage.gameObject.SetActive(true);
 		}
 
 		void AiliaInit()
@@ -71,7 +76,7 @@ namespace ailiaSDK
 		}
 
 		// Download models and Create ailiaModel
-		void CreateAiliaNet(LargeLanguageModelSampleModels modelType, bool gpu_mode = true)
+		void CreateAiliaNet(VisionLanguageModelSampleModels modelType, bool gpu_mode = true)
 		{
 			string asset_path = Application.temporaryCachePath;
 
@@ -79,36 +84,63 @@ namespace ailiaSDK
 			ailia_download.DownloaderProgressPanel = UICanvas.transform.Find("DownloaderProgressPanel").gameObject;
 			var urlList = new List<ModelDownloadURL>();
 
-			if (modelType == LargeLanguageModelSampleModels.gemma2_2b){
-				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-2-2b-it-Q4_K_M.gguf" });
-			}
-			if (modelType == LargeLanguageModelSampleModels.llama3_2_3b){
-				urlList.Add(new ModelDownloadURL() { folder_path = "llama-3", file_name = "Llama-3.2-3B-Instruct-Q4_K_M.gguf" });
+			if (modelType == VisionLanguageModelSampleModels.gemma3_4b){
+				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-3-4b-it-Q4_K_M.gguf" });
+				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-3-4b-it-GGUF_mmproj-model-f16.gguf" });
 			}
 
 			StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
 			{
 				llm = new AiliaLLMModel();
 				llm.Create();
-				if (modelType == LargeLanguageModelSampleModels.gemma2_2b){
-					modelPrepared = llm.Open(asset_path + "/gemma-2-2b-it-Q4_K_M.gguf");
-				}
-				if (modelType == LargeLanguageModelSampleModels.llama3_2_3b){
-					modelPrepared = llm.Open(asset_path + "/Llama-3.2-3B-Instruct-Q4_K_M.gguf");
+				if (modelType == VisionLanguageModelSampleModels.gemma3_4b){
+					modelPrepared = llm.Open(asset_path + "/gemma-3-4b-it-Q4_K_M.gguf");
+					if (modelPrepared){
+						modelPrepared = llm.OpenMultimodalProjector(asset_path + "/gemma-3-4b-it-GGUF_mmproj-model-f16.gguf");
+					}
 				}
 				if (modelPrepared == false){
 					Debug.Log("ailiaModel.OpenFile failed");
 				}
 
+				StartCoroutine(LoadImage());
 				SetSystemPrompt();
 			}));
 		}
 
 		private void SetSystemPrompt(){
-			AiliaLLMChatMessage message = new AiliaLLMChatMessage();
+			AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 			message.role = "system";
-			message.content = "あなたは可愛いくまのキャラクターです。発言の語尾に「くま」をつけてください。";
+			message.content = "あなたは画像分析の専門家です。画像について詳しく説明してください。";
+			message.media_data = new List<AiliaLLMMediaData>();
 			messages.Add(message);
+		}
+
+		private IEnumerator LoadImage(){
+			string imageUrl = "https://storage.googleapis.com/ailia-models/misc/sample_image.jpg";
+			using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(imageUrl))
+			{
+				yield return www.SendWebRequest();
+
+				if (www.result == UnityWebRequest.Result.Success)
+				{
+					currentImage = DownloadHandlerTexture.GetContent(www);
+					rawImage.texture = currentImage;
+
+					// Convert to RGBA32 format for processing
+					Texture2D readableTexture = new Texture2D(currentImage.width, currentImage.height, TextureFormat.RGBA32, false);
+					readableTexture.SetPixels(currentImage.GetPixels());
+					readableTexture.Apply();
+					currentImageData = readableTexture.GetRawTextureData();
+
+					label_text.text = "Image loaded. Please input query about the image.";
+				}
+				else
+				{
+					Debug.Log("Failed to load image: " + www.error);
+					label_text.text = "Failed to load image.";
+				}
+			}
 		}
 
 		void Update()
@@ -153,9 +185,10 @@ namespace ailiaSDK
 			label_text.text = generate_text;
 
 			if (done){
-				AiliaLLMChatMessage message = new AiliaLLMChatMessage();
+				AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 				message.role = "assistant";
 				message.content = generate_text;
+				message.media_data = new List<AiliaLLMMediaData>();
 				messages.Add(message);
 			}
 		}
@@ -171,19 +204,32 @@ namespace ailiaSDK
 			string query_text = input_field.text;
 
 			if (llm.ContextFull()){
-				messages = new List<AiliaLLMChatMessage>();
+				messages = new List<AiliaLLMMultimodalChatMessage>();
 				SetSystemPrompt();
 			}
 
-			AiliaLLMChatMessage message = new AiliaLLMChatMessage();
+			AiliaLLMMultimodalChatMessage message = new AiliaLLMMultimodalChatMessage();
 			message.role = "user";
 			message.content = query_text;
+			message.media_data = new List<AiliaLLMMediaData>();
+
+			// Add image data if available
+			if (currentImageData != null && currentImage != null){
+				AiliaLLMMediaData imageData = new AiliaLLMMediaData();
+				imageData.media_type = "image";
+				imageData.data = currentImageData;
+				imageData.width = (uint)currentImage.width;
+				imageData.height = (uint)currentImage.height;
+				imageData.file_path = null;
+				message.media_data.Add(imageData);
+			}
+
 			messages.Add(message);
 
 			input_field.text = "";
 			generate_text = "";
 
-			llm.SetPrompt(messages);
+			llm.SetMultimodalPrompt(messages);
 			done = false;
 		}
 	}
