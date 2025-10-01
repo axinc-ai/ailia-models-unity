@@ -3,7 +3,7 @@
     "ai.ailia.ailia": "https://github.com/axinc-ai/ailia-sdk-unity.git",
     "ai.ailia.ailia_audio": "https://github.com/axinc-ai/ailia-audio-unity.git",
     "ai.ailia.ailia_llm": "https://github.com/axinc-ai/ailia-llm-unity.git#pre-release",
-    "ai.ailia.ailia_speech": "https://github.com/axinc-ai/ailia-speech-unity.git#v1.3.2",
+    "ai.ailia.ailia_speech": "https://github.com/axinc-ai/ailia-speech-unity.git",
     "ai.ailia.ailia_tflite": "https://github.com/axinc-ai/ailia-tflite-unity.git",
     "ai.ailia.ailia_tokenizer": "https://github.com/axinc-ai/ailia-tokenizer-unity.git",
     "ai.ailia.ailia_tracker": "https://github.com/axinc-ai/ailia-tracker-unity.git",
