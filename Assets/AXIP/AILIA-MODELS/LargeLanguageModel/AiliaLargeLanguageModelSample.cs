@@ -17,6 +17,7 @@ namespace ailiaSDK
 		public enum LargeLanguageModelSampleModels
 		{
 			gemma2_2b,
+			gemma3_4b,
 			llama3_2_3b,
 		}
 
@@ -82,6 +83,9 @@ namespace ailiaSDK
 			if (modelType == LargeLanguageModelSampleModels.gemma2_2b){
 				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-2-2b-it-Q4_K_M.gguf" });
 			}
+			if (modelType == LargeLanguageModelSampleModels.gemma3_4b){
+				urlList.Add(new ModelDownloadURL() { folder_path = "gemma", file_name = "gemma-3-4b-it-Q4_K_M.gguf" });
+			}
 			if (modelType == LargeLanguageModelSampleModels.llama3_2_3b){
 				urlList.Add(new ModelDownloadURL() { folder_path = "llama-3", file_name = "Llama-3.2-3B-Instruct-Q4_K_M.gguf" });
 			}
@@ -92,6 +96,9 @@ namespace ailiaSDK
 				llm.Create();
 				if (modelType == LargeLanguageModelSampleModels.gemma2_2b){
 					modelPrepared = llm.Open(asset_path + "/gemma-2-2b-it-Q4_K_M.gguf");
+				}
+				if (modelType == LargeLanguageModelSampleModels.gemma3_4b){
+					modelPrepared = llm.Open(asset_path + "/gemma-3-4b-it-Q4_K_M.gguf");
 				}
 				if (modelType == LargeLanguageModelSampleModels.llama3_2_3b){
 					modelPrepared = llm.Open(asset_path + "/Llama-3.2-3B-Instruct-Q4_K_M.gguf");
