@@ -17,13 +17,12 @@ namespace ailiaSDK
 {
 	public class AiliaSileroVad
 	{
-		// Model config
-		private const int NUM_INPUTS = 4;
-		private const int NUM_OUTPUTS = 3;
-
 		// Model input parameter
 		private const int batch = 1;
-		private const int sequence = 1536;
+		private int sequence = 0;
+		private int context = 0;
+		private int state = 0;
+		private int version = 0;
 
 		// Inference buffer
 		private float[] input;
@@ -46,7 +45,6 @@ namespace ailiaSDK
 
 		// Constructer
 		public AiliaSileroVad(){
-			ResetState();
 		}
 
 		// Open model from onnx file
@@ -56,7 +54,27 @@ namespace ailiaSDK
 			{
 				ailia_model.Environment(Ailia.AILIA_ENVIRONMENT_TYPE_GPU);
 			}
-			return ailia_model.OpenFile(stream, weight);
+			bool status = ailia_model.OpenFile(stream, weight);
+			if (!status) {
+				return status;
+			}
+			uint[] input_blobs = ailia_model.GetInputBlobList();
+			if (input_blobs.Length == 4) {
+				version = 4;
+			} else {
+				version = 6;
+			}
+			if (version == 4) {
+				sequence = 1536;
+				context = 0;
+				state = 64;
+			} else {
+				sequence = 512;
+				context = 64;
+				state = 128;
+			}
+			ResetState();
+			return status;
 		}
 
 		// Close model
@@ -71,10 +89,14 @@ namespace ailiaSDK
 
 		// Reset internal state
 		public void ResetState(){
-			input = new float[batch * sequence];
+			input = new float[batch * (context + sequence)];
 			sr = new float[1];
-			h = new float[2 * batch * 64];
-			c = new float[2 * batch * 64];
+			h = new float[2 * batch * state];
+			if (version == 4) {
+				c = new float[2 * batch * state];
+			} else {
+				c = new float[batch * context];
+			}
 			remain_pcm = new float[0];
 		}
 
@@ -97,17 +119,28 @@ namespace ailiaSDK
 
 			// Create Inference Buffer
 			List<float[]> inputs = new List<float[]>();
-			inputs.Add(input);
-			inputs.Add(sr);
-			inputs.Add(h);
-			inputs.Add(c);
+			if (version == 4) {
+				inputs.Add(input);
+				inputs.Add(sr);
+				inputs.Add(h);
+				inputs.Add(c);
+			} else {
+				inputs.Add(input);
+				inputs.Add(h);
+				inputs.Add(sr);
+			}
 
 			float[] output = new float[batch];
 				
 			List<float[]> outputs = new List<float[]>();
-			outputs.Add(output);
-			outputs.Add(h);
-			outputs.Add(c);
+			if (version == 4) {
+				outputs.Add(output);
+				outputs.Add(h);
+				outputs.Add(c);
+			} else {
+				outputs.Add(output);
+				outputs.Add(h);
+			}
 
 			// Step Loop
 			int targetSampleRate = 16000;
@@ -116,13 +149,19 @@ namespace ailiaSDK
 			int s;
 			for (s = 0; s < pcm.Length - steps; s+=steps){
 				// Resampling to targetSampleRate
-				for (int i = 0; i < input.Length; i++){
+				for (int i = 0; i < context; i++){
+					input[i] = c[i];
+				}
+				for (int i = 0; i < sequence; i++){
 					int i2 = i * sampleRate / targetSampleRate;
 					if (s + i2 < pcm.Length){
-						input[i] = pcm[s + i2];
+						input[i + context] = pcm[s + i2];
 					}else{
-						input[i] = 0;
+						input[i + context] = 0;
 					}
+				}
+				for (int i = 0; i < context; i++){
+					c[i] = input[sequence + i];
 				}
 				sr[0] = targetSampleRate;
 
@@ -166,30 +205,47 @@ namespace ailiaSDK
 			// Set input blob shape and set input blob data
 			uint[] input_blobs = ailia_model.GetInputBlobList();
 
-			for (int i = 0; i < NUM_INPUTS; i++){
+			for (int i = 0; i < input_blobs.Length; i++){
 				uint input_blob_idx = input_blobs[i];
 
 				Ailia.AILIAShape sequence_shape = new Ailia.AILIAShape();
 				if ( i == 0 ){
-					sequence_shape.x=(uint)inputs[i].Length / (uint)batch;
+					sequence_shape.x=(uint)(sequence + context);
 					sequence_shape.y=(uint)batch;
 					sequence_shape.z=1;
 					sequence_shape.w=1;
 					sequence_shape.dim=2;
 				}
-				if ( i == 1 ){
-					sequence_shape.x=(uint)inputs[i].Length;
-					sequence_shape.y=1;
-					sequence_shape.z=1;
-					sequence_shape.w=1;
-					sequence_shape.dim=1;
-				}
-				if ( i == 2 || i == 3){
-					sequence_shape.x=(uint)inputs[i].Length / (uint)batch / 2;
-					sequence_shape.y=(uint)batch;
-					sequence_shape.z=2;
-					sequence_shape.w=1;
-					sequence_shape.dim=3;
+				if (version == 4) {
+					if ( i == 1 ){
+						sequence_shape.x=1;
+						sequence_shape.y=1;
+						sequence_shape.z=1;
+						sequence_shape.w=1;
+						sequence_shape.dim=1;
+					}
+					if ( i == 2 || i == 3){
+						sequence_shape.x=(uint)state;
+						sequence_shape.y=(uint)batch;
+						sequence_shape.z=2;
+						sequence_shape.w=1;
+						sequence_shape.dim=3;
+					}
+				} else {
+					if ( i == 1){
+						sequence_shape.x=(uint)state;
+						sequence_shape.y=(uint)batch;
+						sequence_shape.z=2;
+						sequence_shape.w=1;
+						sequence_shape.dim=3;
+					}
+					if ( i == 2 ){
+						sequence_shape.x=1;
+						sequence_shape.y=1;
+						sequence_shape.z=1;
+						sequence_shape.w=1;
+						sequence_shape.dim=1;
+					}
 				}
 
 				success = ailia_model.SetInputBlobShape(sequence_shape, (int)input_blob_idx);
@@ -214,7 +270,7 @@ namespace ailiaSDK
 			// Get outpu blob shape and get output blob data
 			uint[] output_blobs = ailia_model.GetOutputBlobList();
 
-			for (int i = 0; i < NUM_OUTPUTS; i++){
+			for (int i = 0; i < output_blobs.Length; i++){
 				uint output_blob_idx = output_blobs[i];
 				
 				Ailia.AILIAShape output_blob_shape = ailia_model.GetBlobShape((int)output_blob_idx);
