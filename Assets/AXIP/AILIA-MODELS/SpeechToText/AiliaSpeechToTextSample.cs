@@ -79,6 +79,7 @@ namespace ailiaSDK {
 				case AiliaSpeechToTextModels.whisper_small:
 				case AiliaSpeechToTextModels.whisper_medium:
 				case AiliaSpeechToTextModels.whisper_turbo:
+				case AiliaSpeechToTextModels.sensevoice_small:
 					mode_text.text = "whisper";
 
 					string encoder_path = "";
@@ -125,7 +126,7 @@ namespace ailiaSDK {
 						encoder_path = "sensevoice_small.onnx";
 						decoder_path = "sensevoice_small.model";
 						remote_path = "sensevoice";
-						vad_path = "silerovad_v6_2.onnx";
+						vad_path = "silero_vad_v6_2.onnx";
 					}
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
 					urlList.Add(new ModelDownloadURL() { folder_path = remote_path, file_name = encoder_path });
