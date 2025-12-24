@@ -17,13 +17,14 @@ namespace ailiaSDK {
 		//Models
 		public enum AudioProcessingModels
 		{
-			silero_vad,
+			silero_vad_v4,
+			silero_vad_v6_2,
 			rvc,
 			rvc_with_f0
 		}
 
 		[SerializeField]
-		private AudioProcessingModels ailiaModelType = AudioProcessingModels.silero_vad;
+		private AudioProcessingModels ailiaModelType = AudioProcessingModels.silero_vad_v4;
 		[SerializeField]
 		private GameObject UICanvas = null;
 
@@ -76,8 +77,8 @@ namespace ailiaSDK {
 			var urlList = new List<ModelDownloadURL>();
 			switch (modelType)
 			{
-				case AudioProcessingModels.silero_vad:
-					mode_text.text = "silero_vad";
+				case AudioProcessingModels.silero_vad_v4:
+					mode_text.text = "silero_vad_v4";
 	
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
@@ -87,8 +88,19 @@ namespace ailiaSDK {
 						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad.onnx.prototxt", asset_path + "/silero_vad.onnx", gpu_mode);
 					}));
 					break;
+				case AudioProcessingModels.silero_vad_v6_2:
+					mode_text.text = "silero_vad_v6_2";
+	
+					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad_v6_2.onnx.prototxt" });
+					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad_v6_2.onnx" });
+
+					StartCoroutine(ailia_download.DownloadWithProgressFromURL(urlList, () =>
+					{
+						FileOpened = ailia_vad.OpenFile(asset_path + "/silero_vad_v6_2.onnx.prototxt", asset_path + "/silero_vad_v6_2.onnx", gpu_mode);
+					}));
+					break;
 				case AudioProcessingModels.rvc:
-					mode_text.text = "silero_vad + rvc";
+					mode_text.text = "silero_vad_v4 + rvc";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
@@ -106,7 +118,7 @@ namespace ailiaSDK {
 					}));
 					break;
 				case AudioProcessingModels.rvc_with_f0:
-					mode_text.text = "silero_vad + rvc + f0";
+					mode_text.text = "silero_vad_v4 + rvc + f0";
 
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx.prototxt" });
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = "silero_vad.onnx" });
