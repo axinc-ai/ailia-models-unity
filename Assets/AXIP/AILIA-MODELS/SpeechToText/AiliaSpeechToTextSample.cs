@@ -1,5 +1,5 @@
 /* AILIA Unity Plugin Speech To Text Sample */
-/* Copyright 2023 - 2024 AXELL CORPORATION */
+/* Copyright 2023 - 2025 AXELL CORPORATION */
 
 using System.Collections;
 using System.Collections.Generic;
@@ -21,7 +21,8 @@ namespace ailiaSDK {
 			whisper_tiny,
 			whisper_small,
 			whisper_medium,
-			whisper_turbo
+			whisper_turbo,
+			sensevoice_small
 		}
 
 		[SerializeField]
@@ -78,12 +79,13 @@ namespace ailiaSDK {
 				case AiliaSpeechToTextModels.whisper_small:
 				case AiliaSpeechToTextModels.whisper_medium:
 				case AiliaSpeechToTextModels.whisper_turbo:
+				case AiliaSpeechToTextModels.sensevoice_small:
 					mode_text.text = "whisper";
 
 					string encoder_path = "";
 					string decoder_path = "";
 					string pb_path = "";
-					string vad_path = "silero_vad.onnx";
+					string vad_path = "silero_vad.onnx"; // v4
 
 					int task = AiliaSpeech.AILIA_SPEECH_TASK_TRANSCRIBE; //AiliaSpeech.AILIA_SPEECH_TASK_TRANSLATE;
 					int flag = AiliaSpeech.AILIA_SPEECH_FLAG_NONE;
@@ -93,32 +95,44 @@ namespace ailiaSDK {
 					int memory_mode = Ailia.AILIA_MEMORY_REDUCE_CONSTANT | Ailia.AILIA_MEMORY_REDUCE_CONSTANT_WITH_INPUT_INITIALIZER | Ailia.AILIA_MEMORY_REUSE_INTERSTAGE;
 					int env_id = ailia_speech.GetEnvironmentId(gpu_mode);
 					int api_model_type = 0;
+					string remote_path = "";
 					if (ailiaModelType == AiliaSpeechToTextModels.whisper_tiny){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_TINY;
 						encoder_path = "encoder_tiny.opt3.onnx";
 						decoder_path = "decoder_tiny_fix_kv_cache.opt3.onnx";
+						remote_path = "whisper";
 					}
 					if (ailiaModelType == AiliaSpeechToTextModels.whisper_small){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_SMALL;
 						encoder_path = "encoder_small.opt3.onnx";
 						decoder_path = "decoder_small_fix_kv_cache.opt3.onnx";
+						remote_path = "whisper";
 					}
 					if (ailiaModelType == AiliaSpeechToTextModels.whisper_medium){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_MEDIUM;
 						encoder_path = "encoder_medium.opt3.onnx";
 						decoder_path = "decoder_medium_fix_kv_cache.opt3.onnx";
+						remote_path = "whisper";
 					}
 					if (ailiaModelType == AiliaSpeechToTextModels.whisper_turbo){
 						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_WHISPER_MULTILINGUAL_LARGE_V3;
 						encoder_path = "encoder_turbo.onnx";
 						pb_path = "encoder_turbo_weights.pb";
 						decoder_path = "decoder_turbo_fix_kv_cache.onnx";
+						remote_path = "whisper";
+					}
+					if (ailiaModelType == AiliaSpeechToTextModels.sensevoice_small){
+						api_model_type = AiliaSpeech.AILIA_SPEECH_MODEL_TYPE_SENSEVOICE_SMALL;
+						encoder_path = "sensevoice_small.onnx";
+						decoder_path = "sensevoice_small.model";
+						remote_path = "sensevoice";
+						vad_path = "silero_vad_v6_2.onnx";
 					}
 					urlList.Add(new ModelDownloadURL() { folder_path = "silero-vad", file_name = vad_path });
-					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = encoder_path });
-					urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = decoder_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = remote_path, file_name = encoder_path });
+					urlList.Add(new ModelDownloadURL() { folder_path = remote_path, file_name = decoder_path });
 					if (pb_path != ""){
-						urlList.Add(new ModelDownloadURL() { folder_path = "whisper", file_name = pb_path });
+						urlList.Add(new ModelDownloadURL() { folder_path = remote_path, file_name = pb_path });
 					}
 					bool virtual_memory_enable = false;
 					string language = "auto"; // ja
