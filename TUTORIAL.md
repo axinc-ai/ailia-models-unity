@@ -13,7 +13,7 @@
 Clone this repository and open the project in unity.
 
 ```
-git clone git@github.com:axinc-ai/ailia-models-unity.git
+git clone git@github.com:ailia-ai/ailia-models-unity.git
 ```
 
 This repository automatically download ailia SDK from Unity Package manager.
